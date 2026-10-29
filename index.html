@@ -6,19 +6,19 @@
   <title>Abrar Sami Khan</title>
   <meta name="description" content="Abrar Sami Khan, Computer Science graduate based in Dhaka. Work, research and projects.">
   <meta name="theme-color" content="#121310">
- 
+
   <!-- Marks the page as JS-capable before anything paints (used by the preloader) -->
   <script>document.documentElement.classList.add('js');</script>
- 
+
   <!-- Fonts: Bricolage Grotesque (display) + Instrument Sans (text) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Instrument+Sans:wght@400..700&display=swap">
- 
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
- 
+
   <!-- Preloader: shown once per visit, removed by main.js (CSS failsafe hides it after 4s) -->
   <div class="preloader" aria-hidden="true">
     <div class="preloader__inner">
@@ -26,18 +26,18 @@
       <span class="preloader__rule"></span>
     </div>
   </div>
- 
+
   <a class="skip-link" href="#main">Skip to content</a>
- 
+
   <!-- Scroll progress line -->
   <div class="progress" aria-hidden="true"><span class="progress__bar"></span></div>
- 
+
   <!-- Custom cursor (desktop, fine pointer only) -->
   <div class="cursor" aria-hidden="true"><span class="cursor__dot"></span></div>
- 
+
   <header class="site-header">
     <a class="site-header__name" href="#top" data-magnetic>Abrar Sami Khan</a>
- 
+
     <nav class="site-nav" aria-label="Main">
       <button class="site-nav__toggle" type="button" aria-expanded="false" aria-controls="site-nav-list">Menu</button>
       <ul class="site-nav__list" id="site-nav-list">
@@ -50,48 +50,61 @@
       </ul>
     </nav>
   </header>
- 
+
   <main id="main">
- 
-    <!-- HERO (built in Stage 2) -->
-    <section class="chapter chapter--hero" id="top" aria-labelledby="hero-title">
-      <h1 class="hero-title" id="hero-title" data-reveal="lines">Abrar Sami Khan</h1>
-      <p class="chapter__note" data-reveal="fade">Computer Science graduate in Dhaka, working across analytics, automation and research. This site is being built in stages.</p>
+
+    <!-- HERO -->
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero__top">
+        <p class="hero__meta">Based in Dhaka</p>
+        <p class="hero__meta hero__meta--end">Computer Science, BRAC University</p>
+      </div>
+
+      <p class="hero__lede">Analytics and automation at Therap BD. Machine learning research, websites and a game, built at university and on my own.</p>
+
+      <a class="hero__cue" href="#work" data-magnetic>
+        <span class="hero__cue-text">Scroll to the work</span>
+        <span class="hero__cue-line" aria-hidden="true"></span>
+      </a>
+
+      <div class="hero__name-wrap">
+        <h1 class="hero__name" id="hero-title">Abrar Sami Khan</h1>
+      </div>
     </section>
- 
+
     <!-- CHAPTER STUBS (filled in Stages 3 to 6) -->
     <section class="chapter" id="work" data-field="1" aria-labelledby="work-title">
       <h2 class="chapter__title" id="work-title" data-reveal="lines">Work</h2>
       <p class="chapter__note" data-reveal="fade">Therap BD, Associate, Customer Experience Strategy &amp; Analytics. Chapter in progress.</p>
     </section>
- 
+
     <section class="chapter" id="research" data-field="2" aria-labelledby="research-title">
       <h2 class="chapter__title" id="research-title" data-reveal="lines">Research</h2>
       <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
     </section>
- 
+
     <section class="chapter" id="websites" data-field="3" aria-labelledby="websites-title">
       <h2 class="chapter__title" id="websites-title" data-reveal="lines">Websites</h2>
       <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
     </section>
- 
+
     <section class="chapter" id="game" data-field="4" aria-labelledby="game-title">
       <h2 class="chapter__title" id="game-title" data-reveal="lines">Game</h2>
       <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
     </section>
- 
+
     <section class="chapter" id="about" aria-labelledby="about-title">
       <h2 class="chapter__title" id="about-title" data-reveal="lines">About</h2>
       <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
     </section>
- 
+
     <section class="chapter chapter--contact" id="contact" aria-labelledby="contact-title">
       <h2 class="chapter__title" id="contact-title" data-reveal="lines">Contact</h2>
       <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
     </section>
- 
+
   </main>
- 
+
   <footer class="site-footer">
     <p>&copy; 2026 Abrar Sami Khan, Dhaka</p>
     <ul class="site-footer__links">
@@ -99,7 +112,7 @@
       <li><a href="https://linktr.ee/abrark8" target="_blank" rel="noopener" data-magnetic>Linktree</a></li>
     </ul>
   </footer>
- 
+
   <!-- Libraries (no build step): GSAP + ScrollTrigger + SplitText, then Lenis -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
