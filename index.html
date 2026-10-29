@@ -198,9 +198,100 @@
       </div>
     </section>
 
-    <section class="chapter" id="research" data-field="2" aria-labelledby="research-title">
-      <h2 class="chapter__title" id="research-title" data-reveal="lines">Research</h2>
-      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    <!-- ===================== RESEARCH ===================== -->
+    <section class="group" id="research" aria-labelledby="research-title">
+      <div class="group__head">
+        <h2 class="group__title" id="research-title" data-reveal="lines">Research</h2>
+        <p class="group__note" data-reveal="fade">Machine learning and product research, from university and on my own.</p>
+      </div>
+
+      <!-- Project: Bridge thesis -->
+      <article class="chapter-block" id="bridge" data-field="2" aria-labelledby="bridge-title">
+
+        <div class="chapter-cover">
+          <div class="chapter-cover__bar">
+            <p>Research</p>
+            <p>Undergraduate thesis, BRAC University</p>
+          </div>
+
+          <h3 class="chapter-cover__title" id="bridge-title" data-reveal="lines">Bridge</h3>
+
+          <dl class="chapter-cover__meta" data-reveal="fade">
+            <div><dt>Thesis</dt><dd>Generalized Bridge Pipeline for Multimodal Gene Regulatory Network Discovery</dd></div>
+            <div><dt>Team</dt><dd>Four authors, including me</dd></div>
+            <div><dt>Submitted</dt><dd>October 2025</dd></div>
+            <div><dt>Data</dt><dd>Public HCA, HLCA and DepMap datasets</dd></div>
+          </dl>
+
+          <div class="chapter-cover__body">
+            <p class="chapter-cover__lede" data-reveal="lines">A pipeline that joins gene expression and CRISPR screen data in one learned space, then uses both to map how genes regulate each other.</p>
+            <p class="chapter-cover__aside" data-reveal="fade">Results are as reported in the thesis. These networks have no ground truth, so the checks measure stability and biological plausibility, not accuracy.</p>
+          </div>
+        </div>
+
+        <div class="story" data-story aria-label="The Bridge thesis, step by step">
+          <nav class="story__index" aria-label="Thesis steps">
+            <ol>
+              <li><a href="#bridge-problem">The problem</a></li>
+              <li><a href="#bridge-built">What we built</a></li>
+              <li><a href="#bridge-checked">How we checked it</a></li>
+              <li><a href="#bridge-found">What it found</a></li>
+            </ol>
+            <span class="story__progress" aria-hidden="true"><span class="story__progress-bar"></span></span>
+          </nav>
+
+          <div class="story__stage">
+            <section class="story__item" id="bridge-problem" aria-labelledby="bridge-problem-t">
+              <h4 class="story__title" id="bridge-problem-t">The problem</h4>
+              <p class="story__text">RNA sequencing shows which genes rise and fall together, but not which genes a cell depends on. CRISPR screens show dependency, but not regulation. Network methods built on expression alone miss that functional evidence.</p>
+              <ol class="flow" aria-label="Two data types">
+                <li>Expression: what moves together</li>
+                <li>CRISPR: what the cell needs</li>
+              </ol>
+            </section>
+
+            <section class="story__item" id="bridge-built" aria-labelledby="bridge-built-t">
+              <h4 class="story__title" id="bridge-built-t">What we built</h4>
+              <p class="story__text">Two encoders map each gene's expression profile and CRISPR dependency profile into one shared 128-dimension space. Training lines the two up with an MMD loss, and a diversity term stops everything collapsing to one point. Networks are then built from three signals together: co-expression, GENIE3 regulator importance and CRISPR co-essentiality.</p>
+              <ol class="flow" aria-label="Pipeline">
+                <li>Expression and CRISPR data</li>
+                <li>Shared 128-d space</li>
+                <li>Fused gene network</li>
+              </ol>
+              <p class="story__tools"><span>Built with</span> Python, PyTorch, GENIE3</p>
+            </section>
+
+            <section class="story__item" id="bridge-checked" aria-labelledby="bridge-checked-t">
+              <h4 class="story__title" id="bridge-checked-t">How we checked it</h4>
+              <p class="story__text">We ran it on blood-forming (hematopoietic) and lung data, and compared each network with an expression-only version: edge overlap (Jaccard), hub ranking (Kendall's tau), how essential the hub genes are in CRISPR screens, and Gene Ontology enrichment.</p>
+              <ol class="flow" aria-label="Checks">
+                <li>Two tissues</li>
+                <li>Stability checks</li>
+                <li>Biology checks</li>
+              </ol>
+            </section>
+
+            <section class="story__item" id="bridge-found" aria-labelledby="bridge-found-t">
+              <h4 class="story__title" id="bridge-found-t">What it found</h4>
+              <p class="story__text">The networks kept their structure (Jaccard 0.981 blood, 0.979 lung) and their hub rankings (tau 1.000 and 0.955). Hub genes leaned essential, and enriched for immune and antigen-presentation processes. Blood and lung networks barely overlapped (Jaccard about 0.02), so the wiring stayed tissue-specific. Cross-modal alignment rose from about 0.6 to 0.9 cosine similarity.</p>
+              <p class="story__tools"><span>Status</span> Reported in the thesis</p>
+            </section>
+          </div>
+        </div>
+
+        <!-- Interactive demo (mock data only) -->
+        <div class="demo" aria-labelledby="demo-bridge-title">
+          <div class="demo__intro">
+            <h4 class="demo__title" id="demo-bridge-title" data-reveal="lines">Try it: align two views of the same genes</h4>
+            <p class="demo__text" data-reveal="fade">Each pair is one made-up gene. Filled dots are its expression profile, rings are its CRISPR profile. Drag the slider to train, and matching pairs move into one shared space. Switch off the diversity term to see why it was needed.</p>
+            <p class="demo__caption" data-reveal="fade">Illustrative demo. Points and scores are made up and only show the idea.</p>
+          </div>
+
+          <div class="demo__widget" data-demo="bridge">
+            <noscript><p class="demo__fallback">This demo needs JavaScript.</p></noscript>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="chapter" id="websites" data-field="3" aria-labelledby="websites-title">
