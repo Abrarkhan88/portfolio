@@ -977,6 +977,51 @@ section[id] { scroll-margin-top: var(--header-h); }
   gap: var(--space-3);
 }
 
+/* Django demo */
+.shop-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
+
+.shop-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.shop-item .meta { opacity: 0.65; display: block; }
+
+.demo-select {
+  padding: var(--space-2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.demo-select option { color: #121310; }
+
+.invoice {
+  padding: var(--space-5);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 2px;
+  font-size: var(--step--1);
+  transform-origin: 50% 0;
+}
+.invoice h5 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-weight: 600;
+}
+.invoice .demo-table th, .invoice .demo-table td { border-bottom-color: rgba(18, 19, 16, 0.15); }
+.invoice__total { margin-top: var(--space-3); text-align: right; font-weight: 600; }
+
+@media (max-width: 420px) {
+  .shop-item { grid-template-columns: 1fr auto; }
+  .shop-item .btn { grid-column: 1 / -1; justify-self: start; }
+}
+
 /* Vegetation demo */
 .veg-canvas {
   width: 100%;
