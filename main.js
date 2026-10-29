@@ -1,6 +1,6 @@
 /* =========================================================
    Abrar Sami Khan, portfolio
-   main.js: preloader, smooth scroll, scroll sync, reveals,
+   main.js: preloader, smooth scroll, scroll sync, hero, reveals,
    header state, progress line, cursor, mobile menu
    ========================================================= */
 (function () {
@@ -210,6 +210,66 @@
     }
   }
 
+  /* ---------- Hero entrance + scroll behaviour ---------- */
+  function setupHero(isDesktop, context) {
+    var hero = document.querySelector('.hero');
+    if (!hero) return;
+
+    var name = hero.querySelector('.hero__name');
+    var nameWrap = hero.querySelector('.hero__name-wrap');
+    var lede = hero.querySelector('.hero__lede');
+    var metas = hero.querySelectorAll('.hero__meta');
+    var cue = hero.querySelector('.hero__cue');
+    var cueText = hero.querySelector('.hero__cue-text');
+    var cueLine = hero.querySelector('.hero__cue-line');
+
+    function build() {
+      var tl = gsap.timeline({ defaults: { ease: MOTION.ease, duration: MOTION.section } });
+
+      if (isDesktop && window.SplitText) {
+        // Desktop: the name rises word by word, the lede line by line
+        var nameSplit = SplitText.create(name, { type: 'words', mask: 'words' });
+        var ledeSplit = SplitText.create(lede, { type: 'lines', mask: 'lines' });
+
+        tl.from(nameSplit.words, { yPercent: 110, duration: MOTION.section * 1.5, stagger: MOTION.stagger * 2 })
+          .from(ledeSplit.lines, { yPercent: 105, stagger: MOTION.stagger * 1.5 }, '-=0.55')
+          .add(function () {
+            // Hand the text back to normal layout so it reflows on resize
+            nameSplit.revert();
+            ledeSplit.revert();
+          }, '+=0.1');
+      } else {
+        // Mobile: simple fades
+        tl.from(name, { autoAlpha: 0, y: 24 })
+          .from(lede, { autoAlpha: 0, y: 16 }, '-=0.4');
+      }
+
+      tl.from(metas, { autoAlpha: 0, stagger: MOTION.stagger }, 0.15)
+        .from(cueText, { autoAlpha: 0, y: 8 }, '-=0.35')
+        .from(cueLine, { scaleX: 0, duration: 0.6 }, '<0.1');
+
+      // The cue fades out over the first 240px of scroll
+      gsap.to(cue, {
+        autoAlpha: 0,
+        ease: 'none',
+        scrollTrigger: { trigger: hero, start: 'top top', end: '+=240', scrub: true }
+      });
+
+      // Subtle parallax on the name as the hero leaves (desktop, 4%)
+      if (isDesktop) {
+        gsap.to(nameWrap, {
+          yPercent: -MOTION.parallaxMax * 100,
+          ease: 'none',
+          scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }
+        });
+      }
+    }
+
+    // Split only after web fonts load, so line breaks are measured correctly
+    if (!document.fonts || document.fonts.status === 'loaded') build();
+    else document.fonts.ready.then(function () { context.add(build); });
+  }
+
   /* ---------- Custom cursor + magnetic links (desktop only) ---------- */
   function setupCursor() {
     var cursor = document.querySelector('.cursor');
@@ -319,7 +379,10 @@
 
       setupActiveNav();
 
-      if (!c.reduce) setupReveals(c.isDesktop);
+      if (!c.reduce) {
+        setupHero(c.isDesktop, context);
+        setupReveals(c.isDesktop);
+      }
 
       if (c.isDesktop && c.finePointer && !c.reduce) cleanupCursor = setupCursor();
 
