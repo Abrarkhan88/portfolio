@@ -1208,11 +1208,93 @@
     render(false);
   }
 
+  /* ---------- Demo: walk the journey (Farmer onboarding) ---------- */
+  function setupJourneyDemo() {
+    var host = document.querySelector('[data-demo="journey"]');
+    if (!host) return;
+
+    var STAGES = [
+      { name: 'Awareness',
+        current: { feel: 'Curious', note: 'Hears about the service from an agent or a flyer', v: 100 },
+        redesign: { feel: 'Interested', note: 'Agent shows a success story from a nearby farmer', v: 100 } },
+      { name: 'Registration',
+        current: { feel: 'Confused', note: 'A long form with many fields', v: 52 },
+        redesign: { feel: 'Confident', note: 'Icon-based Bangla screens, name and phone only, agent on hand', v: 92 } },
+      { name: 'OTP check',
+        current: { feel: 'Frustrated', note: 'An SMS code with unclear instructions', v: 38 },
+        redesign: { feel: 'Reassured', note: 'Clear visuals and an easy retry', v: 85 } },
+      { name: 'First value',
+        current: { feel: 'Lost', note: 'Unclear what to do next', v: 35 },
+        redesign: { feel: 'Delighted', note: 'Weather and crop prices shown straight away', v: 80 } }
+    ];
+    var LABEL = { current: 'assumed', redesign: 'target' };
+
+    host.innerHTML = '';
+    var sw = el('div', { class: 'demo-switch', role: 'group', 'aria-label': 'Journey version' });
+    var bCur = el('button', { type: 'button', 'aria-pressed': 'true' }, 'Current journey');
+    var bNew = el('button', { type: 'button', 'aria-pressed': 'false' }, 'Redesigned journey');
+    sw.append(bCur, bNew);
+
+    var list = el('ol', { class: 'journey' });
+    var cells = STAGES.map(function (s) {
+      var li = el('li', { class: 'journey__step' });
+      var name = el('p', { class: 'journey__name' }, s.name);
+      var feel = el('p', { class: 'journey__feel' });
+      var note = el('p', { class: 'journey__note' });
+      var meter = el('div', { class: 'journey__meter' });
+      var num = el('span', { class: 'num' });
+      var track = el('span', { class: 'demo-bars__track', 'aria-hidden': 'true' });
+      var fill = el('span', { class: 'demo-bars__fill' });
+      track.append(fill);
+      meter.append(num, track);
+      li.append(name, feel, note, meter);
+      list.append(li);
+      return { feel: feel, note: note, num: num, fill: fill };
+    });
+
+    var status = el('p', { class: 'demo__status', 'aria-live': 'polite' });
+    host.append(sw, list, status);
+
+    var mode = 'current';
+    function render(animate) {
+      STAGES.forEach(function (s, i) {
+        var d = s[mode];
+        var c = cells[i];
+        c.feel.textContent = d.feel;
+        c.note.textContent = d.note;
+        c.num.textContent = d.v + '% still here (' + LABEL[mode] + ')';
+        if (animate && canAnimate()) {
+          gsap.to(c.fill, { scaleX: d.v / 100, duration: 0.6, delay: i * 0.06, ease: 'power3.out' });
+          gsap.fromTo([c.feel, c.note], { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.35, delay: i * 0.06, ease: 'power2.out' });
+        } else {
+          c.fill.style.transform = 'scaleX(' + d.v / 100 + ')';
+        }
+      });
+      var last = STAGES[STAGES.length - 1][mode].v;
+      status.textContent = mode === 'current'
+        ? 'Current journey: ' + last + '% of farmers who start reach first value (working assumption).'
+        : 'Redesigned journey: ' + last + '% of farmers who start reach first value (target).';
+    }
+
+    function setMode(m) {
+      if (m === mode) return;
+      mode = m;
+      bCur.setAttribute('aria-pressed', m === 'current' ? 'true' : 'false');
+      bNew.setAttribute('aria-pressed', m === 'redesign' ? 'true' : 'false');
+      render(true);
+    }
+    bCur.addEventListener('click', function () { setMode('current'); });
+    bNew.addEventListener('click', function () { setMode('redesign'); });
+
+    render(false);
+  }
+
   /* ---------- Start ---------- */
   setupReportDemo();
   setupBridgeDemo();
   setupVegetationDemo();
   setupSkinDemo();
+  setupJourneyDemo();
   setupMenu();
   setupAnchors();
 
