@@ -1720,7 +1720,90 @@
     renderCart();
   }
 
+  /* ---------- Demo: score a password (Password Strength Checker) ---------- */
+  function setupPasswordDemo() {
+    var host = document.querySelector('[data-demo="password"]');
+    if (!host) return;
+
+    // The project's rule: five checks, 20 points each
+    var CHECKS = [
+      { id: 'length', label: 'At least 8 characters', tip: 'Make it at least 8 characters long.', test: function (p) { return p.length >= 8; } },
+      { id: 'upper', label: 'An uppercase letter', tip: 'Add an uppercase letter.', test: function (p) { return /[A-Z]/.test(p); } },
+      { id: 'lower', label: 'A lowercase letter', tip: 'Add a lowercase letter.', test: function (p) { return /[a-z]/.test(p); } },
+      { id: 'number', label: 'A number', tip: 'Add a number.', test: function (p) { return /[0-9]/.test(p); } },
+      { id: 'special', label: 'A special character', tip: 'Add a special character, such as ! or #.', test: function (p) { return /[^A-Za-z0-9]/.test(p); } }
+    ];
+    var LEVELS = [ // label and meter colour by score
+      { min: 0, label: 'Weak', color: '#c9705d' },
+      { min: 60, label: 'Medium', color: '#d6b25a' },
+      { min: 80, label: 'Strong', color: '#9fbf86' },
+      { min: 100, label: 'Very Strong', color: '#ece6da' }
+    ];
+
+    host.innerHTML = '';
+    var labelEl = el('label', { for: 'pw-demo-input' }, 'Password');
+    var field = el('div', { class: 'pw-field' });
+    var input = el('input', { id: 'pw-demo-input', type: 'password', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'pw-demo-result' });
+    var toggle = el('button', { class: 'btn btn--quiet', type: 'button', 'aria-pressed': 'false' }, 'Show');
+    field.append(input, toggle);
+
+    var meter = el('div', { class: 'pw-meter', 'aria-hidden': 'true' });
+    var fill = el('span');
+    meter.append(fill);
+
+    var score = el('p', { class: 'pw-score', id: 'pw-demo-result' });
+    var scoreNum = el('span', null, 'Score 0 of 100');
+    var scoreLabel = el('strong', null, 'Weak');
+    score.append(scoreNum, scoreLabel);
+
+    var checks = el('ul', { class: 'pw-checks', 'aria-label': 'Requirements' });
+    var checkEls = CHECKS.map(function (c) { var li = el('li', null, c.label); checks.append(li); return li; });
+
+    var tips = el('p', { class: 'demo__status', 'aria-live': 'polite' }, 'Start typing to see suggestions.');
+    host.append(labelEl, field, meter, score, checks, tips);
+
+    var lastLabel = '';
+    function analyze() {
+      var p = input.value;
+      var met = CHECKS.map(function (c) { return c.test(p); });
+      var points = met.filter(Boolean).length * 20;
+      var level = LEVELS.filter(function (l) { return points >= l.min; }).pop();
+
+      fill.style.setProperty('--pw-color', level.color);
+      fill.style.transform = 'scaleX(' + points / 100 + ')';
+      scoreNum.textContent = 'Score ' + points + ' of 100';
+      scoreLabel.textContent = level.label;
+      checkEls.forEach(function (li, i) {
+        li.classList.toggle('is-met', met[i]);
+        li.setAttribute('aria-label', CHECKS[i].label + (met[i] ? ', met' : ', missing'));
+      });
+
+      var missing = CHECKS.filter(function (c, i) { return !met[i]; }).map(function (c) { return c.tip; });
+      var msg = !p ? 'Start typing to see suggestions.'
+        : missing.length ? missing.join(' ')
+        : 'Every requirement is met. That is a very strong password by this rule.';
+      if (msg !== tips.textContent) tips.textContent = msg;
+
+      if (level.label !== lastLabel && p && canAnimate()) {
+        gsap.fromTo(scoreLabel, { opacity: 0.3, y: 4 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' });
+      }
+      lastLabel = level.label;
+    }
+
+    input.addEventListener('input', analyze);
+    toggle.addEventListener('click', function () {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      toggle.textContent = show ? 'Hide' : 'Show';
+      toggle.setAttribute('aria-pressed', String(show));
+      input.focus();
+    });
+
+    analyze();
+  }
+
   /* ---------- Start ---------- */
+  setupPasswordDemo();
   setupDjangoDemo();
   setupElaraDemo();
   setupReportDemo();
