@@ -912,9 +912,213 @@
     resize();
   }
 
+  /* ---------- Demo: find the green (Vegetation detection) ---------- */
+  function setupVegetationDemo() {
+    var host = document.querySelector('[data-demo="vegetation"]');
+    if (!host) return;
+
+    var GW = 192, GH = 128; // generated image size (scaled up for display)
+
+    // Seeded value noise so the landscape is the same every visit
+    function makeRand(seed) {
+      return function () {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+    function makeNoise(seed, cells) {
+      var r = makeRand(seed);
+      var grid = [];
+      for (var i = 0; i < (cells + 1) * (cells + 1); i++) grid.push(r());
+      function at(x, y) { return grid[y * (cells + 1) + x]; }
+      return function (u, v) { // u, v in 0..1
+        var x = u * cells, y = v * cells;
+        var x0 = Math.floor(x), y0 = Math.floor(y);
+        var fx = x - x0, fy = y - y0;
+        fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+        var x1 = Math.min(x0 + 1, cells), y1 = Math.min(y0 + 1, cells);
+        var a = at(x0, y0) + (at(x1, y0) - at(x0, y0)) * fx;
+        var b = at(x0, y1) + (at(x1, y1) - at(x0, y1)) * fx;
+        return a + (b - a) * fy;
+      };
+    }
+    var nBig = makeNoise(11, 5), nMid = makeNoise(23, 12), nFine = makeNoise(37, 40);
+
+    // Cleared area in the later image (a soft-edged blob)
+    function inClearing(u, v) {
+      var dx = (u - 0.68) / 0.2, dy = (v - 0.36) / 0.24;
+      return dx * dx + dy * dy + (nMid(u, v) - 0.5) * 0.9 < 1;
+    }
+
+    function build(later) {
+      var px = new Uint8ClampedArray(GW * GH * 4);
+      var jitter = makeRand(5); // same grain in both images
+      for (var y = 0; y < GH; y++) {
+        for (var x = 0; x < GW; x++) {
+          var u = x / GW, v = y / GH;
+          var h = nBig(u, v) * 0.6 + nMid(u, v) * 0.3 + nFine(u, v) * 0.1;
+          var river = Math.abs(v - (0.72 + Math.sin(u * 7) * 0.08)) < 0.035 + nFine(u, v) * 0.012;
+          var town = u < 0.26 && v < 0.42 + nMid(u, v) * 0.08;
+          var R, G, B;
+          if (river) { R = 32; G = 52; B = 68; }
+          else if (town) {
+            var g = 108 + nFine((u * 3) % 1, (v * 3) % 1) * 50;
+            var block = ((x >> 3) + (y >> 3)) % 3 === 0;
+            R = g; G = g - 4; B = g - 2 + (block ? 10 : 0);
+          } else if (later && inClearing(u, v)) {
+            R = 146 + nFine(u, v) * 30; G = 112 + nFine(u, v) * 20; B = 80;
+          } else if (h > 0.5) { // forest and dense growth
+            R = 44 + (1 - h) * 36; G = 78 + h * 44; B = 46 + h * 8;
+          } else if (h > 0.36) { // fields and dry grass
+            R = 98 + (0.5 - h) * 240; G = 104 + h * 26; B = 64;
+          } else { // bare soil
+            R = 140 + h * 40; G = 116 + h * 20; B = 84;
+          }
+          var j = (jitter() - 0.5) * 18;
+          var i4 = (y * GW + x) * 4;
+          px[i4] = R + j; px[i4 + 1] = G + j; px[i4 + 2] = B + j; px[i4 + 3] = 255;
+        }
+      }
+      return px;
+    }
+
+    // Excess-green index: how much greener a pixel is than red and blue
+    function greenness(px, i4) {
+      var r = px[i4], g = px[i4 + 1], b = px[i4 + 2];
+      return (2 * g - r - b) / (r + g + b + 1);
+    }
+
+    var images = { earlier: build(false), later: build(true) };
+
+    // ----- Build the widget -----
+    host.innerHTML = '';
+    var top = el('div', { class: 'demo__bar' });
+    var whenSwitch = el('div', { class: 'demo-switch', role: 'group', 'aria-label': 'Image date' });
+    var bEarlier = el('button', { type: 'button', 'aria-pressed': 'true' }, 'Earlier image');
+    var bLater = el('button', { type: 'button', 'aria-pressed': 'false' }, 'Later image');
+    whenSwitch.append(bEarlier, bLater);
+    var viewSwitch = el('div', { class: 'demo-switch', role: 'group', 'aria-label': 'View' });
+    var bPhoto = el('button', { type: 'button', 'aria-pressed': 'true' }, 'Image');
+    var bMap = el('button', { type: 'button', 'aria-pressed': 'false' }, 'Vegetation map');
+    viewSwitch.append(bPhoto, bMap);
+    top.append(whenSwitch, viewSwitch);
+
+    var wrap = el('div', { class: 'veg-canvas' });
+    var canvas = el('canvas', { role: 'img', 'aria-label': 'Generated aerial landscape with a town, a river, fields and forest' });
+    wrap.append(canvas);
+
+    var rangeWrap = el('label', { class: 'demo-range' });
+    var rangeText = el('span', null, 'Greenness threshold');
+    var range = el('input', { type: 'range', min: '0', max: '40', value: '14', step: '1' });
+    rangeWrap.append(rangeText, range);
+
+    var readout = el('dl', { class: 'demo-readout' });
+    var coverBox = el('div'), changeBox = el('div');
+    var coverVal = el('dd'), changeVal = el('dd');
+    coverBox.append(el('dt', null, 'Counted as vegetation'), coverVal);
+    changeBox.append(el('dt', null, 'Change from earlier image'), changeVal);
+    readout.append(coverBox, changeBox);
+
+    var status = el('p', { class: 'demo__status', 'aria-live': 'polite' }, '');
+    host.append(top, wrap, rangeWrap, readout, status);
+
+    var off = el('canvas');
+    off.width = GW; off.height = GH;
+    var offCtx = off.getContext('2d');
+    var ctx = canvas.getContext('2d');
+    var state = { when: 'earlier', view: 'photo' };
+
+    function coverage(px, thr) {
+      var n = 0;
+      for (var i = 0; i < GW * GH; i++) if (greenness(px, i * 4) > thr) n++;
+      return n / (GW * GH);
+    }
+
+    function render() {
+      var thr = range.value / 100;
+      var px = images[state.when];
+      var out = offCtx.createImageData(GW, GH);
+      if (state.view === 'photo') {
+        out.data.set(px);
+      } else {
+        for (var i = 0; i < GW * GH; i++) {
+          var veg = greenness(px, i * 4) > thr;
+          var c = veg ? [236, 230, 218] : [24, 26, 22];
+          out.data[i * 4] = c[0]; out.data[i * 4 + 1] = c[1]; out.data[i * 4 + 2] = c[2]; out.data[i * 4 + 3] = 255;
+        }
+      }
+      offCtx.putImageData(out, 0, 0);
+
+      var w = canvas.width, h = canvas.height;
+      ctx.imageSmoothingEnabled = state.view === 'photo';
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(off, 0, 0, w, h);
+
+      var nowCover = coverage(px, thr);
+      var before = coverage(images.earlier, thr);
+      coverVal.textContent = Math.round(nowCover * 100) + '% of pixels';
+      if (state.when === 'earlier') changeVal.textContent = 'Pick the later image';
+      else {
+        var diff = Math.round((nowCover - before) * 100);
+        changeVal.textContent = (diff > 0 ? '+' : diff < 0 ? '−' : '') + Math.abs(diff) + ' points';
+      }
+      range.setAttribute('aria-valuetext', 'Threshold ' + thr.toFixed(2) + ', ' + Math.round(nowCover * 100) + '% counted as vegetation');
+    }
+
+    function announce(msg) { status.textContent = msg; }
+
+    function setPressed(a, b, aOn) {
+      a.setAttribute('aria-pressed', aOn ? 'true' : 'false');
+      b.setAttribute('aria-pressed', aOn ? 'false' : 'true');
+    }
+
+    function crossfade(change) {
+      if (canAnimate()) {
+        gsap.timeline()
+          .to(canvas, { opacity: 0.2, duration: 0.15, ease: 'power1.in' })
+          .add(change)
+          .to(canvas, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+      } else change();
+    }
+
+    bEarlier.addEventListener('click', function () {
+      if (state.when === 'earlier') return;
+      setPressed(bEarlier, bLater, true);
+      crossfade(function () { state.when = 'earlier'; render(); announce('Showing the earlier image.'); });
+    });
+    bLater.addEventListener('click', function () {
+      if (state.when === 'later') return;
+      setPressed(bEarlier, bLater, false);
+      crossfade(function () { state.when = 'later'; render(); announce('Showing the later image. Part of the forest in the upper right has been cleared.'); });
+    });
+    bPhoto.addEventListener('click', function () {
+      setPressed(bPhoto, bMap, true);
+      crossfade(function () { state.view = 'photo'; render(); announce('Image view.'); });
+    });
+    bMap.addEventListener('click', function () {
+      setPressed(bPhoto, bMap, false);
+      crossfade(function () { state.view = 'map'; render(); announce('Vegetation map: light pixels pass the threshold.'); });
+    });
+    range.addEventListener('input', render);
+
+    function resize() {
+      var rect = wrap.getBoundingClientRect();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      render();
+    }
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+    else window.addEventListener('resize', resize);
+    resize();
+  }
+
   /* ---------- Start ---------- */
   setupReportDemo();
   setupBridgeDemo();
+  setupVegetationDemo();
   setupMenu();
   setupAnchors();
 
