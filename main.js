@@ -493,7 +493,244 @@
     }
   }
 
+  /* =========================================================
+     DEMOS (mock data only). Each works without GSAP and with
+     reduced motion; GSAP only adds the transitions.
+     ========================================================= */
+  function canAnimate() { return !!window.gsap && !prefersReducedMotion(); }
+
+  function el(tag, attrs, text) {
+    var node = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  /* ---------- Demo: clean a monthly report (Work chapter) ---------- */
+  function setupReportDemo() {
+    var host = document.querySelector('[data-demo="report"]');
+    if (!host) return;
+
+    // Made-up export: two duplicates, one messy owner name, one blank owner
+    var RAW = [
+      { month: 'Sep 2026', account: 'Account 101', owner: 'Owner A', logins: 42 },
+      { month: 'Sep 2026', account: 'Account 102', owner: '  owner b ', logins: 17 },
+      { month: 'Sep 2026', account: 'Account 103', owner: 'Owner C', logins: 63 },
+      { month: 'Sep 2026', account: 'Account 101', owner: 'Owner A', logins: 42 },
+      { month: 'Sep 2026', account: 'Account 104', owner: '', logins: 8 },
+      { month: 'Sep 2026', account: 'Account 105', owner: 'Owner B', logins: 29 },
+      { month: 'Sep 2026', account: 'Account 103', owner: 'Owner C', logins: 63 },
+      { month: 'Sep 2026', account: 'Account 106', owner: 'Owner C', logins: 51 }
+    ];
+    var DEFAULT_OWNER = 'Owner A';
+
+    function tidyName(s) {
+      return s.trim().replace(/\s+/g, ' ').toLowerCase().replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
+
+    // The "script": work out what would change, without touching the data
+    function plan(rows) {
+      var seen = {};
+      return rows.map(function (r) {
+        var key = r.month + '|' + r.account;
+        if (seen[key]) return { row: r, action: 'dup', note: 'Duplicate, skipped' };
+        seen[key] = true;
+        if (!r.owner.trim()) return { row: r, action: 'fill', owner: DEFAULT_OWNER, note: 'No owner, set to ' + DEFAULT_OWNER };
+        var clean = tidyName(r.owner);
+        if (clean !== r.owner) return { row: r, action: 'trim', owner: clean, note: 'Name tidied to ' + clean };
+        return { row: r, action: 'keep', owner: r.owner, note: '' };
+      });
+    }
+
+    function groupByOwner(steps) {
+      var groups = {};
+      steps.forEach(function (s) {
+        if (s.action === 'dup') return;
+        (groups[s.owner] = groups[s.owner] || []).push({ account: s.row.account, logins: s.row.logins });
+      });
+      return Object.keys(groups).sort().map(function (owner) {
+        var rows = groups[owner].sort(function (a, b) { return a.account < b.account ? -1 : 1; });
+        var total = rows.reduce(function (t, r) { return t + r.logins; }, 0);
+        return { owner: owner, rows: rows, total: total };
+      });
+    }
+
+    var steps = plan(RAW);
+    var groups = groupByOwner(steps);
+    var count = function (a) { return steps.filter(function (s) { return s.action === a; }).length; };
+
+    // ----- Build the widget -----
+    host.innerHTML = '';
+    var bar = el('div', { class: 'demo__bar' });
+    var file = el('p', { class: 'demo__file' }, 'monthly-export.csv, 8 rows');
+    var buttons = el('div', { class: 'demo__bar' });
+    var primary = el('button', { class: 'btn', type: 'button' }, 'Preview changes');
+    var reset = el('button', { class: 'btn btn--quiet', type: 'button', hidden: '' }, 'Start over');
+    buttons.append(primary, reset);
+    bar.append(file, buttons);
+
+    var status = el('p', { class: 'demo__status', 'aria-live': 'polite' }, 'Raw export as it arrives. Nothing has changed yet.');
+
+    var views = el('div', { class: 'demo__views' });
+
+    // Raw view
+    var rawView = el('div', { class: 'demo__view' });
+    var rawTable = el('table', { class: 'demo-table' });
+    rawTable.innerHTML = '<caption class="visually-hidden">Raw monthly export</caption>' +
+      '<thead><tr><th class="col-month" scope="col">Month</th><th scope="col">Account</th><th scope="col">Owner</th>' +
+      '<th class="num" scope="col">Logins</th><th scope="col">Script note</th></tr></thead>';
+    var rawBody = el('tbody');
+    var noteCells = [];
+    steps.forEach(function (s) {
+      var tr = el('tr');
+      tr.append(
+        el('td', { class: 'col-month' }, s.row.month),
+        el('td', null, s.row.account),
+        el('td', null, s.row.owner.trim() ? '"' + s.row.owner + '"' : '(blank)'),
+        el('td', { class: 'num' }, String(s.row.logins))
+      );
+      var note = el('td', { class: 'note' });
+      var noteText = el('span', null, '');
+      note.append(noteText);
+      tr.append(note);
+      rawBody.append(tr);
+      noteCells.push({ tr: tr, span: noteText, step: s });
+    });
+    rawTable.append(rawBody);
+    rawView.append(rawTable);
+
+    // Output view
+    var outView = el('div', { class: 'demo__view', hidden: '' });
+    var tabs = el('div', { class: 'demo-tabs', role: 'tablist', 'aria-label': 'Owner tabs' });
+    var panel = el('div', { role: 'tabpanel', id: 'demo-report-panel', tabindex: '0' });
+    var tabButtons = groups.map(function (g, i) {
+      var b = el('button', {
+        type: 'button', role: 'tab', id: 'demo-report-tab-' + i,
+        'aria-controls': 'demo-report-panel', 'aria-selected': i === 0 ? 'true' : 'false',
+        tabindex: i === 0 ? '0' : '-1'
+      }, g.owner + ' (' + g.rows.length + ')');
+      tabs.append(b);
+      return b;
+    });
+
+    var maxTotal = Math.max.apply(null, groups.map(function (g) { return g.total; }));
+    var bars = el('div', { class: 'demo-bars', 'aria-label': 'Logins by owner' });
+    var fills = groups.map(function (g) {
+      var row = el('div', { class: 'demo-bars__row' });
+      var track = el('span', { class: 'demo-bars__track', 'aria-hidden': 'true' });
+      var fill = el('span', { class: 'demo-bars__fill' });
+      fill.style.transform = 'scaleX(' + (g.total / maxTotal) + ')';
+      track.append(fill);
+      row.append(el('span', null, g.owner), track, el('span', { class: 'num' }, String(g.total)));
+      bars.append(row);
+      return { fill: fill, scale: g.total / maxTotal };
+    });
+
+    function renderPanel(i) {
+      var g = groups[i];
+      panel.setAttribute('aria-labelledby', 'demo-report-tab-' + i);
+      panel.innerHTML = '';
+      var t = el('table', { class: 'demo-table' });
+      t.innerHTML = '<thead><tr><th scope="col">Account</th><th class="num" scope="col">Logins</th></tr></thead>';
+      var tb = el('tbody');
+      g.rows.forEach(function (r) {
+        var tr = el('tr');
+        tr.append(el('td', null, r.account), el('td', { class: 'num' }, String(r.logins)));
+        tb.append(tr);
+      });
+      var tf = el('tfoot');
+      var ftr = el('tr');
+      ftr.append(el('td', null, 'Total'), el('td', { class: 'num' }, String(g.total)));
+      tf.append(ftr);
+      t.append(tb, tf);
+      panel.append(t);
+      if (canAnimate()) gsap.from(tb.children, { opacity: 0, x: -8, duration: 0.3, stagger: 0.04, ease: 'power2.out' });
+    }
+
+    function selectTab(i, focus) {
+      tabButtons.forEach(function (b, j) {
+        b.setAttribute('aria-selected', j === i ? 'true' : 'false');
+        b.setAttribute('tabindex', j === i ? '0' : '-1');
+      });
+      if (focus) tabButtons[i].focus();
+      renderPanel(i);
+    }
+
+    tabs.addEventListener('click', function (e) {
+      var b = e.target.closest('[role="tab"]');
+      if (b) selectTab(tabButtons.indexOf(b), false);
+    });
+    tabs.addEventListener('keydown', function (e) {
+      var i = tabButtons.indexOf(document.activeElement);
+      if (i < 0) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); selectTab((i + 1) % tabButtons.length, true); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); selectTab((i - 1 + tabButtons.length) % tabButtons.length, true); }
+    });
+
+    outView.append(tabs, panel, bars);
+    views.append(rawView, outView);
+    host.append(bar, status, views);
+
+    // ----- States -----
+    var state = 'raw';
+
+    function preview() {
+      state = 'preview';
+      noteCells.forEach(function (c) {
+        c.span.textContent = c.step.note;
+        c.tr.classList.toggle('is-dup', c.step.action === 'dup');
+      });
+      status.textContent = '8 rows in. ' + count('dup') + ' duplicates will be skipped, ' + count('trim') +
+        ' owner name tidied, ' + count('fill') + ' blank owner filled. ' + groups.length + ' owner tabs will be created.';
+      primary.textContent = 'Run script';
+      reset.hidden = false;
+      if (canAnimate()) {
+        var spans = noteCells.filter(function (c) { return c.step.note; }).map(function (c) { return c.span; });
+        gsap.from(spans, { opacity: 0, x: -10, duration: 0.35, stagger: 0.06, ease: 'power2.out' });
+      }
+    }
+
+    function run() {
+      state = 'done';
+      status.textContent = 'Done. ' + groups.length + ' tabs created from ' + (RAW.length - count('dup')) +
+        ' clean rows. Pick an owner to see their tab.';
+      primary.hidden = true;
+      selectTab(0, false);
+      if (canAnimate()) {
+        gsap.timeline()
+          .to(rawView, { opacity: 0, y: -12, duration: 0.3, ease: 'power2.in' })
+          .add(function () { rawView.hidden = true; outView.hidden = false; })
+          .fromTo(outView, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' })
+          .fromTo(fills.map(function (f) { return f.fill; }), { scaleX: 0 },
+            { scaleX: function (i) { return fills[i].scale; }, duration: 0.6, stagger: 0.08, ease: 'power3.out' }, '<0.1');
+      } else {
+        rawView.hidden = true;
+        outView.hidden = false;
+      }
+    }
+
+    function startOver() {
+      state = 'raw';
+      noteCells.forEach(function (c) { c.span.textContent = ''; c.tr.classList.remove('is-dup'); });
+      status.textContent = 'Raw export as it arrives. Nothing has changed yet.';
+      primary.textContent = 'Preview changes';
+      primary.hidden = false;
+      reset.hidden = true;
+      outView.hidden = true;
+      rawView.hidden = false;
+      if (window.gsap) gsap.set([rawView, outView], { clearProps: 'opacity,transform' });
+      primary.focus();
+    }
+
+    primary.addEventListener('click', function () {
+      if (state === 'raw') preview();
+      else if (state === 'preview') run();
+    });
+    reset.addEventListener('click', startOver);
+  }
+
   /* ---------- Start ---------- */
+  setupReportDemo();
   setupMenu();
   setupAnchors();
 
