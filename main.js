@@ -270,6 +270,92 @@
     else document.fonts.ready.then(function () { context.add(build); });
   }
 
+  /* ---------- Chapter stories: pinned + scrubbed on desktop ---------- */
+  function setupStories() {
+    var cleanups = [];
+
+    document.querySelectorAll('[data-story]').forEach(function (story) {
+      var items = Array.prototype.slice.call(story.querySelectorAll('.story__item'));
+      var links = Array.prototype.slice.call(story.querySelectorAll('.story__index a'));
+      var bar = story.querySelector('.story__progress-bar');
+      var n = items.length;
+      if (n < 2) return;
+
+      story.classList.add('is-pinned');
+
+      // Panels share one grid cell; only the first is visible at the start.
+      // Opacity (not visibility) keeps every panel readable by screen readers.
+      gsap.set(items, { opacity: 0 });
+      gsap.set(items[0], { opacity: 1 });
+
+      var hold = 0.7;          // scroll "dwell" per panel
+      var midpoints = [];      // timeline time at which each panel takes over
+      var tl = gsap.timeline({ defaults: { ease: 'power1.inOut', duration: 1 } });
+
+      tl.to({}, { duration: hold });
+      for (var i = 1; i < n; i++) {
+        midpoints.push(tl.duration() + 0.5);
+        tl.to(items[i - 1], { opacity: 0, y: -28 })
+          .fromTo(items[i], { opacity: 0, y: 28 }, { opacity: 1, y: 0 }, '<')
+          .to({}, { duration: hold });
+      }
+      if (bar) tl.fromTo(bar, { scaleY: 1 / n }, { scaleY: 1, ease: 'none', duration: tl.duration() }, 0);
+
+      var current = -1;
+      function setActive(idx) {
+        if (idx === current) return;
+        current = idx;
+        items.forEach(function (item, j) { item.classList.toggle('is-active', j === idx); });
+        links.forEach(function (link, j) {
+          if (j === idx) link.setAttribute('aria-current', 'step');
+          else link.removeAttribute('aria-current');
+        });
+      }
+      setActive(0);
+
+      var st = ScrollTrigger.create({
+        trigger: story,
+        start: 'top top',
+        end: function () { return '+=' + Math.round(window.innerHeight * 0.65 * n); },
+        pin: true,
+        scrub: 0.6,
+        animation: tl,
+        invalidateOnRefresh: true,
+        onUpdate: function () {
+          var t = tl.time();
+          var idx = 0;
+          for (var k = 0; k < midpoints.length; k++) if (t >= midpoints[k]) idx = k + 1;
+          setActive(idx);
+        }
+      });
+
+      // Index links jump to that panel's scroll position inside the pin
+      function onIndexClick(e) {
+        var link = e.target.closest('a');
+        if (!link) return;
+        var idx = links.indexOf(link);
+        if (idx < 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var t = idx === 0 ? 0 : midpoints[idx - 1] + 0.5;
+        var y = st.start + (st.end - st.start) * (t / tl.duration());
+        if (lenis) lenis.scrollTo(y);
+        else window.scrollTo({ top: y, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      }
+      var index = story.querySelector('.story__index');
+      index.addEventListener('click', onIndexClick);
+
+      cleanups.push(function () {
+        index.removeEventListener('click', onIndexClick);
+        story.classList.remove('is-pinned');
+        items.forEach(function (item) { item.classList.remove('is-active'); });
+        links.forEach(function (link) { link.removeAttribute('aria-current'); });
+      });
+    });
+
+    return function () { cleanups.forEach(function (fn) { fn(); }); };
+  }
+
   /* ---------- Custom cursor + magnetic links (desktop only) ---------- */
   function setupCursor() {
     var cursor = document.querySelector('.cursor');
@@ -377,12 +463,17 @@
         onToggle: function (self) { header.classList.toggle('is-scrolled', self.isActive); }
       });
 
-      setupActiveNav();
-
+      // Order matters: ScrollTriggers are created top to bottom, and pins
+      // come before the triggers below them so their spacing is counted.
+      var cleanupStories = null;
       if (!c.reduce) {
         setupHero(c.isDesktop, context);
-        setupReveals(c.isDesktop);
+        if (c.isDesktop) cleanupStories = setupStories();
       }
+
+      setupActiveNav();
+
+      if (!c.reduce) setupReveals(c.isDesktop);
 
       if (c.isDesktop && c.finePointer && !c.reduce) cleanupCursor = setupCursor();
 
@@ -391,6 +482,7 @@
         if (lenis) { lenis.destroy(); lenis = null; }
         gsap.ticker.lagSmoothing(500, 33);
         if (cleanupCursor) cleanupCursor();
+        if (cleanupStories) cleanupStories();
         header.classList.remove('is-scrolled');
       };
     });
