@@ -1289,12 +1289,210 @@
     render(false);
   }
 
+  /* ---------- Demo: hold a seat (Wonderland Cinemas) ---------- */
+  function setupCinemaDemo() {
+    var host = document.querySelector('[data-demo="cinema"]');
+    if (!host) return;
+
+    var ROWS = 'ABCDEF'.split('');
+    var COLS = 10;
+    var HOLD_SECONDS = 300;            // five minutes, like the real locks
+    var BOOKED = ['A3', 'A4', 'B6', 'C1', 'C2', 'D7', 'D8', 'E5', 'F9', 'F10'];
+
+    var seats = {};                    // id -> { state: free | mine | held | booked, btn }
+    var holdEnds = null;               // timestamp when my hold expires
+    var tick = null, others = null;
+
+    // ----- Build the widget -----
+    host.innerHTML = '';
+    var screen = el('div');
+    screen.append(el('div', { class: 'screen-line', 'aria-hidden': 'true' }), el('p', { class: 'screen-label' }, 'Screen'));
+
+    var grid = el('div', { class: 'seats', role: 'group', 'aria-label': 'Seat map, Hall 2, 7:00 pm (mock)' });
+    ROWS.forEach(function (r) {
+      grid.append(el('span', { class: 'seats__row', 'aria-hidden': 'true' }, r));
+      for (var c = 1; c <= COLS; c++) {
+        var id = r + c;
+        var btn = el('button', { class: 'seat', type: 'button', 'data-seat': id });
+        grid.append(btn);
+        seats[id] = { state: 'free', btn: btn };
+      }
+    });
+
+    var legend = el('p', { class: 'seat-legend' });
+    [['', 'Available'], ['k-mine', 'Held by you'], ['k-held', 'Held by someone else'], ['k-booked', 'Booked']].forEach(function (k) {
+      var s = el('span'); s.append(el('i', { class: k[0], 'aria-hidden': 'true' }), document.createTextNode(k[1])); legend.append(s);
+    });
+
+    var bar = el('div', { class: 'hold-bar' });
+    var timerWrap = el('div');
+    var timer = el('p', { class: 'hold-bar__timer', 'aria-hidden': 'true' }, '5:00');
+    var summary = el('p', null, 'No seats held');
+    timerWrap.append(timer, summary);
+    var actions = el('div', { class: 'hold-bar__actions' });
+    var payBtn = el('button', { class: 'btn', type: 'button', disabled: '' }, 'Pay (test)');
+    var skipBtn = el('button', { class: 'btn btn--quiet', type: 'button', disabled: '' }, 'Skip ahead 4 min');
+    var rivalBtn = el('button', { class: 'btn btn--quiet', type: 'button', disabled: '' }, 'Another customer tries my seat');
+    var resetBtn = el('button', { class: 'btn btn--quiet', type: 'button' }, 'Reset');
+    actions.append(payBtn, skipBtn, rivalBtn, resetBtn);
+    bar.append(timerWrap, actions);
+
+    var status = el('p', { class: 'demo__status', 'aria-live': 'polite' }, 'Pick any available seat to hold it.');
+    host.append(screen, grid, legend, bar, status);
+
+    // ----- Helpers -----
+    function label(id, state) {
+      var words = { free: 'available', mine: 'held by you', held: 'held by someone else', booked: 'booked' };
+      return 'Row ' + id[0] + ' seat ' + id.slice(1) + ', ' + words[state];
+    }
+
+    function setState(id, state) {
+      var s = seats[id];
+      s.state = state;
+      s.btn.className = 'seat' + (state === 'mine' ? ' is-mine' : state === 'held' ? ' is-held' : state === 'booked' ? ' is-booked' : '');
+      s.btn.disabled = state === 'booked';
+      s.btn.setAttribute('aria-pressed', state === 'mine' ? 'true' : 'false');
+      s.btn.setAttribute('aria-label', label(id, state));
+    }
+
+    function mine() { return Object.keys(seats).filter(function (id) { return seats[id].state === 'mine'; }); }
+
+    function fmt(sec) {
+      sec = Math.max(0, Math.ceil(sec));
+      return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+    }
+
+    function refreshBar() {
+      var m = mine();
+      payBtn.disabled = skipBtn.disabled = rivalBtn.disabled = m.length === 0;
+      if (!m.length) {
+        timer.textContent = '5:00';
+        summary.textContent = 'No seats held';
+      } else {
+        summary.textContent = m.length + (m.length === 1 ? ' seat' : ' seats') + ' held: ' + m.join(', ');
+      }
+    }
+
+    function pulse(btn) {
+      if (canAnimate()) gsap.fromTo(btn, { scale: 0.85 }, { scale: 1, duration: 0.35, ease: 'back.out(2.5)', clearProps: 'transform' });
+    }
+
+    // ----- My hold -----
+    function startHold() {
+      if (holdEnds) return;
+      holdEnds = Date.now() + HOLD_SECONDS * 1000;
+      tick = setInterval(updateTimer, 500);
+      updateTimer();
+    }
+
+    function stopHold() {
+      holdEnds = null;
+      clearInterval(tick);
+      tick = null;
+    }
+
+    function updateTimer() {
+      if (!holdEnds) return;
+      var left = (holdEnds - Date.now()) / 1000;
+      timer.textContent = fmt(left);
+      if (left <= 0) {
+        mine().forEach(function (id) { setState(id, 'free'); });
+        stopHold();
+        refreshBar();
+        status.textContent = 'Your hold expired after five minutes, so the seats were released for everyone else.';
+      }
+    }
+
+    grid.addEventListener('click', function (e) {
+      var btn = e.target.closest('.seat');
+      if (!btn || btn.disabled) return;
+      var id = btn.getAttribute('data-seat');
+      var s = seats[id];
+      if (s.state === 'held') {
+        status.textContent = 'Seat ' + id + ' is locked by another customer right now. Try another seat.';
+        return;
+      }
+      if (s.state === 'mine') {
+        setState(id, 'free');
+        status.textContent = 'Seat ' + id + ' released. Its lock is removed so others can pick it.';
+        if (!mine().length) stopHold();
+      } else {
+        if (mine().length >= 6) { status.textContent = 'This demo holds up to six seats at once.'; return; }
+        setState(id, 'mine');
+        startHold();
+        pulse(btn);
+        status.textContent = 'Seat ' + id + ' is held for you. Other customers now see it as taken.';
+      }
+      refreshBar();
+    });
+
+    payBtn.addEventListener('click', function () {
+      var m = mine();
+      if (!m.length) return;
+      stopHold();
+      status.textContent = 'Checking every lock is still yours…';
+      payBtn.disabled = skipBtn.disabled = rivalBtn.disabled = true;
+      setTimeout(function () {
+        m.forEach(function (id) { setState(id, 'booked'); pulse(seats[id].btn); });
+        refreshBar();
+        timer.textContent = 'Booked';
+        status.textContent = 'Payment confirmed (test). All locks were still yours, so ' + (m.length === 1 ? 'seat ' + m[0] + ' is' : 'seats ' + m.join(', ') + ' are') + ' now booked.';
+      }, 700);
+    });
+
+    skipBtn.addEventListener('click', function () {
+      if (!holdEnds) return;
+      holdEnds -= 240 * 1000;
+      updateTimer();
+      if (holdEnds) status.textContent = 'Four minutes later. The hold ends at zero unless you pay.';
+    });
+
+    rivalBtn.addEventListener('click', function () {
+      var m = mine();
+      if (!m.length) return;
+      var id = m[0];
+      if (canAnimate()) gsap.fromTo(seats[id].btn, { x: -3 }, { x: 0, duration: 0.4, ease: 'elastic.out(1, 0.3)', clearProps: 'transform' });
+      status.textContent = 'Another customer tried to lock seat ' + id + '. The lock already belongs to you, so their request was refused.';
+    });
+
+    // ----- Other customers holding and releasing seats -----
+    function otherCustomers() {
+      var free = Object.keys(seats).filter(function (id) { return seats[id].state === 'free'; });
+      if (!free.length) return;
+      var id = free[Math.floor(Math.random() * free.length)];
+      setState(id, 'held');
+      setTimeout(function () { if (seats[id].state === 'held') setState(id, 'free'); }, 6000 + Math.random() * 5000);
+    }
+
+    function startOthers() { if (!others) others = setInterval(otherCustomers, 2600); }
+    function stopOthers() { clearInterval(others); others = null; }
+
+    function reset() {
+      stopHold();
+      Object.keys(seats).forEach(function (id) { setState(id, BOOKED.indexOf(id) > -1 ? 'booked' : 'free'); });
+      ['B2', 'E8'].forEach(function (id) { setState(id, 'held'); });
+      refreshBar();
+      status.textContent = 'Pick any available seat to hold it.';
+    }
+    resetBtn.addEventListener('click', reset);
+
+    reset();
+
+    // Only simulate other customers while the demo is on screen
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (en.isIntersecting) startOthers(); else stopOthers(); });
+      }).observe(host);
+    } else startOthers();
+  }
+
   /* ---------- Start ---------- */
   setupReportDemo();
   setupBridgeDemo();
   setupVegetationDemo();
   setupSkinDemo();
   setupJourneyDemo();
+  setupCinemaDemo();
   setupMenu();
   setupAnchors();
 
