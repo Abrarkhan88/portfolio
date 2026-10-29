@@ -851,6 +851,85 @@ section[id] { scroll-margin-top: var(--header-h); }
   .journey { grid-template-columns: 1fr; }
 }
 
+/* Cinema demo */
+.screen-line {
+  height: 2px;
+  margin: 0 8% var(--space-1);
+  background: currentColor;
+  opacity: 0.5;
+  border-radius: 2px;
+}
+.screen-label { text-align: center; opacity: 0.6; margin-bottom: var(--space-3); }
+
+.seats {
+  display: grid;
+  grid-template-columns: 1.25rem repeat(10, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.seats__row { align-self: center; opacity: 0.6; text-align: center; }
+
+.seat {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 3px 3px 1px 1px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.seat:hover:not(:disabled) { transform: translateY(-2px); }
+.seat.is-mine { background: currentColor; }
+.seat.is-held {
+  border-style: dashed;
+  opacity: 0.55;
+  background: repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 4px);
+}
+.seat.is-booked { opacity: 0.22; background: currentColor; cursor: not-allowed; }
+.seat:disabled { cursor: not-allowed; }
+
+.seat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+  opacity: 0.85;
+}
+.seat-legend span { display: inline-flex; align-items: center; gap: var(--space-2); }
+.seat-legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 2px 2px 1px 1px;
+}
+.seat-legend .k-mine { background: currentColor; }
+.seat-legend .k-held { border-style: dashed; background: repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 4px); opacity: 0.6; }
+.seat-legend .k-booked { background: currentColor; opacity: 0.22; }
+
+.hold-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+.hold-bar__timer {
+  font-family: var(--font-display);
+  font-size: var(--step-2);
+  font-variant-numeric: tabular-nums;
+}
+.hold-bar__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+@media (max-width: 420px) {
+  .seats { gap: 4px; }
+}
+
 /* Vegetation demo */
 .veg-canvas {
   width: 100%;
