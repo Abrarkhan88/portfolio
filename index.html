@@ -528,9 +528,97 @@
       </article>
     </section>
 
-    <section class="chapter" id="websites" data-field="3" aria-labelledby="websites-title">
-      <h2 class="chapter__title" id="websites-title" data-reveal="lines">Websites</h2>
-      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    <!-- ===================== WEBSITES ===================== -->
+    <section class="group" id="websites" aria-labelledby="websites-title">
+      <div class="group__head">
+        <h2 class="group__title" id="websites-title" data-reveal="lines">Websites</h2>
+        <p class="group__note" data-reveal="fade">Web apps and storefronts, from a full booking system to coursework builds.</p>
+      </div>
+
+      <!-- Project: Wonderland Cinemas -->
+      <article class="chapter-block" id="cinema" data-field="6" aria-labelledby="cinema-title">
+
+        <div class="chapter-cover">
+          <div class="chapter-cover__bar">
+            <p>Websites</p>
+            <p>Personal project</p>
+          </div>
+
+          <h3 class="chapter-cover__title" id="cinema-title" data-reveal="lines">Wonderland Cinemas</h3>
+
+          <dl class="chapter-cover__meta" data-reveal="fade">
+            <div><dt>Stack</dt><dd>React, Vite, Supabase, Upstash Redis, Stripe</dd></div>
+            <div><dt>Scope</dt><dd>Four halls, four daily showtimes, customer booking and an admin panel</dd></div>
+            <div><dt>Status</dt><dd>Working MVP, payments in Stripe test mode</dd></div>
+          </dl>
+
+          <div class="chapter-cover__body">
+            <p class="chapter-cover__lede" data-reveal="lines">A cinema booking site built to hold up to real customers: live seat maps, no double bookings, and a payment flow that only writes a booking once every seat is confirmed.</p>
+            <p class="chapter-cover__aside" data-reveal="fade">Movie titles and posters are placeholders. Known gaps: one hard-coded admin account and a flat price per seat.</p>
+          </div>
+        </div>
+
+        <div class="story" data-story aria-label="Wonderland Cinemas, step by step">
+          <nav class="story__index" aria-label="Project steps">
+            <ol>
+              <li><a href="#cinema-goal">The goal</a></li>
+              <li><a href="#cinema-locks">No double bookings</a></li>
+              <li><a href="#cinema-pay">Payments</a></li>
+              <li><a href="#cinema-admin">Admin panel</a></li>
+            </ol>
+            <span class="story__progress" aria-hidden="true"><span class="story__progress-bar"></span></span>
+          </nav>
+
+          <div class="story__stage">
+            <section class="story__item" id="cinema-goal" aria-labelledby="cinema-goal-t">
+              <h4 class="story__title" id="cinema-goal-t">The goal</h4>
+              <p class="story__text">Browse what's showing, pick a date and showtime, choose seats on a live map, pay online and get a confirmed booking. Built to be trusted with real payments, not just to look the part.</p>
+              <ol class="flow" aria-label="Customer flow">
+                <li>Browse</li>
+                <li>Pick seats</li>
+                <li>Pay</li>
+                <li>Confirmed</li>
+              </ol>
+            </section>
+
+            <section class="story__item" id="cinema-locks" aria-labelledby="cinema-locks-t">
+              <h4 class="story__title" id="cinema-locks-t">No double bookings</h4>
+              <p class="story__text">Picking a seat places a five-minute lock in Redis through a Supabase Edge Function. Everyone else sees that seat as taken straight away. Locks are released when a customer deselects or a payment fails, and seat maps stay in sync across sessions.</p>
+              <p class="story__tools"><span>Built with</span> Supabase Edge Functions (Deno), Upstash Redis</p>
+            </section>
+
+            <section class="story__item" id="cinema-pay" aria-labelledby="cinema-pay-t">
+              <h4 class="story__title" id="cinema-pay-t">Payments</h4>
+              <p class="story__text">Stripe Checkout, in test mode. A webhook checks Stripe's signature, then confirms every seat is still held by the same customer before the booking is written to the database.</p>
+              <ol class="flow" aria-label="Payment flow">
+                <li>Checkout session</li>
+                <li>Signed webhook</li>
+                <li>Locks re-checked</li>
+                <li>Booking written</li>
+              </ol>
+              <p class="story__tools"><span>Built with</span> Stripe Checkout, Supabase Postgres</p>
+            </section>
+
+            <section class="story__item" id="cinema-admin" aria-labelledby="cinema-admin-t">
+              <h4 class="story__title" id="cinema-admin-t">Admin panel</h4>
+              <p class="story__text">Add a movie and its four daily showtimes in one step, move a show to another hall, remove shows or movies, and see occupancy for every hall and showtime.</p>
+            </section>
+          </div>
+        </div>
+
+        <!-- Interactive demo (mock data only) -->
+        <div class="demo" aria-labelledby="demo-cinema-title">
+          <div class="demo__intro">
+            <h4 class="demo__title" id="demo-cinema-title" data-reveal="lines">Try it: hold a seat</h4>
+            <p class="demo__text" data-reveal="fade">Pick seats and each one is held for you for five minutes. Other customers are browsing too: seats they hold turn unavailable for you, and they can't take yours. Pay before the timer runs out, or skip ahead to watch the hold expire.</p>
+            <p class="demo__caption" data-reveal="fade">Illustrative demo. Runs entirely in your browser; the other customers and the payment are simulated.</p>
+          </div>
+
+          <div class="demo__widget" data-demo="cinema">
+            <noscript><p class="demo__fallback">This demo needs JavaScript.</p></noscript>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="chapter" id="game" data-field="4" aria-labelledby="game-title">
