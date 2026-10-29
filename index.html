@@ -72,10 +72,117 @@
       </div>
     </section>
 
-    <!-- CHAPTER STUBS (filled in Stages 3 to 6) -->
-    <section class="chapter" id="work" data-field="1" aria-labelledby="work-title">
-      <h2 class="chapter__title" id="work-title" data-reveal="lines">Work</h2>
-      <p class="chapter__note" data-reveal="fade">Therap BD, Associate, Customer Experience Strategy &amp; Analytics. Chapter in progress.</p>
+    <!-- ===================================================
+         CHAPTER TEMPLATE
+         .chapter-cover  = the "magazine cover" for the chapter
+         .story          = pinned + scrubbed sequence on desktop,
+                           a plain stacked list on mobile / reduced motion
+         =================================================== -->
+    <section class="chapter-block" id="work" data-field="1" aria-labelledby="work-title">
+
+      <div class="chapter-cover">
+        <div class="chapter-cover__bar">
+          <p>Work</p>
+          <p>Full-time role</p>
+        </div>
+
+        <h2 class="chapter-cover__title" id="work-title" data-reveal="lines">Therap BD</h2>
+
+        <dl class="chapter-cover__meta" data-reveal="fade">
+          <div><dt>Role</dt><dd>Associate, Customer Experience Strategy &amp; Analytics</dd></div>
+          <div><dt>Since</dt><dd>September 2026</dd></div>
+          <div><dt>Based</dt><dd>Dhaka</dd></div>
+        </dl>
+
+        <div class="chapter-cover__body">
+          <p class="chapter-cover__lede" data-reveal="lines">I turn manual monthly reporting into scripted tools, support the team's Salesforce setup, and look for places where AI can save time.</p>
+          <p class="chapter-cover__aside" data-reveal="fade">Everything here is described at overview level. Client, internal and personal data stay private.</p>
+        </div>
+      </div>
+
+      <div class="story" data-story aria-label="Workstreams at Therap BD">
+        <nav class="story__index" aria-label="Workstreams">
+          <ol>
+            <li><a href="#ws-reporting">Reporting automation</a></li>
+            <li><a href="#ws-crm-sync">CRM data sync</a></li>
+            <li><a href="#ws-ai-summaries">AI account summaries</a></li>
+            <li><a href="#ws-admin">Salesforce administration</a></li>
+            <li><a href="#ws-review-tool">Compliance review tool</a></li>
+            <li><a href="#ws-presentations">Presentations</a></li>
+          </ol>
+          <span class="story__progress" aria-hidden="true"><span class="story__progress-bar"></span></span>
+        </nav>
+
+        <div class="story__stage">
+
+          <article class="story__item" id="ws-reporting">
+            <h3 class="story__title">Reporting automation</h3>
+            <p class="story__text">Google Apps Script tools that turn raw monthly exports into clean, dashboard-ready reports, covering billing, support KPIs, chat analytics and product usage. Each run previews its changes and asks before writing.</p>
+            <ol class="flow" aria-label="How it works">
+              <li>Monthly export</li>
+              <li>Script cleans and splits</li>
+              <li>Dashboard-ready tabs</li>
+            </ol>
+            <p class="story__tools"><span>Built with</span> Google Apps Script, Google Sheets, Drive API, Looker Studio</p>
+          </article>
+
+          <article class="story__item" id="ws-crm-sync">
+            <h3 class="story__title">CRM data sync</h3>
+            <p class="story__text">A script that prepares monthly usage data for updating account records in Salesforce, split by region and exported as import-ready files.</p>
+            <ol class="flow" aria-label="How it works">
+              <li>Usage report</li>
+              <li>Accounts matched by region</li>
+              <li>Import-ready CSVs</li>
+            </ol>
+            <p class="story__tools"><span>Built with</span> Google Apps Script, Salesforce</p>
+          </article>
+
+          <article class="story__item" id="ws-ai-summaries">
+            <h3 class="story__title">AI account summaries</h3>
+            <p class="story__text">A Salesforce integration with the Gemini API that writes separate account summaries for Sales, Support and Finance, opened from a button on the account page. Built and demoed in a sandbox.</p>
+            <ol class="flow" aria-label="How it works">
+              <li>Account and related records</li>
+              <li>Apex calls Gemini</li>
+              <li>Summary per team</li>
+            </ol>
+            <p class="story__tools"><span>Built with</span> Apex, Named Credentials, Screen Flow, Gemini API</p>
+          </article>
+
+          <article class="story__item" id="ws-admin">
+            <h3 class="story__title">Salesforce administration</h3>
+            <p class="story__text">Planned and tested a bulk content update in a sandbox, and turned platform release notes, security notices and infrastructure changes into checklists and action plans for the team.</p>
+            <ol class="flow" aria-label="How it works">
+              <li>Platform notice</li>
+              <li>Sandbox testing</li>
+              <li>Action plan</li>
+            </ol>
+            <p class="story__tools"><span>Built with</span> Salesforce Setup, sandboxes, Apex</p>
+          </article>
+
+          <article class="story__item" id="ws-review-tool">
+            <h3 class="story__title">Compliance review tool</h3>
+            <p class="story__text">A reviewer-assisted tool that speeds up quality checks of recorded training webinars. It runs entirely in Colab, with no external AI, and leaves the final call to a person.</p>
+            <ol class="flow" aria-label="How it works">
+              <li>Recorded webinar</li>
+              <li>Screens surfaced for review</li>
+              <li>Reviewer decides</li>
+            </ol>
+            <p class="story__tools"><span>Built with</span> Google Colab, Python, OpenCV, OCR</p>
+          </article>
+
+          <article class="story__item" id="ws-presentations">
+            <h3 class="story__title">Presentations</h3>
+            <p class="story__text">Internal explainer decks on product features and workflows, and an infographic on Medicare and Medicaid built from public sources.</p>
+            <ol class="flow" aria-label="How it works">
+              <li>Process or topic</li>
+              <li>Deck or infographic</li>
+              <li>Team and user sessions</li>
+            </ol>
+            <p class="story__tools"><span>Built with</span> Slide decks, NotebookLM</p>
+          </article>
+
+        </div>
+      </div>
     </section>
 
     <section class="chapter" id="research" data-field="2" aria-labelledby="research-title">
