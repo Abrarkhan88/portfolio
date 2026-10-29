@@ -1486,7 +1486,145 @@
     } else startOthers();
   }
 
+  /* ---------- Demo: take the skin quiz (Elara Botanics) ---------- */
+  function setupElaraDemo() {
+    var host = document.querySelector('[data-demo="elara"]');
+    if (!host) return;
+
+    // Fictional products and quiz rules, taken from the project's own data
+    var PRODUCTS = {
+      'cleanser-oat-milk': { name: 'Oat Milk Gentle Cleanser', price: 18.5, ff: true },
+      'cleanser-clarifying-gel': { name: 'Willow Bark Clarifying Gel', price: 22, ff: false },
+      'serum-hydration-boost': { name: 'Hyaluronic Dew Drops', price: 34, ff: true },
+      'serum-brightening-c': { name: 'Kakadu Plum Vitamin C Serum', price: 38, ff: false },
+      'serum-calming-barrier': { name: 'Centella Rescue Drops', price: 32, ff: true },
+      'moisturiser-daily-light': { name: 'Cloudberry Light Lotion', price: 28, ff: false },
+      'moisturiser-rich-repair': { name: 'Macadamia Night Cream', price: 36, ff: false },
+      'moisturiser-peptide-firm': { name: 'Algae & Peptide Firming Cream', price: 42, ff: false },
+      'mask-clay-purify': { name: 'Matcha & Bentonite Purifying Mask', price: 24, ff: true },
+      'treatment-spot-clear': { name: 'Zinc & Tea Tree Blemish Paste', price: 16, ff: false }
+    };
+    var QUESTIONS = [
+      { id: 'skin_type', q: 'How would you describe your skin?',
+        options: [['Dry', 'dry'], ['Oily', 'oily'], ['Combination', 'combination'], ['Sensitive', 'sensitive'], ['Normal', 'normal']] },
+      { id: 'main_concern', q: "What's your main concern?",
+        options: [['Dehydration', 'dehydration'], ['Breakouts', 'breakouts'], ['Redness', 'redness'], ['Dullness', 'dullness'], ['Fine lines', 'fine_lines']] },
+      { id: 'fragrance', q: 'Do you prefer fragrance-free products?',
+        options: [['Yes', 'yes'], ['No preference', 'no']] }
+    ];
+    var ROUTINES = {
+      'Calm & Soothe': ['cleanser-oat-milk', 'serum-calming-barrier', 'moisturiser-rich-repair'],
+      'Balance & Clarify': ['cleanser-clarifying-gel', 'treatment-spot-clear', 'moisturiser-daily-light', 'mask-clay-purify'],
+      'Hydrate & Glow': ['cleanser-oat-milk', 'serum-hydration-boost', 'serum-brightening-c', 'moisturiser-peptide-firm']
+    };
+
+    // Same scoring as the project's quiz.js
+    function scoreQuiz(a) {
+      var s = { 'Calm & Soothe': 0, 'Balance & Clarify': 0, 'Hydrate & Glow': 0 };
+      if (a.skin_type === 'sensitive' || a.skin_type === 'dry') s['Calm & Soothe'] += 2;
+      if (a.skin_type === 'oily' || a.skin_type === 'combination') s['Balance & Clarify'] += 2;
+      if (a.skin_type === 'normal') s['Hydrate & Glow'] += 1;
+      if (a.main_concern === 'redness') s['Calm & Soothe'] += 3;
+      if (a.main_concern === 'breakouts') s['Balance & Clarify'] += 3;
+      if (a.main_concern === 'dehydration' || a.main_concern === 'dullness') s['Hydrate & Glow'] += 3;
+      if (a.main_concern === 'fine_lines') { s['Hydrate & Glow'] += 2; s['Calm & Soothe'] += 1; }
+      var best = 'Hydrate & Glow', high = -1;
+      Object.keys(s).forEach(function (k) { if (s[k] > high) { high = s[k]; best = k; } });
+      return { routine: best, products: ROUTINES[best], fragranceFree: a.fragrance === 'yes' };
+    }
+
+    var gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
+    var step = 0, answers = {}, result = null;
+
+    var body = el('div', { class: 'quiz', 'aria-live': 'polite' });
+    host.innerHTML = '';
+    host.append(body);
+
+    function fadeIn(node) {
+      if (canAnimate()) gsap.from(node.children, { opacity: 0, y: 10, duration: 0.35, stagger: 0.05, ease: 'power2.out' });
+    }
+
+    function renderQuestion() {
+      var q = QUESTIONS[step];
+      body.innerHTML = '';
+      var wrap = el('div', { class: 'quiz__result' });
+      var prog = el('p', { class: 'quiz__progress' });
+      prog.append(el('span', null, 'Question ' + (step + 1) + ' of ' + QUESTIONS.length));
+      if (step > 0) {
+        var back = el('button', { class: 'btn btn--quiet', type: 'button' }, 'Back');
+        back.addEventListener('click', function () { step--; renderQuestion(); });
+        prog.append(back);
+      }
+      var title = el('p', { class: 'quiz__question', id: 'elara-q' }, q.q);
+      var opts = el('div', { class: 'quiz__options', role: 'group', 'aria-labelledby': 'elara-q' });
+      q.options.forEach(function (o) {
+        var b = el('button', { class: 'btn', type: 'button' }, o[0]);
+        if (answers[q.id] === o[1]) b.setAttribute('aria-pressed', 'true');
+        b.addEventListener('click', function () {
+          answers[q.id] = o[1];
+          step++;
+          if (step < QUESTIONS.length) renderQuestion(); else renderResult();
+        });
+        opts.append(b);
+      });
+      wrap.append(prog, title, opts);
+      body.append(wrap);
+      fadeIn(wrap);
+      var first = opts.querySelector('button');
+      if (first && host.contains(document.activeElement)) first.focus();
+    }
+
+    function renderResult() {
+      result = scoreQuiz(answers);
+      body.innerHTML = '';
+      var wrap = el('div', { class: 'quiz__result' });
+      wrap.append(el('p', { class: 'quiz__progress' }, 'Your routine'));
+      wrap.append(el('p', { class: 'quiz__question' }, result.routine));
+
+      var list = el('ul', { class: 'products' });
+      var subtotal = 0;
+      result.products.forEach(function (id) {
+        var p = PRODUCTS[id];
+        subtotal += p.price;
+        var li = el('li');
+        li.append(el('span', null, p.name), el('span', { class: 'num' }, gbp.format(p.price)));
+        var meta = result.fragranceFree
+          ? (p.ff ? 'Fragrance-free' : 'Not fragrance-free')
+          : (p.ff ? 'Fragrance-free' : '');
+        if (meta) li.append(el('span', { class: 'meta' }, meta));
+        list.append(li);
+      });
+      wrap.append(list);
+
+      var cartLine = el('div', { class: 'cart-line' });
+      var cartText = el('p', null, 'Cart is empty');
+      var add = el('button', { class: 'btn', type: 'button' }, 'Add routine to cart');
+      var again = el('button', { class: 'btn btn--quiet', type: 'button' }, 'Retake quiz');
+      var btns = el('div', { class: 'quiz__options' });
+      btns.append(add, again);
+      cartLine.append(cartText, btns);
+      wrap.append(cartLine);
+
+      add.addEventListener('click', function () {
+        // Shipping rule from the project's checkout: free over £50, else £5
+        var shipping = subtotal > 50 ? 0 : 5;
+        cartText.textContent = result.products.length + ' items, ' + gbp.format(subtotal) +
+          (shipping ? ' + ' + gbp.format(shipping) + ' shipping' : ', free shipping') +
+          ' = ' + gbp.format(subtotal + shipping);
+        add.disabled = true;
+        add.textContent = 'Added';
+      });
+      again.addEventListener('click', function () { step = 0; answers = {}; renderQuestion(); });
+
+      body.append(wrap);
+      fadeIn(wrap);
+    }
+
+    renderQuestion();
+  }
+
   /* ---------- Start ---------- */
+  setupElaraDemo();
   setupReportDemo();
   setupBridgeDemo();
   setupVegetationDemo();
