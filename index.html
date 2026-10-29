@@ -4,17 +4,107 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Abrar Sami Khan</title>
-  <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-           background: #0d0d0d; color: #f4efe6; font-family: system-ui, sans-serif; }
-    h1 { font-size: clamp(2rem, 8vw, 5rem); font-weight: 600; letter-spacing: -0.02em; margin: 0; }
-    p { opacity: .6; margin: .5rem 0 0; }
-  </style>
+  <meta name="description" content="Abrar Sami Khan, Computer Science graduate based in Dhaka. Work, research and projects.">
+  <meta name="theme-color" content="#121310">
+ 
+  <!-- Marks the page as JS-capable before anything paints (used by the preloader) -->
+  <script>document.documentElement.classList.add('js');</script>
+ 
+  <!-- Fonts: Bricolage Grotesque (display) + Instrument Sans (text) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Instrument+Sans:wght@400..700&display=swap">
+ 
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main>
-    <h1>Abrar Sami Khan</h1>
-    <p>Portfolio, coming soon.</p>
+ 
+  <!-- Preloader: shown once per visit, removed by main.js (CSS failsafe hides it after 4s) -->
+  <div class="preloader" aria-hidden="true">
+    <div class="preloader__inner">
+      <div class="preloader__mask"><p class="preloader__name">Abrar Sami Khan</p></div>
+      <span class="preloader__rule"></span>
+    </div>
+  </div>
+ 
+  <a class="skip-link" href="#main">Skip to content</a>
+ 
+  <!-- Scroll progress line -->
+  <div class="progress" aria-hidden="true"><span class="progress__bar"></span></div>
+ 
+  <!-- Custom cursor (desktop, fine pointer only) -->
+  <div class="cursor" aria-hidden="true"><span class="cursor__dot"></span></div>
+ 
+  <header class="site-header">
+    <a class="site-header__name" href="#top" data-magnetic>Abrar Sami Khan</a>
+ 
+    <nav class="site-nav" aria-label="Main">
+      <button class="site-nav__toggle" type="button" aria-expanded="false" aria-controls="site-nav-list">Menu</button>
+      <ul class="site-nav__list" id="site-nav-list">
+        <li><a href="#work" data-magnetic>Work</a></li>
+        <li><a href="#research" data-magnetic>Research</a></li>
+        <li><a href="#websites" data-magnetic>Websites</a></li>
+        <li><a href="#game" data-magnetic>Game</a></li>
+        <li><a href="#about" data-magnetic>About</a></li>
+        <li><a href="#contact" data-magnetic>Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+ 
+  <main id="main">
+ 
+    <!-- HERO (built in Stage 2) -->
+    <section class="chapter chapter--hero" id="top" aria-labelledby="hero-title">
+      <h1 class="hero-title" id="hero-title" data-reveal="lines">Abrar Sami Khan</h1>
+      <p class="chapter__note" data-reveal="fade">Computer Science graduate in Dhaka, working across analytics, automation and research. This site is being built in stages.</p>
+    </section>
+ 
+    <!-- CHAPTER STUBS (filled in Stages 3 to 6) -->
+    <section class="chapter" id="work" data-field="1" aria-labelledby="work-title">
+      <h2 class="chapter__title" id="work-title" data-reveal="lines">Work</h2>
+      <p class="chapter__note" data-reveal="fade">Therap BD, Associate, Customer Experience Strategy &amp; Analytics. Chapter in progress.</p>
+    </section>
+ 
+    <section class="chapter" id="research" data-field="2" aria-labelledby="research-title">
+      <h2 class="chapter__title" id="research-title" data-reveal="lines">Research</h2>
+      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    </section>
+ 
+    <section class="chapter" id="websites" data-field="3" aria-labelledby="websites-title">
+      <h2 class="chapter__title" id="websites-title" data-reveal="lines">Websites</h2>
+      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    </section>
+ 
+    <section class="chapter" id="game" data-field="4" aria-labelledby="game-title">
+      <h2 class="chapter__title" id="game-title" data-reveal="lines">Game</h2>
+      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    </section>
+ 
+    <section class="chapter" id="about" aria-labelledby="about-title">
+      <h2 class="chapter__title" id="about-title" data-reveal="lines">About</h2>
+      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    </section>
+ 
+    <section class="chapter chapter--contact" id="contact" aria-labelledby="contact-title">
+      <h2 class="chapter__title" id="contact-title" data-reveal="lines">Contact</h2>
+      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    </section>
+ 
   </main>
+ 
+  <footer class="site-footer">
+    <p>&copy; 2026 Abrar Sami Khan, Dhaka</p>
+    <ul class="site-footer__links">
+      <li><a href="https://github.com/Abrarkhan88" target="_blank" rel="noopener" data-magnetic>GitHub</a></li>
+      <li><a href="https://linktr.ee/abrark8" target="_blank" rel="noopener" data-magnetic>Linktree</a></li>
+    </ul>
+  </footer>
+ 
+  <!-- Libraries (no build step): GSAP + ScrollTrigger + SplitText, then Lenis -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
+  <script src="main.js" defer></script>
 </body>
 </html>
