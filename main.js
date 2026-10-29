@@ -729,8 +729,192 @@
     reset.addEventListener('click', startOver);
   }
 
+  /* ---------- Demo: align two views of the same genes (Bridge) ---------- */
+  function setupBridgeDemo() {
+    var host = document.querySelector('[data-demo="bridge"]');
+    if (!host) return;
+
+    // Seeded random numbers so the picture is the same on every visit
+    var seed = 7;
+    function rand() {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    function gauss() { return (rand() + rand() + rand() - 1.5) / 1.5; }
+
+    // Made-up genes in three "programs". Coordinates are in a 0..1 box.
+    var centers = [[0.36, 0.38], [0.64, 0.36], [0.5, 0.66]];
+    var genes = [];
+    for (var i = 0; i < 54; i++) {
+      var c = centers[i % 3];
+      var shared = [c[0] + gauss() * 0.07, c[1] + gauss() * 0.07];
+      genes.push({
+        shared: shared,
+        // Expression view: squashed into the left side
+        a: [0.08 + shared[0] * 0.38 + gauss() * 0.05, 0.12 + (1 - shared[1]) * 0.7 + gauss() * 0.05],
+        // CRISPR view: rotated and pushed right
+        b: [0.56 + shared[1] * 0.38 + gauss() * 0.05, 0.12 + shared[0] * 0.7 + gauss() * 0.05]
+      });
+    }
+    var middle = [0.5, 0.5];
+
+    // ----- Build the widget -----
+    host.innerHTML = '';
+    var legend = el('p', { class: 'demo-legend' });
+    legend.append(el('span', { class: 'is-filled' }, 'Expression view'), el('span', { class: 'is-ring' }, 'CRISPR view'));
+
+    var canvasWrap = el('div', { class: 'bridge-canvas' });
+    var canvas = el('canvas', { role: 'img', 'aria-label': 'Scatter plot of made-up genes in two views, moving into a shared space as training progresses' });
+    canvasWrap.append(canvas);
+
+    var controls = el('div', { class: 'demo-controls' });
+    var rangeWrap = el('label', { class: 'demo-range' });
+    var rangeText = el('span', null, 'Training progress');
+    var range = el('input', { type: 'range', min: '0', max: '100', value: '0', step: '1' });
+    rangeWrap.append(rangeText, range);
+    var play = el('button', { class: 'btn', type: 'button' }, 'Play');
+    var checkWrap = el('label', { class: 'demo-check' });
+    var check = el('input', { type: 'checkbox', checked: '' });
+    checkWrap.append(check, document.createTextNode('Keep diversity term'));
+    controls.append(rangeWrap, play, checkWrap);
+
+    var readout = el('dl', { class: 'demo-readout' });
+    var gapBox = el('div'); var spreadBox = el('div');
+    var gapVal = el('dd', null, '');
+    var spreadVal = el('dd', null, '');
+    gapBox.append(el('dt', null, 'Distance between matching pairs'), gapVal);
+    spreadBox.append(el('dt', null, 'Spread between genes'), spreadVal);
+    readout.append(gapBox, spreadBox);
+
+    var status = el('p', { class: 'demo__status', 'aria-live': 'polite' }, '');
+
+    host.append(legend, canvasWrap, controls, readout, status);
+
+    var ctx = canvas.getContext('2d');
+    var W = 0, H = 0;
+
+    function lerp(p, q, t) { return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]; }
+    function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+    // Where a gene's shared point ends up: with no diversity term the
+    // whole space shrinks toward one point as training goes on.
+    function target(g, t) {
+      if (check.checked) return g.shared;
+      return lerp(g.shared, middle, 0.94 * t);
+    }
+
+    function positions(t) {
+      var e = ease(t);
+      return genes.map(function (g) {
+        var tgt = target(g, t);
+        return { a: lerp(g.a, tgt, e), b: lerp(g.b, [tgt[0] + 0.006, tgt[1] + 0.006], e) };
+      });
+    }
+
+    function stats(pos) {
+      var gap = 0, mx = 0, my = 0;
+      pos.forEach(function (p) {
+        gap += Math.hypot(p.a[0] - p.b[0], p.a[1] - p.b[1]);
+        mx += p.a[0]; my += p.a[1];
+      });
+      mx /= pos.length; my /= pos.length;
+      var spread = 0;
+      pos.forEach(function (p) { spread += Math.hypot(p.a[0] - mx, p.a[1] - my); });
+      return { gap: gap / pos.length, spread: spread / pos.length };
+    }
+
+    var base = stats(positions(0));
+
+    function draw(t) {
+      var pos = positions(t);
+      var ink = getComputedStyle(host).color;
+      ctx.clearRect(0, 0, W, H);
+      var pad = 12;
+      function X(v) { return pad + v * (W - pad * 2); }
+      function Y(v) { return pad + v * (H - pad * 2); }
+
+      // Faint links between matching pairs while they travel
+      ctx.globalAlpha = 0.18 * (1 - t) + 0.04;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      pos.forEach(function (p) { ctx.moveTo(X(p.a[0]), Y(p.a[1])); ctx.lineTo(X(p.b[0]), Y(p.b[1])); });
+      ctx.stroke();
+
+      ctx.globalAlpha = 1;
+      var r = Math.max(3, Math.min(W, H) / 110);
+      pos.forEach(function (p) {
+        ctx.fillStyle = ink;
+        ctx.beginPath(); ctx.arc(X(p.a[0]), Y(p.a[1]), r, 0, Math.PI * 2); ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(X(p.b[0]), Y(p.b[1]), r + 1.5, 0, Math.PI * 2); ctx.stroke();
+      });
+
+      var s = stats(pos);
+      var gapPct = Math.round(100 * s.gap / base.gap);
+      var spreadPct = Math.round(100 * s.spread / base.spread);
+      gapVal.textContent = gapPct + '% of start';
+      spreadVal.textContent = spreadPct + '% of start';
+      return { gapPct: gapPct, spreadPct: spreadPct };
+    }
+
+    var lastAnnounce = '';
+    function update() {
+      var t = range.value / 100;
+      var s = draw(t);
+      var msg;
+      if (t === 0) msg = 'Before training: the two views sit apart.';
+      else if (t < 1) msg = 'Training: matching pairs are moving together.';
+      else if (check.checked) msg = 'Trained: pairs line up and the three gene groups stay distinct.';
+      else msg = 'Collapsed: without the diversity term, every gene ends up in one spot.';
+      if (msg !== lastAnnounce) { status.textContent = msg; lastAnnounce = msg; }
+      range.setAttribute('aria-valuetext', range.value + '% trained, pairs at ' + s.gapPct + '% of starting distance');
+    }
+
+    function resize() {
+      var rect = canvasWrap.getBoundingClientRect();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = rect.width; H = rect.height;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      update();
+    }
+
+    var playing = null;
+    function stop() {
+      if (playing) { playing.kill(); playing = null; }
+      play.textContent = 'Play';
+    }
+
+    play.addEventListener('click', function () {
+      if (playing) { stop(); return; }
+      if (Number(range.value) >= 100) range.value = 0;
+      if (!canAnimate()) { range.value = 100; update(); return; }
+      var proxy = { v: Number(range.value) };
+      play.textContent = 'Pause';
+      playing = gsap.to(proxy, {
+        v: 100,
+        duration: 3.2 * (1 - proxy.v / 100),
+        ease: 'none',
+        onUpdate: function () { range.value = Math.round(proxy.v); update(); },
+        onComplete: stop
+      });
+    });
+
+    range.addEventListener('input', function () { stop(); update(); });
+    check.addEventListener('change', update);
+
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(canvasWrap);
+    else window.addEventListener('resize', resize);
+    resize();
+  }
+
   /* ---------- Start ---------- */
   setupReportDemo();
+  setupBridgeDemo();
   setupMenu();
   setupAnchors();
 
