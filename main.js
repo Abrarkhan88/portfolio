@@ -1115,10 +1115,104 @@
     resize();
   }
 
+  /* ---------- Demo: read a prediction (Skin disease detection) ---------- */
+  function setupSkinDemo() {
+    var host = document.querySelector('[data-demo="skin"]');
+    if (!host) return;
+
+    var THRESHOLD = 0.5; // this demo's cut-off for the low-confidence warning
+    var SAMPLES = [
+      { name: 'Sample 1', top: [['Condition A', 0.86], ['Condition B', 0.08], ['Condition C', 0.03]] },
+      { name: 'Sample 2', top: [['Condition D', 0.61], ['Condition B', 0.27], ['Condition E', 0.06]] },
+      { name: 'Sample 3', top: [['Condition F', 0.34], ['Condition C', 0.29], ['Condition A', 0.18]] }
+    ];
+    var GUIDE_AI = {
+      sure: 'Keep an eye on changes in size, colour or discomfort. If it spreads, bleeds or lasts more than a couple of weeks, see a doctor.',
+      unsure: 'The model is not sure, so the label is not worth relying on. A doctor can examine it properly.'
+    };
+    var GUIDE_FALLBACK = 'This is general advice, not a diagnosis. If you are worried about a skin change, see a doctor or dermatologist.';
+
+    // ----- Build the widget -----
+    host.innerHTML = '';
+    var row = el('div', { class: 'sample-row', role: 'group', 'aria-label': 'Samples' });
+    var sampleButtons = SAMPLES.map(function (s, i) {
+      var b = el('button', { class: 'sample', type: 'button', 'aria-pressed': i === 0 ? 'true' : 'false' });
+      b.append(el('span', { class: 'sample__swatch sample__swatch--' + (i + 1), 'aria-hidden': 'true' }), el('span', null, s.name));
+      row.append(b);
+      return b;
+    });
+
+    var result = el('div', { class: 'demo-guidance', 'aria-live': 'polite' });
+    var heading = el('p', null, '');
+    var list = el('ol', { class: 'pred' });
+    var warning = el('p', { class: 'demo-warning', hidden: '' }, '');
+    var guideSource = el('p', { class: 'demo-guidance__source' }, '');
+    var guideText = el('p', null, '');
+    result.append(heading, list, warning, guideSource, guideText);
+
+    var checkWrap = el('label', { class: 'demo-check' });
+    var aiOn = el('input', { type: 'checkbox', checked: '' });
+    checkWrap.append(aiOn, document.createTextNode('Language model available'));
+
+    host.append(row, checkWrap, result);
+
+    var current = 0;
+    function render(animate) {
+      var s = SAMPLES[current];
+      var best = s.top[0][1];
+      var sure = best >= THRESHOLD;
+      heading.textContent = s.name + ': top three classes';
+      list.innerHTML = '';
+      var fills = [];
+      s.top.forEach(function (p) {
+        var li = el('li');
+        var track = el('span', { class: 'demo-bars__track', 'aria-hidden': 'true' });
+        var fill = el('span', { class: 'demo-bars__fill' });
+        fill.style.transform = 'scaleX(' + p[1] + ')';
+        track.append(fill);
+        li.append(el('span', null, p[0]), track, el('span', { class: 'num' }, Math.round(p[1] * 100) + '%'));
+        list.append(li);
+        fills.push({ fill: fill, v: p[1] });
+      });
+
+      if (sure) { warning.hidden = true; }
+      else {
+        warning.hidden = false;
+        warning.textContent = 'Low confidence: the top class is under ' + Math.round(THRESHOLD * 100) + '%. Treat this result with caution.';
+      }
+
+      if (aiOn.checked) {
+        guideSource.textContent = 'Guidance written by the language model (mock text)';
+        guideText.textContent = sure ? GUIDE_AI.sure : GUIDE_AI.unsure;
+      } else {
+        guideSource.textContent = 'Language model unavailable. Showing built-in fallback guidance';
+        guideText.textContent = GUIDE_FALLBACK;
+      }
+
+      if (animate && canAnimate()) {
+        gsap.fromTo(fills.map(function (f) { return f.fill; }), { scaleX: 0 },
+          { scaleX: function (i) { return fills[i].v; }, duration: 0.55, stagger: 0.07, ease: 'power3.out' });
+        gsap.from([warning, guideText], { opacity: 0, y: 6, duration: 0.35, delay: 0.2, ease: 'power2.out' });
+      }
+    }
+
+    row.addEventListener('click', function (e) {
+      var b = e.target.closest('.sample');
+      if (!b) return;
+      current = sampleButtons.indexOf(b);
+      sampleButtons.forEach(function (x, j) { x.setAttribute('aria-pressed', j === current ? 'true' : 'false'); });
+      render(true);
+    });
+    aiOn.addEventListener('change', function () { render(false); });
+
+    render(false);
+  }
+
   /* ---------- Start ---------- */
   setupReportDemo();
   setupBridgeDemo();
   setupVegetationDemo();
+  setupSkinDemo();
   setupMenu();
   setupAnchors();
 
