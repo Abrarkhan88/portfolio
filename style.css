@@ -376,6 +376,20 @@ section[id] { scroll-margin-top: var(--header-h); }
   opacity: 0.7;
 }
 
+.chapter-cover__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+}
+
+.chapter-cover__links a {
+  display: inline-block;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid currentColor;
+}
+.chapter-cover__links a:hover,
+.chapter-cover__links a:focus-visible { opacity: 0.75; }
+
 /* Story: default (static) layout = a stacked list.
    Used on mobile, with reduced motion, and if scripts fail. */
 .story {
@@ -729,6 +743,34 @@ section[id] { scroll-margin-top: var(--header-h); }
   border-bottom: 1px solid var(--rule);
 }
 .bridge-canvas canvas { width: 100%; height: 100%; }
+
+/* Vegetation demo */
+.veg-canvas {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--rule);
+}
+.veg-canvas canvas { width: 100%; height: 100%; }
+
+.demo-switch {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.demo-switch button {
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.65;
+}
+.demo-switch button[aria-pressed="true"] {
+  background: var(--paper);
+  color: var(--ink);
+  opacity: 1;
+}
 
 .demo-controls {
   display: flex;
