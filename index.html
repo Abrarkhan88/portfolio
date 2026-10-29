@@ -619,6 +619,73 @@
           </div>
         </div>
       </article>
+
+      <!-- Project: Elara Botanics -->
+      <article class="chapter-block" id="elara" data-field="1" aria-labelledby="elara-title">
+
+        <div class="chapter-cover">
+          <div class="chapter-cover__bar">
+            <p>Websites</p>
+            <p>University coursework</p>
+          </div>
+
+          <h3 class="chapter-cover__title" id="elara-title" data-reveal="lines">Elara Botanics</h3>
+
+          <dl class="chapter-cover__meta" data-reveal="fade">
+            <div><dt>Brand</dt><dd>Fictional sustainable, plant-based skincare</dd></div>
+            <div><dt>Stack</dt><dd>HTML, CSS and JavaScript, then React, Vite, React Router and Vitest</dd></div>
+            <div><dt>Scope</dt><dd>12 routes, 14 products, skin quiz, cart, simulated account</dd></div>
+          </dl>
+
+          <div class="chapter-cover__body">
+            <p class="chapter-cover__lede" data-reveal="lines">A storefront for a fictional skincare brand, built twice: first in plain JavaScript with no build tools, then rebuilt in React.</p>
+            <p class="chapter-cover__aside" data-reveal="fade">The brand, products and prices are invented for the coursework.</p>
+          </div>
+        </div>
+
+        <div class="story" data-story aria-label="Elara Botanics, step by step">
+          <nav class="story__index" aria-label="Project steps">
+            <ol>
+              <li><a href="#elara-brief">The brief</a></li>
+              <li><a href="#elara-v1">Version one</a></li>
+              <li><a href="#elara-v2">Version two</a></li>
+            </ol>
+            <span class="story__progress" aria-hidden="true"><span class="story__progress-bar"></span></span>
+          </nav>
+
+          <div class="story__stage">
+            <section class="story__item" id="elara-brief" aria-labelledby="elara-brief-t">
+              <h4 class="story__title" id="elara-brief-t">The brief</h4>
+              <p class="story__text">A complete online shop for a sustainable, plant-based skincare brand: browse and filter products, take a skin quiz for a routine, manage a cart, check out and keep an account, plus content pages on sustainability and a journal.</p>
+            </section>
+
+            <section class="story__item" id="elara-v1" aria-labelledby="elara-v1-t">
+              <h4 class="story__title" id="elara-v1-t">Version one</h4>
+              <p class="story__text">Fourteen static pages in plain HTML, CSS and JavaScript, with the cart saved in the browser. The cart and quiz logic are pure functions with their own tests, run with plain Node, and the work was tracked in a project log and task list.</p>
+              <p class="story__tools"><span>Built with</span> HTML, CSS, JavaScript, localStorage, Node tests</p>
+            </section>
+
+            <section class="story__item" id="elara-v2" aria-labelledby="elara-v2-t">
+              <h4 class="story__title" id="elara-v2-t">Version two</h4>
+              <p class="story__text">The same shop rebuilt as a React app with 12 routes, a shared cart through React Context, product filtering, the skin quiz and a simulated login. Checkout in this version is still a placeholder; the full simulated checkout lives in version one.</p>
+              <p class="story__tools"><span>Built with</span> React 19, Vite, React Router, Vitest</p>
+            </section>
+          </div>
+        </div>
+
+        <!-- Interactive demo (mock data only) -->
+        <div class="demo" aria-labelledby="demo-elara-title">
+          <div class="demo__intro">
+            <h4 class="demo__title" id="demo-elara-title" data-reveal="lines">Try it: take the skin quiz</h4>
+            <p class="demo__text" data-reveal="fade">Three questions from the shop's quiz, scored with the same rules as the project. You get a routine and its products, and can add them to a cart.</p>
+            <p class="demo__caption" data-reveal="fade">Illustrative demo. Fictional brand and products. This is not skincare advice.</p>
+          </div>
+
+          <div class="demo__widget" data-demo="elara">
+            <noscript><p class="demo__fallback">This demo needs JavaScript.</p></noscript>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="chapter" id="game" data-field="4" aria-labelledby="game-title">
