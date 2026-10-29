@@ -368,6 +368,81 @@
           </div>
         </div>
       </article>
+
+      <!-- Project: Skin disease detection -->
+      <article class="chapter-block" id="skin" data-field="5" aria-labelledby="skin-title">
+
+        <div class="chapter-cover">
+          <div class="chapter-cover__bar">
+            <p>Research</p>
+            <p>Applied machine learning</p>
+          </div>
+
+          <h3 class="chapter-cover__title" id="skin-title" data-reveal="lines">Skin disease detection</h3>
+
+          <dl class="chapter-cover__meta" data-reveal="fade">
+            <div><dt>Model</dt><dd>EfficientNet-B0, transfer learning, 10 classes</dd></div>
+            <div><dt>Stack</dt><dd>PyTorch, FastAPI, Streamlit, Gemini Flash</dd></div>
+            <div><dt>Use</dt><dd>Educational only, not a diagnostic tool</dd></div>
+          </dl>
+
+          <div class="chapter-cover__body">
+            <p class="chapter-cover__lede" data-reveal="lines">An image classifier for skin conditions with a simple app around it: upload a photo, see the three most likely classes, and get plain-language next steps.</p>
+            <p class="chapter-cover__aside" data-reveal="fade">Built for learning and demonstration. It is not a medical device and does not give a diagnosis. A demo video is in the repository.</p>
+            <ul class="chapter-cover__links" data-reveal="fade">
+              <li><a href="https://github.com/Abrarkhan88/skin-disease-detection-ai" target="_blank" rel="noopener" data-magnetic>View the repository</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="story" data-story aria-label="Skin disease detection, step by step">
+          <nav class="story__index" aria-label="Project steps">
+            <ol>
+              <li><a href="#skin-does">What it does</a></li>
+              <li><a href="#skin-works">How it works</a></li>
+              <li><a href="#skin-uncertainty">Handling uncertainty</a></li>
+            </ol>
+            <span class="story__progress" aria-hidden="true"><span class="story__progress-bar"></span></span>
+          </nav>
+
+          <div class="story__stage">
+            <section class="story__item" id="skin-does" aria-labelledby="skin-does-t">
+              <h4 class="story__title" id="skin-does-t">What it does</h4>
+              <p class="story__text">Takes a photo of a skin condition and returns the three most likely of ten classes, each with a confidence score, followed by recommendations, next steps and general tips.</p>
+            </section>
+
+            <section class="story__item" id="skin-works" aria-labelledby="skin-works-t">
+              <h4 class="story__title" id="skin-works-t">How it works</h4>
+              <p class="story__text">An EfficientNet-B0 model, fine-tuned with transfer learning in PyTorch, serves predictions through a FastAPI backend. A Streamlit front end shows the results, and Gemini Flash writes the guidance around them.</p>
+              <ol class="flow" aria-label="Pipeline">
+                <li>Photo</li>
+                <li>EfficientNet-B0 via FastAPI</li>
+                <li>Top 3 classes</li>
+                <li>Guidance from Gemini</li>
+              </ol>
+              <p class="story__tools"><span>Built with</span> Python, PyTorch, FastAPI, Streamlit, Gemini Flash</p>
+            </section>
+
+            <section class="story__item" id="skin-uncertainty" aria-labelledby="skin-uncertainty-t">
+              <h4 class="story__title" id="skin-uncertainty-t">Handling uncertainty</h4>
+              <p class="story__text">It shows three classes instead of one answer, warns when confidence is low, and falls back to built-in guidance when the language model is unavailable. Every result carries an educational-use disclaimer.</p>
+            </section>
+          </div>
+        </div>
+
+        <!-- Interactive demo (mock data only) -->
+        <div class="demo" aria-labelledby="demo-skin-title">
+          <div class="demo__intro">
+            <h4 class="demo__title" id="demo-skin-title" data-reveal="lines">Try it: read a prediction</h4>
+            <p class="demo__text" data-reveal="fade">Pick a sample to see how the app presents a result: three classes with confidence, a warning when the model is unsure, and guidance underneath. Switch off the language model to see the fallback.</p>
+            <p class="demo__caption" data-reveal="fade">Illustrative demo. Samples, class names and scores are made up. No model runs here.</p>
+          </div>
+
+          <div class="demo__widget" data-demo="skin">
+            <noscript><p class="demo__fallback">This demo needs JavaScript.</p></noscript>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="chapter" id="websites" data-field="3" aria-labelledby="websites-title">
