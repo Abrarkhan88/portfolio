@@ -121,6 +121,20 @@ a { color: inherit; text-decoration: none; }
 /* Anchored sections clear the fixed header */
 section[id] { scroll-margin-top: var(--header-h); }
 
+[hidden] { display: none !important; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skip-link {
   position: fixed;
   top: var(--space-2);
@@ -510,6 +524,175 @@ section[id] { scroll-margin-top: var(--header-h); }
   .chapter-cover__bar { font-size: var(--step--1); }
   .chapter-cover__meta div { grid-template-columns: 4.5rem 1fr; }
   .flow li { white-space: normal; }
+}
+
+/* ---------- 3d. Interactive demos ---------- */
+.demo {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gutter);
+  row-gap: var(--space-5);
+  padding: var(--space-7) var(--margin) var(--space-8);
+  border-top: 1px solid var(--rule);
+}
+
+.demo__intro {
+  grid-column: 1 / span 4;
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.demo__title {
+  font-size: var(--step-2);
+  font-weight: 600;
+  font-variation-settings: "wdth" 90, "opsz" 48;
+  line-height: 1.05;
+}
+
+.demo__text { max-width: 40ch; }
+
+.demo__caption {
+  font-size: var(--step--1);
+  opacity: 0.65;
+}
+
+.demo__widget {
+  grid-column: 6 / -1;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: var(--step--1);
+}
+
+@media (max-width: 900px) {
+  .demo__intro, .demo__widget { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .demo__widget { padding: var(--space-4) var(--space-3); }
+}
+
+.demo__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.demo__file { opacity: 0.7; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.btn:hover, .btn:focus-visible {
+  background: var(--paper);
+  color: var(--ink);
+}
+.btn--quiet { border-color: var(--rule); }
+
+.demo__status {
+  min-height: 2.6em;
+  opacity: 0.85;
+}
+
+.demo__views { display: grid; }
+.demo__view { grid-area: 1 / 1; min-width: 0; }
+.demo__view[hidden] { display: none; }
+
+.demo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-table th,
+.demo-table td {
+  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+.demo-table th {
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.demo-table .num { text-align: right; padding-right: var(--space-3); }
+
+.demo-table tr.is-dup td:not(.note) { text-decoration: line-through; opacity: 0.45; }
+
+.demo-table .note { opacity: 0.8; }
+.demo-table .note span { display: inline-block; }
+
+.demo-table tfoot td { border-bottom: 0; font-weight: 600; }
+
+.demo-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.demo-tabs [role="tab"] {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.demo-tabs [role="tab"][aria-selected="true"] {
+  border-color: currentColor;
+  opacity: 1;
+}
+
+.demo-bars {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.demo-bars__row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.demo-bars__track {
+  height: 6px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.demo-bars__fill {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  transform-origin: 0 50%;
+}
+
+.demo-bars__row .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 560px) {
+  .demo-table .col-month { display: none; }
+  .demo-bars__row { grid-template-columns: 5rem 1fr 2rem; }
 }
 
 /* ---------- 4. Header ---------- */
