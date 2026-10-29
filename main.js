@@ -1623,7 +1623,105 @@
     renderQuestion();
   }
 
+  /* ---------- Demo: from cart to invoice (Django e-commerce) ---------- */
+  function setupDjangoDemo() {
+    var host = document.querySelector('[data-demo="django"]');
+    if (!host) return;
+
+    var PRODUCTS = [
+      { id: 'tee', name: 'Cotton T-shirt', cat: 'Men, T-shirts', price: 650, sizes: ['S', 'M', 'L', 'XL'] },
+      { id: 'sneaker', name: 'Canvas Sneakers', cat: 'Women, Shoes', price: 2400, sizes: ['36', '37', '38', '39', '40'] },
+      { id: 'jacket', name: 'Denim Jacket', cat: 'Men, Jackets', price: 3200, sizes: ['M', 'L', 'XL'] },
+      { id: 'kids', name: 'Kids Rain Boots', cat: 'Girls, Shoes', price: 1100, sizes: ['28', '30', '32'] }
+    ];
+    var taka = function (n) { return 'BDT ' + n.toLocaleString('en-IN'); };
+    var cart = []; // { key, name, size, qty, unit }
+
+    host.innerHTML = '';
+    var list = el('ul', { class: 'shop-list', 'aria-label': 'Products (mock)' });
+    PRODUCTS.forEach(function (p) {
+      var li = el('li', { class: 'shop-item' });
+      var info = el('div');
+      info.append(el('span', null, p.name), el('span', { class: 'meta' }, p.cat + ', ' + taka(p.price)));
+      var sel = el('select', { class: 'demo-select', 'aria-label': 'Size for ' + p.name });
+      p.sizes.forEach(function (s) { sel.append(el('option', { value: s }, s)); });
+      var add = el('button', { class: 'btn', type: 'button' }, 'Add');
+      add.addEventListener('click', function () { addToCart(p, sel.value); });
+      li.append(info, sel, add);
+      list.append(li);
+    });
+
+    var cartBox = el('div', { class: 'demo-guidance' });
+    var cartTitle = el('p', null, 'Cart');
+    var cartTable = el('table', { class: 'demo-table' });
+    var cartFoot = el('div', { class: 'cart-line' });
+    var cartTotal = el('p', null, '');
+    var gen = el('button', { class: 'btn', type: 'button', disabled: '' }, 'Generate invoice');
+    var clear = el('button', { class: 'btn btn--quiet', type: 'button', disabled: '' }, 'Empty cart');
+    var btns = el('div', { class: 'quiz__options' });
+    btns.append(gen, clear);
+    cartFoot.append(cartTotal, btns);
+    cartBox.append(cartTitle, cartTable, cartFoot);
+
+    var invoiceWrap = el('div', { 'aria-live': 'polite' });
+    host.append(list, cartBox, invoiceWrap);
+
+    function total() { return cart.reduce(function (t, i) { return t + i.qty * i.unit; }, 0); }
+
+    function renderCart() {
+      cartTable.innerHTML = '';
+      if (!cart.length) {
+        cartTable.innerHTML = '<tbody><tr><td>Your cart is empty. Add something above.</td></tr></tbody>';
+      } else {
+        cartTable.innerHTML = '<thead><tr><th scope="col">Item</th><th scope="col">Size</th><th class="num" scope="col">Qty</th><th class="num" scope="col">Price</th></tr></thead>';
+        var tb = el('tbody');
+        cart.forEach(function (i) {
+          var tr = el('tr');
+          tr.append(el('td', null, i.name), el('td', null, i.size), el('td', { class: 'num' }, String(i.qty)), el('td', { class: 'num' }, taka(i.qty * i.unit)));
+          tb.append(tr);
+        });
+        cartTable.append(tb);
+      }
+      cartTotal.textContent = cart.length ? 'Total ' + taka(total()) : '';
+      gen.disabled = clear.disabled = !cart.length;
+    }
+
+    function addToCart(p, size) {
+      var key = p.id + '|' + size; // each size is its own line, like the real cart
+      var line = cart.filter(function (i) { return i.key === key; })[0];
+      if (line) line.qty++;
+      else cart.push({ key: key, name: p.name, size: size, qty: 1, unit: p.price });
+      invoiceWrap.innerHTML = '';
+      renderCart();
+      var rows = cartTable.querySelectorAll('tbody tr');
+      if (canAnimate() && rows.length) gsap.from(rows[rows.length - 1], { opacity: 0, x: -8, duration: 0.3, ease: 'power2.out' });
+    }
+
+    gen.addEventListener('click', function () {
+      invoiceWrap.innerHTML = '';
+      var inv = el('div', { class: 'invoice' });
+      inv.append(el('h5', null, 'Invoice'), el('p', null, 'Order summary'), el('p', null, 'Customer name: demo_user'));
+      var t = el('table', { class: 'demo-table' });
+      t.innerHTML = '<thead><tr><th scope="col">Product</th><th class="num" scope="col">Quantity</th><th class="num" scope="col">Price (BDT)</th></tr></thead>';
+      var tb = el('tbody');
+      cart.forEach(function (i) {
+        var tr = el('tr');
+        tr.append(el('td', null, i.name + ' (' + i.size + ')'), el('td', { class: 'num' }, String(i.qty)), el('td', { class: 'num' }, (i.qty * i.unit).toLocaleString('en-IN')));
+        tb.append(tr);
+      });
+      t.append(tb);
+      inv.append(t, el('p', { class: 'invoice__total' }, 'Total price: ' + taka(total())));
+      invoiceWrap.append(inv);
+      if (canAnimate()) gsap.from(inv, { opacity: 0, y: 16, scale: 0.98, duration: 0.45, ease: 'power3.out' });
+    });
+
+    clear.addEventListener('click', function () { cart = []; invoiceWrap.innerHTML = ''; renderCart(); });
+
+    renderCart();
+  }
+
   /* ---------- Start ---------- */
+  setupDjangoDemo();
   setupElaraDemo();
   setupReportDemo();
   setupBridgeDemo();
