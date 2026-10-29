@@ -1022,6 +1022,64 @@ section[id] { scroll-margin-top: var(--header-h); }
   .shop-item .btn { grid-column: 1 / -1; justify-self: start; }
 }
 
+/* Password demo */
+.pw-field {
+  display: flex;
+  gap: var(--space-2);
+}
+.pw-field input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font: inherit;
+  font-size: var(--step-0);
+}
+.pw-field input:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+
+.pw-meter {
+  height: 8px;
+  background: var(--rule);
+  overflow: hidden;
+  border-radius: 1px;
+}
+.pw-meter span {
+  display: block;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: var(--pw-color, var(--paper));
+  transition: transform var(--dur-section) var(--ease-out), background-color var(--dur-fast) linear;
+}
+
+.pw-score {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.pw-score strong {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-weight: 600;
+}
+
+.pw-checks { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); }
+.pw-checks li::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.pw-checks li.is-met::before { background: currentColor; }
+.pw-checks li:not(.is-met) { opacity: 0.6; }
+
 /* Vegetation demo */
 .veg-canvas {
   width: 100%;
