@@ -744,6 +744,71 @@ section[id] { scroll-margin-top: var(--header-h); }
 }
 .bridge-canvas canvas { width: 100%; height: 100%; }
 
+/* Skin demo */
+.sample-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.sample {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sample__swatch {
+  display: block;
+  aspect-ratio: 1;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.sample:hover .sample__swatch { transform: scale(1.02); }
+.sample[aria-pressed="true"] .sample__swatch { outline: 2px solid currentColor; outline-offset: 3px; }
+.sample[aria-pressed="false"] { opacity: 0.7; }
+
+/* Abstract swatches, deliberately not photos */
+.sample__swatch--1 { background: radial-gradient(circle at 45% 50%, rgba(236,230,218,.85) 0 16%, rgba(236,230,218,.35) 34%, rgba(0,0,0,.25) 72%); }
+.sample__swatch--2 { background: radial-gradient(ellipse at 55% 45%, rgba(236,230,218,.7) 0 10%, rgba(236,230,218,.3) 30%, rgba(0,0,0,.25) 70%), linear-gradient(135deg, rgba(236,230,218,.12), transparent); }
+.sample__swatch--3 { background: radial-gradient(circle at 30% 62%, rgba(236,230,218,.55) 0 9%, transparent 11%), radial-gradient(circle at 64% 36%, rgba(236,230,218,.5) 0 11%, transparent 13%), radial-gradient(circle at 50% 50%, rgba(236,230,218,.18), rgba(0,0,0,.25) 72%); }
+
+.pred {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pred li {
+  display: grid;
+  grid-template-columns: 7rem 1fr 3rem;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pred .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.demo-warning {
+  padding: var(--space-3);
+  border-left: 2px solid currentColor;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.demo-guidance {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+.demo-guidance__source { opacity: 0.6; }
+
 /* Vegetation demo */
 .veg-canvas {
   width: 100%;
