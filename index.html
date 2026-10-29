@@ -292,6 +292,82 @@
           </div>
         </div>
       </article>
+
+      <!-- Project: Vegetation detection -->
+      <article class="chapter-block" id="vegetation" data-field="4" aria-labelledby="vegetation-title">
+
+        <div class="chapter-cover">
+          <div class="chapter-cover__bar">
+            <p>Research</p>
+            <p>Course project and paper</p>
+          </div>
+
+          <h3 class="chapter-cover__title" id="vegetation-title" data-reveal="lines">Vegetation detection</h3>
+
+          <dl class="chapter-cover__meta" data-reveal="fade">
+            <div><dt>Course</dt><dd>CSE424 Pattern Recognition, BRAC University</dd></div>
+            <div><dt>Team</dt><dd>Five members, including me</dd></div>
+            <div><dt>Data</dt><dd>EuroSAT satellite imagery</dd></div>
+            <div><dt>Paper</dt><dd>In revision at Sustainable Futures</dd></div>
+          </dl>
+
+          <div class="chapter-cover__body">
+            <p class="chapter-cover__lede" data-reveal="lines">Convolutional neural networks that classify vegetation in satellite imagery, for environmental monitoring.</p>
+            <p class="chapter-cover__aside" data-reveal="fade">The public repository holds an earlier version of the code.</p>
+            <ul class="chapter-cover__links" data-reveal="fade">
+              <li><a href="https://github.com/Abrarkhan88/Vegetation-Detection-Using-Deep-Learning-on-Satellite-Imagery" target="_blank" rel="noopener" data-magnetic>View the repository</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="story" data-story aria-label="Vegetation detection, step by step">
+          <nav class="story__index" aria-label="Project steps">
+            <ol>
+              <li><a href="#vegetation-problem">The problem</a></li>
+              <li><a href="#vegetation-built">What we built</a></li>
+              <li><a href="#vegetation-paper">The paper</a></li>
+            </ol>
+            <span class="story__progress" aria-hidden="true"><span class="story__progress-bar"></span></span>
+          </nav>
+
+          <div class="story__stage">
+            <section class="story__item" id="vegetation-problem" aria-labelledby="vegetation-problem-t">
+              <h4 class="story__title" id="vegetation-problem-t">The problem</h4>
+              <p class="story__text">Land cover changes faster than anyone can check by hand. Environmental monitoring needs models that can pick out vegetation from satellite images at scale.</p>
+            </section>
+
+            <section class="story__item" id="vegetation-built" aria-labelledby="vegetation-built-t">
+              <h4 class="story__title" id="vegetation-built-t">What we built</h4>
+              <p class="story__text">CNN models that classify satellite image patches by land cover, trained on EuroSAT, including a ResNet-50 transfer-learning model. Alongside the classifier, a simple green-pixel rule flags areas where vegetation may have been lost.</p>
+              <ol class="flow" aria-label="Pipeline">
+                <li>Satellite image patches</li>
+                <li>CNN classifier</li>
+                <li>Vegetation map</li>
+              </ol>
+              <p class="story__tools"><span>Built with</span> Python, PyTorch, ResNet-50, EuroSAT</p>
+            </section>
+
+            <section class="story__item" id="vegetation-paper" aria-labelledby="vegetation-paper-t">
+              <h4 class="story__title" id="vegetation-paper-t">The paper</h4>
+              <p class="story__text">We wrote the work up as "Deep Learning Techniques for Detecting Vegetation with Satellite Imagery". It has been through peer review at Sustainable Futures and is now in revision.</p>
+              <p class="story__tools"><span>Status</span> In revision</p>
+            </section>
+          </div>
+        </div>
+
+        <!-- Interactive demo (mock data only) -->
+        <div class="demo" aria-labelledby="demo-veg-title">
+          <div class="demo__intro">
+            <h4 class="demo__title" id="demo-veg-title" data-reveal="lines">Try it: find the green</h4>
+            <p class="demo__text" data-reveal="fade">A generated landscape seen from above. Raise or lower the greenness threshold to decide what counts as vegetation, switch to the map view, then compare a later image where part of the forest has been cleared.</p>
+            <p class="demo__caption" data-reveal="fade">Illustrative demo. The landscape is generated, not real imagery, and the rule here is far simpler than a trained CNN.</p>
+          </div>
+
+          <div class="demo__widget" data-demo="vegetation">
+            <noscript><p class="demo__fallback">This demo needs JavaScript.</p></noscript>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="chapter" id="websites" data-field="3" aria-labelledby="websites-title">
