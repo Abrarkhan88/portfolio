@@ -526,6 +526,38 @@ section[id] { scroll-margin-top: var(--header-h); }
   .flow li { white-space: normal; }
 }
 
+/* ---------- 3c-2. Group opener (Research, Websites, Game) ---------- */
+.group__head {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gutter);
+  row-gap: var(--space-5);
+  align-content: end;
+  min-height: 70vh;
+  padding: calc(var(--header-h) + var(--space-7)) var(--margin) var(--space-7);
+  border-top: 1px solid var(--rule);
+}
+
+.group__title {
+  grid-column: 1 / -1;
+  font-size: var(--step-5);
+  font-weight: 650;
+  font-variation-settings: "wdth" 88, "opsz" 96;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+}
+
+.group__note {
+  grid-column: 7 / -1;
+  max-width: 36ch;
+  font-size: var(--step-1);
+  color: var(--paper-muted);
+}
+
+@media (max-width: 900px) {
+  .group__note { grid-column: 1 / -1; }
+}
+
 /* ---------- 3d. Interactive demos ---------- */
 .demo {
   display: grid;
@@ -689,6 +721,68 @@ section[id] { scroll-margin-top: var(--header-h); }
 }
 
 .demo-bars__row .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Bridge demo */
+.bridge-canvas {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-bottom: 1px solid var(--rule);
+}
+.bridge-canvas canvas { width: 100%; height: 100%; }
+
+.demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+}
+
+.demo-range {
+  flex: 1 1 220px;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.demo-range input[type="range"] {
+  width: 100%;
+  accent-color: var(--paper);
+}
+
+.demo-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.demo-check input { accent-color: var(--paper); width: 1rem; height: 1rem; }
+
+.demo-readout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.demo-readout div { border-top: 1px solid var(--rule); padding-top: var(--space-2); }
+.demo-readout dt { opacity: 0.6; }
+.demo-readout dd { margin: 0; font-size: var(--step-1); font-variant-numeric: tabular-nums; }
+
+.demo-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  opacity: 0.8;
+}
+.demo-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: var(--space-2);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.demo-legend .is-filled::before { background: currentColor; }
+.demo-legend .is-ring::before { border: 1.5px solid currentColor; }
 
 @media (max-width: 560px) {
   .demo-table .col-month { display: none; }
