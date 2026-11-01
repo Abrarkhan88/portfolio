@@ -415,8 +415,10 @@
         var bw = between(opts.minW, opts.maxW);
         if (opts.clear && x + bw > opts.clear[0] && x < opts.clear[1]) { x = opts.clear[1] + between(0, 20); continue; }   // keep this view open
         var top = h * between(opts.topMin, opts.topMax);
+        if (opts.low && x + bw > opts.low[0] && x < opts.low[1]) top = Math.max(top, h * opts.low[2]);
         g.fillStyle = opts.colors[Math.floor(rnd() * opts.colors.length)];
         g.fillRect(x, top, bw, h - top);
+        if (opts.out) opts.out.push([x, top, bw]);
         // Windows: a mix of warm bulbs and white tube lights; many dark
         var cols = Math.max(2, Math.floor(bw / opts.cell));
         var rows = Math.floor((h - top) / (opts.cell * 1.25));
@@ -484,40 +486,28 @@
       // Distant haze line of buildings
       drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.18,
         colors: ['#8a5a74', '#7d5270', '#94627a'], tanks: 0.4, tankColor: '#6d4762' });
-      // Mid-distance blocks
-      drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.32,
-        colors: ['#6b4462', '#5e3d58', '#734a66'], tanks: 0.55, tankColor: '#3f2840' });
-      // Mosque: dome and two minarets, placed where the window looks from the main view
-      var mx = w * 0.53, base = h * 0.68, k = 1.35;
+      // Mosque: dome and two minarets, off to one side of the window view, behind the city
+      var mx = w * 0.603, base = h * 0.7, k = 0.62;
       g.fillStyle = '#5c3a58';
       g.fillRect(mx - 70 * k, base - 40 * k, 140 * k, h - base + 40 * k);
       g.beginPath(); g.arc(mx, base - 40 * k, 62 * k, Math.PI, 0); g.fill();
-      g.fillRect(mx - 3, base - 40 * k - 62 * k - 18, 6, 22);
-      g.beginPath(); g.arc(mx, base - 40 * k - 62 * k - 20, 6, 0, Math.PI * 2); g.fill();
+      g.fillRect(mx - 2, base - 40 * k - 62 * k - 14, 4, 16);
+      g.beginPath(); g.arc(mx, base - 40 * k - 62 * k - 15, 4, 0, Math.PI * 2); g.fill();
       [mx - 118 * k, mx + 104 * k].forEach(function (px) {
         g.fillStyle = '#5c3a58';
         g.fillRect(px, base - 190 * k, 14 * k, h - base + 190 * k);
         g.beginPath(); g.arc(px + 7 * k, base - 190 * k, 11 * k, Math.PI, 0); g.fill();
-        g.fillRect(px + 6 * k, base - 214 * k, 3, 16 * k);
-        g.fillRect(px - 5, base - 140 * k, 14 * k + 10, 6);   // balcony ring
-        // small evening lights up the minarets
-        for (var li = 0; li < 6; li++) {
-          g.fillStyle = li % 2 ? 'rgba(170,255,190,0.95)' : 'rgba(255,250,225,0.95)';
-          g.beginPath(); g.arc(px + 7 * k, base - 170 * k + li * 26 * k, 3.5, 0, Math.PI * 2); g.fill();
+        g.fillRect(px + 6 * k, base - 214 * k, 2, 16 * k);
+        g.fillRect(px - 3, base - 140 * k, 14 * k + 6, 4);   // balcony ring
+        for (var li = 0; li < 4; li++) {                       // small evening lights on the minarets
+          g.fillStyle = li % 2 ? 'rgba(170,255,190,0.85)' : 'rgba(255,250,225,0.85)';
+          g.beginPath(); g.arc(px + 7 * k, base - 176 * k + li * 22 * k, 2.2, 0, Math.PI * 2); g.fill();
         }
       });
-      // a soft glow behind the dome so it reads against the sky
-      var halo = g.createRadialGradient(mx, base - 70 * k, 20, mx, base - 70 * k, 160 * k);
-      halo.addColorStop(0, 'rgba(255,220,170,0.35)'); halo.addColorStop(1, 'rgba(255,220,170,0)');
-      g.globalCompositeOperation = 'destination-over';
-      g.fillStyle = halo; g.fillRect(mx - 200 * k, base - 260 * k, 400 * k, 300 * k);
-      g.globalCompositeOperation = 'source-over';
-      // lit arched windows on the prayer hall
-      g.fillStyle = 'rgba(255,214,140,0.9)';
-      for (var aw = -2; aw <= 2; aw++) {
-        g.beginPath(); g.arc(mx + aw * 24 * k, base - 8 * k, 6 * k, Math.PI, 0); g.fill();
-        g.fillRect(mx + aw * 24 * k - 6 * k, base - 8 * k, 12 * k, 16 * k);
-      }
+      // Mid-distance blocks, kept a little lower in front of the dome so it peeks over them
+      drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.32,
+        colors: ['#6b4462', '#5e3d58', '#734a66'], tanks: 0.55, tankColor: '#3f2840',
+        low: [mx - 80 * k, mx + 80 * k, 0.735] });
       // A few birds over the sky
       g.strokeStyle = 'rgba(40,24,40,0.7)'; g.lineWidth = 3;
       for (var b = 0; b < 7; b++) {
@@ -532,9 +522,41 @@
 
     // Layer 2: closer residential blocks with balconies and AC units
     var nearTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
-      drawBuildingsRow(g, w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.62, gap: 30, cell: 34, lit: 0.42,
+      // The blocks go on their own canvas first, so some can be stamped back in front of the expressway
+      var blocks = document.createElement('canvas'); blocks.width = w; blocks.height = h;
+      var rects = [];
+      drawBuildingsRow(blocks.getContext('2d'), w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.66, gap: 30, cell: 34, lit: 0.42,
         colors: ['#3d2734', '#46303a', '#352230'], tanks: 0.7, tankColor: '#24161f', grills: true, ac: true,
-        clear: [w * 0.44, w * 0.6] });   // the mosque shows through here
+        clear: [w * 0.58, w * 0.63], out: rects });   // a side street, looking through to the mosque
+      g.drawImage(blocks, 0, 0);
+
+      // Elevated expressway weaving through the blocks: concrete deck on pillars, traffic streaking along
+      var deckY = function (x) { return h * (0.6 - 0.035 * (x / w)) - Math.sin(x / w * Math.PI) * h * 0.012; };
+      var line = function (off) { g.beginPath(); for (var dx = -10; dx <= w + 10; dx += 20) { if (dx < 0) g.moveTo(dx, deckY(dx) + off); else g.lineTo(dx, deckY(dx) + off); } g.stroke(); };
+      g.fillStyle = '#4e3846';
+      for (var px = 70; px < w; px += 240) {                       // pillars with pier caps
+        var py = deckY(px);
+        g.fillRect(px - 13, py + 18, 26, h - py);
+        g.fillRect(px - 26, py + 14, 52, 9);
+      }
+      g.lineCap = 'butt';
+      g.strokeStyle = '#5f4654'; g.lineWidth = 24; line(0);          // deck
+      g.strokeStyle = '#3e2c38'; g.lineWidth = 6; line(12);          // shadowed underside edge
+      g.strokeStyle = '#a07b80'; g.lineWidth = 4; line(-13);         // parapet catching the sunset
+      for (var cl = 0; cl < 40; cl++) {                               // headlights one way, tail lights the other
+        var cx = between(0, w), head = rnd() < 0.5;
+        g.fillStyle = head ? 'rgba(255,244,210,0.95)' : 'rgba(255,80,64,0.9)';
+        g.fillRect(cx, deckY(cx) + (head ? -6 : 2), between(10, 22), 3);
+      }
+      for (var lp = 50; lp < w; lp += 170) {                          // lamp posts along the parapet
+        g.fillStyle = '#3e2c38'; g.fillRect(lp, deckY(lp) - 48, 3, 36); g.fillRect(lp, deckY(lp) - 48, 10, 3);
+        g.fillStyle = 'rgba(255,214,140,0.95)'; g.beginPath(); g.arc(lp + 10, deckY(lp) - 45, 4, 0, Math.PI * 2); g.fill();
+      }
+      // Every other block stands in front of the road, so it weaves through rather than sitting on top
+      rects.forEach(function (r, i) {
+        if (i % 2) return;
+        g.drawImage(blocks, r[0], r[1], r[2], h - r[1], r[0], r[1], r[2], h - r[1]);
+      });
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
     near.position.set(RX0 - 3.6, 3.0, -1.5);
