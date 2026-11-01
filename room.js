@@ -109,6 +109,7 @@
     'fetching three.js',
     'laying out the room: desk, wall, shelf',
     'lighting the Dhaka skyline at dusk',
+    'switching on the ceiling fan',
     'putting projects on the monitor',
     'pinning ID cards to the wall',
     'leaving the phone on the desk'
@@ -237,19 +238,17 @@
 
     // Dhaka dusk palette
     var C = {
-      wall: 0x5a3a33,       // warm terracotta-brown
-      wallDark: 0x47302b,
-      floor: 0x7a5236,      // warm wood
-      rug: 0x2f5d5b,        // teal
-      desk: 0x2b2421,
-      deskTop: 0x3a302b,
-      metal: 0x1f1c1a,
-      screen: 0x0f1416,
-      board: 0x2a2320,
+      wall: 0x7b4a3a,       // warm terracotta
+      wallDark: 0x6a3f33,
+      floor: 0x8a5c3c,      // warm wood
+      desk: 0x3a2e28,
+      deskTop: 0x4a3b33,
+      metal: 0x24201d,
+      board: 0x3a2d26,
       paper: 0xece6da,
       marigold: 0xe9c14a,
-      teal: 0x3e8c86,
-      sky: 0xf2a463
+      teal: 0x2f7d77,
+      cane: 0xb98a4e
     };
 
     var renderer = new T.WebGLRenderer({ antialias: true });
@@ -264,11 +263,21 @@
     var scene = new T.Scene();
     var camera = new T.PerspectiveCamera(40, 16 / 9, 0.1, 200);
 
-    /* ---------- Lights ---------- */
-    scene.add(new T.HemisphereLight(0xffd9b8, 0x2a1a14, 0.8));   // soft fill now that the room is closed
+    /* ---------- Small seeded random, so the city looks the same every visit ---------- */
+    var seed = 20261101;
+    function rnd() {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    function between(a, b) { return a + rnd() * (b - a); }
 
-    var sunset = new T.DirectionalLight(0xffa86b, 1.1);     // low dusk sun through the window
-    sunset.position.set(-14, 9, 4);
+    /* ---------- Lights ---------- */
+    scene.add(new T.HemisphereLight(0xffe2c4, 0x3a2418, 1.05));   // warm evening fill
+
+    var sunset = new T.DirectionalLight(0xffa463, 1.25);           // low dusk sun through the window
+    sunset.position.set(-14, 8.5, 3);
     sunset.castShadow = true;
     sunset.shadow.mapSize.width = 2048;
     sunset.shadow.mapSize.height = 2048;
@@ -276,10 +285,20 @@
     sunset.shadow.camera.top = 12; sunset.shadow.camera.bottom = -12;
     scene.add(sunset);
 
-    var lamp = new T.PointLight(0xffc27a, 1.2, 9, 2);        // desk lamp
-    lamp.position.set(-0.9, 3.1, -1.2);
+    var lamp = new T.PointLight(0xffc27a, 1.3, 9, 2);              // desk lamp
+    lamp.position.set(-1.9, 3.3, -2.5);
     lamp.castShadow = true;
     scene.add(lamp);
+
+    // Wall lights above the shelf and the board, and the fan light
+    [[-4.4, 6.4, -5.3], [3.6, 6.4, -5.3]].forEach(function (p) {
+      var l = new T.PointLight(0xffb870, 0.7, 7, 2);
+      l.position.set(p[0], p[1], p[2]);
+      scene.add(l);
+    });
+    var fanLight = new T.PointLight(0xfff0d6, 0.45, 14, 2);
+    fanLight.position.set(0.6, 6.5, 1);
+    scene.add(fanLight);
 
     /* ---------- Helpers ---------- */
     function mat(color, opts) {
@@ -295,21 +314,63 @@
       (parent || scene).add(mesh);
       return mesh;
     }
+    function cyl(rt, rb, h, m, x, y, z, parent, seg) {
+      var mesh = new T.Mesh(new T.CylinderGeometry(rt, rb, h, seg || 20), m);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      (parent || scene).add(mesh);
+      return mesh;
+    }
+    function canvasTex(w, h, draw) {
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      draw(c.getContext('2d'), w, h);
+      return new T.CanvasTexture(c);
+    }
 
     /* ---------- Room: a closed box, so the only view outside is the window ----------
        Inside spans x -8..13, z -6..14, height 7.5 */
     var RX0 = -8, RX1 = 13, RZ0 = -6, RZ1 = 14, RH = 7.5;
     var RW = RX1 - RX0, RD = RZ1 - RZ0, CX = (RX0 + RX1) / 2, CZ = (RZ0 + RZ1) / 2;
 
-    var floor = new T.Mesh(new T.PlaneGeometry(RW, RD), mat(C.floor, { roughness: 0.7 }));
+    // Floor boards
+    var floorTex = canvasTex(1024, 1024, function (g, w, h) {
+      g.fillStyle = '#8a5c3c'; g.fillRect(0, 0, w, h);
+      for (var y = 0; y < h; y += 64) {
+        g.fillStyle = 'rgba(0,0,0,' + (0.04 + rnd() * 0.06) + ')';
+        g.fillRect(0, y, w, 64);
+        g.fillStyle = 'rgba(30,15,8,0.35)';
+        g.fillRect(0, y, w, 2);
+        var off = rnd() * w;
+        g.fillRect(off, y, 2, 64);
+      }
+    });
+    var floor = new T.Mesh(new T.PlaneGeometry(RW, RD), new T.MeshStandardMaterial({ map: floorTex, roughness: 0.7 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(CX, 0, CZ);
     floor.receiveShadow = true;
     scene.add(floor);
 
-    var rug = new T.Mesh(new T.PlaneGeometry(6.4, 4.6), mat(C.rug, { roughness: 1 }));
+    // Kantha-style rug: deep teal with running-stitch borders and a simple centre motif
+    var rugTex = canvasTex(1024, 740, function (g, w, h) {
+      g.fillStyle = '#245f5a'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#e9c14a'; g.lineWidth = 6; g.setLineDash([18, 12]);
+      for (var i = 0; i < 4; i++) { g.strokeRect(30 + i * 22, 30 + i * 22, w - 60 - i * 44, h - 60 - i * 44); }
+      g.strokeStyle = '#c4553f'; g.setLineDash([10, 10]); g.lineWidth = 5;
+      g.strokeRect(140, 140, w - 280, h - 280);
+      g.setLineDash([]);
+      g.translate(w / 2, h / 2);
+      for (var k = 0; k < 8; k++) {
+        g.rotate(Math.PI / 4);
+        g.fillStyle = k % 2 ? '#ece6da' : '#e9c14a';
+        g.beginPath(); g.ellipse(0, -60, 22, 56, 0, 0, Math.PI * 2); g.fill();
+      }
+      g.fillStyle = '#c4553f'; g.beginPath(); g.arc(0, 0, 26, 0, Math.PI * 2); g.fill();
+    });
+    var rug = new T.Mesh(new T.PlaneGeometry(6.4, 4.6), new T.MeshStandardMaterial({ map: rugTex, roughness: 1 }));
     rug.rotation.x = -Math.PI / 2;
-    rug.position.set(0.6, 0.01, 0.6);
+    rug.position.set(0.6, 0.01, 0.8);
     rug.receiveShadow = true;
     scene.add(rug);
 
@@ -317,82 +378,277 @@
     box(RW + 0.6, RH, 0.3, wallM, CX, RH / 2, RZ0);                  // back wall
     box(0.3, RH, RD, wallM, RX1, RH / 2, CZ);                         // right wall
     box(RW + 0.6, RH, 0.3, wallM, CX, RH / 2, RZ1);                   // front wall (behind the camera)
-    box(RW + 0.6, 0.3, RD + 0.6, mat(0x2a1d19, { roughness: 1 }), CX, RH + 0.15, CZ);  // ceiling
+    box(RW + 0.6, 0.3, RD + 0.6, mat(0x5a3a30, { roughness: 1 }), CX, RH + 0.15, CZ);  // ceiling
+    // Skirting along the walls
+    box(RW, 0.25, 0.08, mat(0x4a2e25), CX, 0.125, RZ0 + 0.18);
+    box(0.08, 0.25, RD, mat(0x4a2e25), RX0 + 0.18, 0.125, CZ);
 
     // Left wall (x = -8), built around a window opening from z -3 to 3, y 1.6 to 5.6
-    box(0.3, RH, 3.0, wallDarkM, RX0, RH / 2, -4.5);                  // behind the window
-    box(0.3, RH, RZ1 - 3, wallDarkM, RX0, RH / 2, (3 + RZ1) / 2);     // in front of the window
-    box(0.3, 1.6, 6.0, wallDarkM, RX0, 0.8, 0);                       // below the window
-    box(0.3, RH - 5.6, 6.0, wallDarkM, RX0, (5.6 + RH) / 2, 0);       // above the window
-    // Window frame
+    box(0.3, RH, 3.0, wallDarkM, RX0, RH / 2, -4.5);
+    box(0.3, RH, RZ1 - 3, wallDarkM, RX0, RH / 2, (3 + RZ1) / 2);
+    box(0.3, 1.6, 6.0, wallDarkM, RX0, 0.8, 0);
+    box(0.3, RH - 5.6, 6.0, wallDarkM, RX0, (5.6 + RH) / 2, 0);
     var frameM = mat(C.metal, { roughness: 0.6 });
     box(0.36, 0.12, 6.0, frameM, RX0, 1.62, 0);
     box(0.36, 0.12, 6.0, frameM, RX0, 5.58, 0);
     box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 0);
     box(0.36, 4.0, 0.12, frameM, RX0, 3.6, -2.95);
     box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 2.95);
+    box(0.7, 0.1, 6.3, mat(0x4a2e25), RX0 + 0.3, 1.58, 0);            // window sill
+    // Window grill, common on Dhaka windows
+    for (var gz = -2.5; gz <= 2.5; gz += 0.5) box(0.04, 3.9, 0.04, frameM, RX0 - 0.12, 3.6, gz);
 
-    // City beyond the window: a dusk sky placeholder sitting just outside the glass
-    // (the Dhaka skyline arrives in stage 2)
-    var skyCanvas = document.createElement('canvas');
-    skyCanvas.width = 512; skyCanvas.height = 256;
-    var g = skyCanvas.getContext('2d');
-    var grad = g.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0, '#5b4a7a');
-    grad.addColorStop(0.55, '#f08a5d');
-    grad.addColorStop(1, '#f6c27a');
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 512, 256);
-    var sky = new T.Mesh(new T.PlaneGeometry(14, 9), new T.MeshBasicMaterial({ map: new T.CanvasTexture(skyCanvas) }));
-    sky.position.set(RX0 - 1.2, 3.6, 0);
-    sky.rotation.y = Math.PI / 2;
-    scene.add(sky);
+    // Teal curtains drawn to the sides
+    var curtainM = mat(C.teal, { roughness: 1 });
+    box(0.15, 4.8, 1.1, curtainM, RX0 + 0.35, 3.4, -3.65);
+    box(0.15, 4.8, 1.1, curtainM, RX0 + 0.35, 3.4, 3.65);
+    box(0.1, 0.1, 8.6, frameM, RX0 + 0.4, 5.85, 0);                     // curtain rod
+
+    /* ---------- Dhaka at dusk, outside the window ----------
+       Three layers at different depths so the city shifts as the camera moves. */
+    var SKY_W = 2048, SKY_H = 1024;
+
+    function drawBuildingsRow(g, w, h, opts) {
+      var x = -20;
+      while (x < w + 20) {
+        var bw = between(opts.minW, opts.maxW);
+        var top = h * between(opts.topMin, opts.topMax);
+        g.fillStyle = opts.colors[Math.floor(rnd() * opts.colors.length)];
+        g.fillRect(x, top, bw, h - top);
+        // Windows: a mix of warm bulbs and white tube lights; many dark
+        var cols = Math.max(2, Math.floor(bw / opts.cell));
+        var rows = Math.floor((h - top) / (opts.cell * 1.25));
+        var cw = bw / cols;
+        for (var r = 0; r < rows; r++) {
+          for (var c = 0; c < cols; c++) {
+            var lit = rnd();
+            if (lit < opts.lit) {
+              g.fillStyle = rnd() < 0.35 ? 'rgba(232,244,255,0.9)' : 'rgba(255,205,120,0.92)';
+              g.fillRect(x + c * cw + cw * 0.22, top + 10 + r * opts.cell * 1.25, cw * 0.56, opts.cell * 0.6);
+            } else if (opts.grills) {
+              g.fillStyle = 'rgba(0,0,0,0.25)';
+              g.fillRect(x + c * cw + cw * 0.22, top + 10 + r * opts.cell * 1.25, cw * 0.56, opts.cell * 0.6);
+            }
+            if (opts.grills) {
+              // balcony rail under each floor
+              g.fillStyle = 'rgba(0,0,0,0.35)';
+              g.fillRect(x + c * cw + 2, top + 10 + r * opts.cell * 1.25 + opts.cell * 0.72, cw - 4, 3);
+            }
+          }
+        }
+        // Rooftop water tanks, the most Dhaka thing on a skyline
+        if (rnd() < opts.tanks) {
+          var tw = bw * between(0.18, 0.3), th = tw * between(0.7, 1.0);
+          var tx = x + bw * between(0.1, 0.6);
+          g.fillStyle = opts.tankColor;
+          g.fillRect(tx, top - th, tw, th);
+          g.fillRect(tx + tw * 0.1, top - th - 4, tw * 0.8, 4);
+        }
+        // Antennas and dishes on some roofs
+        if (rnd() < 0.3) { g.fillStyle = opts.tankColor; g.fillRect(x + bw * 0.8, top - opts.cell * 1.6, 2, opts.cell * 1.6); }
+        // AC units on facades of near buildings
+        if (opts.ac) {
+          for (var a = 0; a < 3; a++) if (rnd() < 0.5) {
+            g.fillStyle = 'rgba(220,210,200,0.55)';
+            g.fillRect(x + between(4, bw - 26), top + between(20, h - top - 30), 22, 14);
+          }
+        }
+        x += bw + between(0, opts.gap);
+      }
+    }
+
+    // Layer 1: sky, sun, far skyline with a mosque
+    var farTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
+      var sk = g.createLinearGradient(0, 0, 0, h);
+      sk.addColorStop(0, '#3a2a5a');
+      sk.addColorStop(0.32, '#8b4d7c');
+      sk.addColorStop(0.55, '#ef7f58');
+      sk.addColorStop(0.7, '#ffc373');
+      sk.addColorStop(1, '#ffd9a0');
+      g.fillStyle = sk; g.fillRect(0, 0, w, h);
+      // Low sun with a soft glow
+      var sx = w * 0.36, sy = h * 0.64;
+      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 320);
+      glow.addColorStop(0, 'rgba(255,240,190,1)');
+      glow.addColorStop(0.18, 'rgba(255,214,140,0.8)');
+      glow.addColorStop(1, 'rgba(255,170,100,0)');
+      g.fillStyle = glow; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#fff1c8'; g.beginPath(); g.arc(sx, sy, 46, 0, Math.PI * 2); g.fill();
+      // Long thin clouds
+      g.fillStyle = 'rgba(255,190,170,0.35)';
+      for (var i = 0; i < 9; i++) {
+        g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
+      }
+      // Distant haze line of buildings
+      drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.18,
+        colors: ['#8a5a74', '#7d5270', '#94627a'], tanks: 0.4, tankColor: '#6d4762' });
+      // Mosque: dome and two minarets on the far skyline
+      var mx = w * 0.7, base = h * 0.66;
+      g.fillStyle = '#5c3a58';
+      g.fillRect(mx - 70, base - 40, 140, h - base + 40);
+      g.beginPath(); g.arc(mx, base - 40, 62, Math.PI, 0); g.fill();
+      g.fillRect(mx - 3, base - 118, 6, 18);
+      [mx - 110, mx + 104].forEach(function (px) {
+        g.fillRect(px, base - 190, 14, h - base + 190);
+        g.beginPath(); g.arc(px + 7, base - 190, 11, Math.PI, 0); g.fill();
+        g.fillRect(px + 6, base - 214, 2, 14);
+        g.fillRect(px - 4, base - 140, 22, 5);   // balcony ring
+      });
+      // Mid-distance blocks
+      drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.32,
+        colors: ['#6b4462', '#5e3d58', '#734a66'], tanks: 0.55, tankColor: '#3f2840' });
+      // A few birds over the sky
+      g.strokeStyle = 'rgba(40,24,40,0.7)'; g.lineWidth = 3;
+      for (var b = 0; b < 7; b++) {
+        var bx = between(w * 0.15, w * 0.85), by = between(h * 0.2, h * 0.45), s = between(8, 14);
+        g.beginPath(); g.moveTo(bx - s, by); g.quadraticCurveTo(bx - s / 2, by - s / 2, bx, by); g.quadraticCurveTo(bx + s / 2, by - s / 2, bx + s, by); g.stroke();
+      }
+    });
+    var far = new T.Mesh(new T.PlaneGeometry(34, 17), new T.MeshBasicMaterial({ map: farTex }));
+    far.position.set(RX0 - 7, 4, -3);
+    far.rotation.y = Math.PI / 2;
+    scene.add(far);
+
+    // Layer 2: closer residential blocks with balconies and AC units
+    var nearTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
+      drawBuildingsRow(g, w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.62, gap: 30, cell: 34, lit: 0.42,
+        colors: ['#3d2734', '#46303a', '#352230'], tanks: 0.7, tankColor: '#24161f', grills: true, ac: true });
+    });
+    var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
+    near.position.set(RX0 - 3.6, 2.2, -1.5);
+    near.rotation.y = Math.PI / 2;
+    scene.add(near);
+
+    // Layer 3: overhead electric wires, sagging across the view, with a few crows
+    var wireTex = canvasTex(SKY_W, 512, function (g, w, h) {
+      g.strokeStyle = 'rgba(28,16,22,0.92)';
+      for (var i = 0; i < 9; i++) {
+        var y0 = between(60, 260), y1 = between(60, 260), sag = between(40, 120);
+        g.lineWidth = between(2, 4);
+        g.beginPath(); g.moveTo(-10, y0); g.quadraticCurveTo(w / 2, Math.max(y0, y1) + sag, w + 10, y1); g.stroke();
+      }
+      // a tangle near one side
+      for (var j = 0; j < 14; j++) {
+        g.lineWidth = 2;
+        g.beginPath(); g.moveTo(w * 0.12, between(80, 200)); g.bezierCurveTo(w * between(0.2, 0.4), between(100, 380), w * between(0.4, 0.6), between(60, 300), w + 10, between(80, 340)); g.stroke();
+      }
+      // crows sitting on a wire
+      g.fillStyle = 'rgba(20,12,18,0.95)';
+      [[0.55, 214], [0.58, 216], [0.62, 219]].forEach(function (c) {
+        var cx = w * c[0], cy = c[1];
+        g.beginPath(); g.ellipse(cx, cy - 12, 9, 13, 0, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.arc(cx + 5, cy - 26, 6, 0, Math.PI * 2); g.fill();
+      });
+    });
+    var wires = new T.Mesh(new T.PlaneGeometry(16, 4), new T.MeshBasicMaterial({ map: wireTex, transparent: true }));
+    wires.position.set(RX0 - 1.4, 5.0, 0);
+    wires.rotation.y = Math.PI / 2;
+    scene.add(wires);
 
     /* ---------- Desk with monitor, lamp and phone ---------- */
     var desk = new T.Group();
     desk.position.set(0, 0, -2.2);
     scene.add(desk);
-    box(5.2, 0.16, 2.2, mat(C.deskTop, { roughness: 0.5 }), 0, 1.55, 0, desk);   // top
-    box(0.16, 1.5, 2.0, mat(C.desk), -2.45, 0.75, 0, desk);                        // legs
-    box(1.6, 1.5, 2.0, mat(C.desk), 1.8, 0.75, 0, desk);                           // drawer unit
-    // Thin marigold light strip under the desk edge
+    box(5.2, 0.16, 2.2, mat(C.deskTop, { roughness: 0.5 }), 0, 1.55, 0, desk);
+    box(0.16, 1.5, 2.0, mat(C.desk), -2.45, 0.75, 0, desk);
+    box(1.6, 1.5, 2.0, mat(C.desk), 1.8, 0.75, 0, desk);
+    box(1.4, 0.04, 0.04, mat(C.marigold, { metalness: 0.5 }), 1.8, 1.1, 1.01, desk);   // drawer handle
     box(5.2, 0.03, 0.03, new T.MeshBasicMaterial({ color: C.marigold }), 0, 1.46, 1.1, desk);
 
     var monitor = new T.Group();
     monitor.position.set(-0.3, 1.63, -0.45);
     desk.add(monitor);
-    box(0.5, 0.06, 0.4, mat(C.metal), 0, 0.03, 0, monitor);                         // foot
-    box(0.12, 0.7, 0.08, mat(C.metal), 0, 0.4, -0.05, monitor);                     // neck
-    box(2.5, 1.5, 0.12, mat(C.metal, { roughness: 0.4 }), 0, 1.4, 0, monitor);      // body
-    var screen = new T.Mesh(new T.PlaneGeometry(2.36, 1.36), new T.MeshBasicMaterial({ color: C.screen }));
+    box(0.5, 0.06, 0.4, mat(C.metal), 0, 0.03, 0, monitor);
+    box(0.12, 0.7, 0.08, mat(C.metal), 0, 0.4, -0.05, monitor);
+    box(2.5, 1.5, 0.12, mat(C.metal, { roughness: 0.4 }), 0, 1.4, 0, monitor);
+    // Glowing screen: a simple desktop (projects arrive in a later stage)
+    var screenTex = canvasTex(1024, 590, function (g, w, h) {
+      var bg = g.createLinearGradient(0, 0, w, h);
+      bg.addColorStop(0, '#13232a'); bg.addColorStop(1, '#1e1a2c');
+      g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, 0, w, 34);
+      g.fillStyle = '#ece6da'; g.font = '600 18px sans-serif'; g.fillText('abrar@desk', 16, 23);
+      g.fillStyle = '#a7a194'; g.fillText('Dhaka, dusk', w - 130, 23);
+      var tiles = ['#2f7d77', '#e9c14a', '#c4553f', '#5b4a7a', '#3e6e8c', '#8a5c3c'];
+      for (var i = 0; i < 6; i++) {
+        var tx = 40 + (i % 3) * 320, ty = 70 + Math.floor(i / 3) * 250;
+        g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(tx, ty, 290, 220);
+        g.fillStyle = tiles[i]; g.fillRect(tx, ty, 290, 8);
+        g.fillStyle = 'rgba(236,230,218,0.25)';
+        for (var r = 0; r < 4; r++) g.fillRect(tx + 18, ty + 40 + r * 34, 180 - r * 30, 12);
+      }
+    });
+    var screen = new T.Mesh(new T.PlaneGeometry(2.36, 1.36), new T.MeshBasicMaterial({ map: screenTex }));
     screen.position.set(0, 1.4, 0.065);
     monitor.add(screen);
-    box(1.9, 0.05, 0.6, mat(0x2e2a28), -0.3, 1.66, 0.45, desk);                     // keyboard
+    var screenGlow = new T.PointLight(0x8fd1ff, 0.35, 4, 2);
+    screenGlow.position.set(0, 1.4, 0.6);
+    monitor.add(screenGlow);
+    box(1.9, 0.05, 0.6, mat(0x2e2a28), -0.3, 1.66, 0.45, desk);                       // keyboard
+    box(0.2, 0.05, 0.32, mat(0x2e2a28), 0.95, 1.66, 0.45, desk);                      // mouse
+    cyl(0.14, 0.12, 0.3, mat(0xece6da), 1.1, 1.78, -0.35, desk);                       // tea cup
+    box(0.04, 0.12, 0.04, mat(0xece6da), 1.27, 1.8, -0.35, desk);                     // cup handle
 
     var lampArm = new T.Group();
     lampArm.position.set(-2.1, 1.63, -0.6);
     desk.add(lampArm);
     box(0.4, 0.06, 0.4, mat(C.metal), 0, 0.03, 0, lampArm);
     box(0.06, 1.4, 0.06, mat(C.metal), 0, 0.73, 0, lampArm);
-    box(0.5, 0.25, 0.35, mat(C.marigold, { emissive: 0x4a3510 }), 0.15, 1.45, 0.1, lampArm);
+    box(0.5, 0.25, 0.35, mat(C.marigold, { emissive: 0x6a4a10 }), 0.15, 1.45, 0.1, lampArm);
 
     var phone = box(0.34, 0.04, 0.66, mat(0x111214, { roughness: 0.3 }), 1.55, 1.65, 0.35, desk);
     phone.rotation.y = -0.35;
 
-    /* ---------- Back wall: ID card board and a shelf ---------- */
-    var board = box(4.6, 2.4, 0.08, mat(C.board), 3.6, 4.2, -5.8);
-    box(4.6, 0.04, 0.12, new T.MeshBasicMaterial({ color: C.marigold }), 3.6, 2.97, -5.78);   // glow line under the board
+    /* ---------- Back wall: ID card board, shelf and a rickshaw-art poster ---------- */
+    var boardTex = canvasTex(920, 480, function (g, w, h) {
+      g.fillStyle = '#3a2d26'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#271d18';
+      for (var y = 20; y < h; y += 28) for (var x = 20; x < w; x += 28) { g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); }
+      g.strokeStyle = '#5a4436'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+    });
+    var board = new T.Mesh(new T.BoxGeometry(4.6, 2.4, 0.08), [
+      mat(C.board), mat(C.board), mat(C.board), mat(C.board),
+      new T.MeshStandardMaterial({ map: boardTex, roughness: 0.9 }), mat(C.board)
+    ]);
+    board.position.set(3.6, 4.2, -5.8);
+    board.castShadow = true; board.receiveShadow = true;
+    scene.add(board);
+    box(4.6, 0.04, 0.12, new T.MeshBasicMaterial({ color: C.marigold }), 3.6, 2.97, -5.78);
 
     var shelf = new T.Group();
     shelf.position.set(-4.4, 0, -5.55);
     scene.add(shelf);
     box(3.2, 0.12, 0.6, mat(C.desk), 0, 4.6, 0, shelf);
     box(3.2, 0.12, 0.6, mat(C.desk), 0, 3.4, 0, shelf);
-    var bookColors = [0x3e8c86, 0xe9c14a, 0xb5523b, 0xece6da, 0x5b4a7a, 0x2f5d5b];
+    var bookColors = [0x2f7d77, 0xe9c14a, 0xc4553f, 0xece6da, 0x5b4a7a, 0x245f5a];
     for (var i = 0; i < 9; i++) {
-      var h = 0.55 + (i % 3) * 0.12;
-      box(0.18, h, 0.42, mat(bookColors[i % bookColors.length]), -1.3 + i * 0.22, 4.66 + h / 2, 0, shelf);
+      var bh = 0.55 + (i % 3) * 0.12;
+      box(0.18, bh, 0.42, mat(bookColors[i % bookColors.length]), -1.3 + i * 0.22, 4.66 + bh / 2, 0, shelf);
     }
+    box(0.5, 0.35, 0.4, mat(0x8a5c3c), 0.9, 3.64, 0, shelf);                        // a small box
+    cyl(0.16, 0.12, 0.35, mat(C.teal), 1.3, 3.64, 0, shelf);                        // small pot
+    box(0.08, 0.4, 0.08, mat(0x4f8a45), 1.3, 3.95, 0, shelf);
+
+    // Rickshaw-art inspired poster: bright border, flowers and a peacock-blue field
+    var posterTex = canvasTex(400, 560, function (g, w, h) {
+      g.fillStyle = '#0f6f7a'; g.fillRect(0, 0, w, h);
+      var stripes = ['#e9c14a', '#c4553f', '#ece6da', '#2a9d4b'];
+      for (var s = 0; s < 4; s++) { g.strokeStyle = stripes[s]; g.lineWidth = 10; g.strokeRect(10 + s * 10, 10 + s * 10, w - 20 - s * 20, h - 20 - s * 20); }
+      function flower(x, y, r, petal, centre) {
+        g.fillStyle = petal;
+        for (var p = 0; p < 8; p++) { g.beginPath(); g.ellipse(x + Math.cos(p * Math.PI / 4) * r, y + Math.sin(p * Math.PI / 4) * r, r * 0.55, r * 0.32, p * Math.PI / 4, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = centre; g.beginPath(); g.arc(x, y, r * 0.5, 0, Math.PI * 2); g.fill();
+      }
+      flower(w / 2, h * 0.42, 70, '#e64b6b', '#e9c14a');
+      flower(w * 0.27, h * 0.72, 38, '#e9c14a', '#c4553f');
+      flower(w * 0.73, h * 0.72, 38, '#ece6da', '#e64b6b');
+      flower(w * 0.27, h * 0.18, 26, '#2a9d4b', '#ece6da');
+      flower(w * 0.73, h * 0.18, 26, '#2a9d4b', '#ece6da');
+    });
+    var poster = new T.Mesh(new T.PlaneGeometry(1.6, 2.24), new T.MeshStandardMaterial({ map: posterTex, roughness: 0.8 }));
+    poster.position.set(8.4, 4.3, -5.83);
+    scene.add(poster);
+    box(1.72, 2.36, 0.06, mat(0x2a1d19), 8.4, 4.3, -5.88);
 
     /* ---------- Chair (the character sits here in stage 3) ---------- */
     var chair = new T.Group();
@@ -401,10 +657,54 @@
     box(1.1, 0.14, 1.0, mat(0x2b2a33), 0, 1.05, 0, chair);
     box(1.1, 1.3, 0.12, mat(0x2b2a33), 0, 1.75, 0.5, chair);
     box(0.1, 1.0, 0.1, mat(C.metal), 0, 0.5, 0, chair);
+    box(0.9, 0.06, 0.06, mat(C.metal), 0, 0.05, 0, chair);
+    box(0.06, 0.06, 0.9, mat(C.metal), 0, 0.05, 0, chair);
+
+    /* ---------- Bangladeshi home details ---------- */
+    // Ceiling fan, turning slowly
+    var fan = new T.Group();
+    fan.position.set(0.6, RH, 1);
+    scene.add(fan);
+    cyl(0.06, 0.06, 0.9, mat(0xd9d2c4), 0, -0.45, 0, fan, 8);
+    cyl(0.35, 0.3, 0.25, mat(0xd9d2c4), 0, -0.95, 0, fan);
+    var blades = new T.Group();
+    blades.position.y = -0.98;
+    fan.add(blades);
+    for (var bl = 0; bl < 3; bl++) {
+      var arm = new T.Group();
+      arm.rotation.y = bl * (Math.PI * 2 / 3);
+      blades.add(arm);
+      var blade = box(2.4, 0.04, 0.45, mat(0xd9d2c4), 1.4, 0, 0, arm);
+      blade.rotation.x = 0.12;
+    }
+    cyl(0.12, 0.12, 0.05, new T.MeshBasicMaterial({ color: 0xfff0d6 }), 0, -1.1, 0, fan);
+
+    // Mora: a cane stool with a red cushion
+    var mora = new T.Group();
+    mora.position.set(4.2, 0, 2.6);
+    scene.add(mora);
+    var caneM = mat(C.cane, { roughness: 0.95 });
+    cyl(0.28, 0.5, 0.55, caneM, 0, 0.275, 0, mora);
+    cyl(0.5, 0.28, 0.55, caneM, 0, 0.825, 0, mora);
+    cyl(0.48, 0.48, 0.1, mat(0xc4553f), 0, 1.15, 0, mora);
+
+    // Plant by the window
+    var plant = new T.Group();
+    plant.position.set(-6.5, 0, 4.6);
+    scene.add(plant);
+    cyl(0.45, 0.35, 0.9, mat(0xc4553f), 0, 0.45, 0, plant);
+    for (var lf = 0; lf < 9; lf++) {
+      var leaf = box(0.12, between(1.2, 2.1), 0.32, mat(lf % 2 ? 0x4f8a45 : 0x3f7a3a), 0, 1.6, 0, plant);
+      leaf.rotation.set(between(-0.35, 0.35), lf * 0.7, between(-0.35, 0.35));
+    }
+
+    // A floor cushion near the window, for reading
+    box(1.6, 0.35, 1.6, mat(0xe9c14a, { roughness: 1 }), -5.8, 0.18, -3.6);
+    box(1.2, 0.5, 0.35, mat(0xc4553f, { roughness: 1 }), -6.4, 0.55, -3.6).rotation.y = Math.PI / 2;
 
     /* ---------- Views: where the camera goes for each section ---------- */
     var VIEWS = {
-      home:     { pos: [9.5, 6.6, 9.5],  look: [-0.6, 2.2, -2.2] },
+      home:     { pos: [9.8, 5.5, 9.8],  look: [-1.0, 2.6, -2.4] },
       projects: { pos: [-0.3, 3.05, 0.2], look: [-0.3, 3.03, -2.65] },
       work:     { pos: [3.6, 4.2, -1.6],  look: [3.6, 4.2, -5.8] },
       about:    { pos: [-4.4, 4.4, -2.6], look: [-4.4, 4.1, -5.55] },
@@ -413,7 +713,7 @@
 
     // Objects you can click, and where their floating markers sit
     var HOTSPOTS = [
-      { view: 'projects', label: 'Projects', at: [-0.3, 4.2, -2.65], mesh: screen },
+      { view: 'projects', label: 'Projects', at: [-0.3, 3.05, -2.5], mesh: screen },
       { view: 'work', label: 'Work', at: [3.6, 5.7, -5.7], mesh: board },
       { view: 'about', label: 'About', at: [-4.4, 5.6, -5.4], mesh: shelf },
       { view: 'contact', label: 'Contact', at: [1.55, 2.2, -1.85], mesh: phone }
@@ -578,7 +878,8 @@
         yawTarget += (0 - yawTarget) * Math.min(1, dt * 0.6);
         pitchTarget += (0 - pitchTarget) * Math.min(1, dt * 0.6);
       }
-      lamp.intensity = 1.2 + Math.sin(t * 2.1) * 0.03;   // the faintest lamp flicker
+      lamp.intensity = 1.3 + Math.sin(t * 2.1) * 0.03;   // the faintest lamp flicker
+      blades.rotation.y += dt * 2.4;                       // ceiling fan
       applyCamera();
       renderer.render(scene, camera);
       placeMarkers(W, H);
@@ -586,7 +887,7 @@
     }
 
     // Start in the far corner, then glide to the home view
-    setCam({ pos: [12.2, 7.1, 13.2], look: [-0.6, 2.2, -2.2] });   // inside the room, near the far corner
+    setCam({ pos: [12.0, 6.6, 13.2], look: [-1.0, 2.6, -2.4] });   // inside the room, near the far corner
     applyCamera();
     raf = requestAnimationFrame(frame);
 
