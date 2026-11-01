@@ -2596,7 +2596,36 @@
     }
   }
 
+  /* ---------- About: resume button + capability disclosures ---------- */
+  function setupAbout() {
+    // Show the resume button only once the PDF is actually in the repo
+    var resume = document.querySelector('[data-resume]');
+    if (resume && window.fetch && location.protocol !== 'file:') {
+      var href = resume.querySelector('a').getAttribute('href');
+      fetch(href, { method: 'HEAD' })
+        .then(function (res) { if (res.ok) resume.hidden = false; })
+        .catch(function () { /* stays hidden */ });
+    }
+
+    // Escape closes an open capability and returns focus to its heading
+    document.querySelectorAll('.cap').forEach(function (d) {
+      d.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && d.open) {
+          d.open = false;
+          d.querySelector('summary').focus();
+        }
+      });
+      d.addEventListener('toggle', function () {
+        if (d.open && canAnimate()) {
+          gsap.from(d.querySelector('p'), { opacity: 0, y: -6, duration: 0.3, ease: 'power2.out' });
+        }
+        if (window.ScrollTrigger) ScrollTrigger.refresh();
+      });
+    });
+  }
+
   /* ---------- Start ---------- */
+  setupAbout();
   setupTankDemo();
   setupLibraryDemo();
   setupPasswordDemo();
