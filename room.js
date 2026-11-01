@@ -68,6 +68,7 @@
 
       '<div class="room-desk" hidden></div>' +
       '<div class="room-phone" hidden></div>' +
+      '<section class="room-book" hidden aria-labelledby="room-book-title"></section>' +
       '<div class="room-app" role="dialog" aria-modal="true" aria-labelledby="room-app-title" hidden>' +
         '<div class="room-app__bar">' +
           '<button class="room-app__home" type="button"><span aria-hidden="true">&larr;</span> Desktop</button>' +
@@ -945,10 +946,36 @@
     box(3.2, 0.12, 0.6, mat(C.desk), 0, 4.6, 0, shelf);
     box(3.2, 0.12, 0.6, mat(C.desk), 0, 3.4, 0, shelf);
     var bookColors = [0x2f7d77, 0xe9c14a, 0xc4553f, 0xece6da, 0x5b4a7a, 0x245f5a];
+    var books = [];
     for (var i = 0; i < 9; i++) {
       var bh = 0.55 + (i % 3) * 0.12;
-      box(0.18, bh, 0.42, mat(bookColors[i % bookColors.length]), -1.3 + i * 0.22, 4.66 + bh / 2, 0, shelf);
+      books.push(box(0.18, bh, 0.42, mat(bookColors[i % bookColors.length]), -1.3 + i * 0.22, 4.66 + bh / 2, 0, shelf));
     }
+    var aboutBook = books[1];                      // the marigold one slides out when you open About
+    var aboutBookHome = { z: aboutBook.position.z, rx: aboutBook.rotation.x };
+    // A framed photo of you on the lower shelf (same portrait as the ID cards)
+    var photoFrame = new T.Group();
+    photoFrame.position.set(-0.85, 3.46, 0.05);
+    photoFrame.rotation.x = -0.12;                       // leaning back a little
+    photoFrame.rotation.y = 0.18;
+    shelf.add(photoFrame);
+    box(0.62, 0.74, 0.05, mat(0x6b4a2f, { roughness: 0.6 }), 0, 0.37, 0, photoFrame);
+    var frameTex = canvasTex(256, 300, function (g, w, h) {
+      g.fillStyle = '#e3dccf'; g.fillRect(0, 0, w, h);
+      drawAvatar(g, w / 2, h / 2, w * 0.42, '#e3dccf');
+    });
+    var framePhoto = new T.Mesh(new T.PlaneGeometry(0.5, 0.6), new T.MeshBasicMaterial({ map: frameTex, color: 0xe6dfd2 }));
+    framePhoto.position.set(0, 0.37, 0.027);
+    photoFrame.add(framePhoto);
+    function paintFrame() {
+      var cv = frameTex.image;
+      if (!cv || !cv.getContext) return;
+      var g = cv.getContext('2d'), side = Math.max(cv.width, cv.height);
+      g.drawImage(portrait, (cv.width - side) / 2, (cv.height - side) / 2, side, side);
+      frameTex.needsUpdate = true;
+    }
+    if (portraitReady) paintFrame(); else portrait.addEventListener('load', paintFrame);
+
     box(0.5, 0.35, 0.4, mat(0x8a5c3c), 0.9, 3.64, 0, shelf);                        // a small box
     cyl(0.16, 0.12, 0.35, mat(C.teal), 1.3, 3.64, 0, shelf);                        // small pot
     box(0.08, 0.4, 0.08, mat(0x4f8a45), 1.3, 3.95, 0, shelf);
@@ -1152,7 +1179,7 @@
       home:     { pos: [9.8, 5.5, 9.8],  look: [-1.0, 2.6, -2.4] },
       projects: { pos: [-0.3, 3.05, 0.2], look: [-0.3, 3.03, -2.65] },
       work:     { pos: [4.6, 3.95, -0.3], look: [4.6, 3.95, -5.8] },   // off-centre so the panel sits beside the board
-      about:    { pos: [-4.4, 4.4, -2.6], look: [-4.4, 4.1, -5.55] },
+      about:    { pos: [-3.4, 4.25, -0.9], look: [-3.4, 4.0, -5.55] },   // shelf on the left, the open notebook on the right
       contact:  { pos: [1.55, 2.57, -0.3], look: [1.55, 2.55, -1.45] }
     };
 
@@ -1205,10 +1232,8 @@
       syncUi(name);
     }
 
-    /* ---------- Section panels (filled in by later stages) ---------- */
-    var SECTION_TEXT = {
-      about: { title: 'About', body: 'Your story will live here. Coming in a later stage.' }
-    };
+    /* ---------- Section panels (every section now has its own object; kept for future ones) ---------- */
+    var SECTION_TEXT = {};
 
     // Work panel: the readable (and keyboard) side of the ID cards
     function esc(t) { return String(t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); }
@@ -1254,13 +1279,14 @@
       showDesk(name === 'projects');
       if (name !== 'work') resetCards();
       showPhone(name === 'contact');
-      if (name === 'projects' || name === 'contact') {
+      showBook(name === 'about');
+      if (name === 'projects' || name === 'contact' || name === 'about') {
         panel.hidden = true;
       } else if (name === 'work') {
         renderWorkPanel();
         panel.hidden = false;
         if (window.gsap) gsap.fromTo(panel, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.5, delay: 0.9, ease: 'power2.out' });
-      } else if (inSection) {
+      } else if (inSection && SECTION_TEXT[name]) {
         panelTitle.textContent = SECTION_TEXT[name].title;
         panelBody.textContent = SECTION_TEXT[name].body;
         panel.hidden = false;
@@ -1537,6 +1563,53 @@
       phoneUi.style.width = (x1 - x0) + 'px';
       phoneUi.style.height = (y1 - y0) + 'px';
       phoneUi.style.fontSize = ((x1 - x0) / 19) + 'px';
+    }
+
+    /* ---------- About: a book slides off the shelf and opens as a notebook ---------- */
+    var bookUi = layer.querySelector('.room-book');
+    function fillBook() {
+      var story = document.querySelector('#about .about__story');
+      var facts = document.querySelector('#about .about__facts');
+      bookUi.innerHTML =
+        '<div class="room-book__page room-book__page--left">' +
+          '<p class="room-book__kicker">About</p>' +
+          '<h2 class="room-book__title" id="room-book-title">Abrar Sami Khan</h2>' +
+          '<div class="room-book__story"></div>' +
+        '</div>' +
+        '<div class="room-book__page room-book__page--right">' +
+          '<p class="room-book__kicker">Quick facts</p>' +
+          '<div class="room-book__facts"></div>' +
+          '<p class="room-book__more">Projects are on the computer, work is on the board, and the phone has my contact details.</p>' +
+        '</div>';
+      if (story) bookUi.querySelector('.room-book__story').appendChild(cleanCopy(story));
+      if (facts) bookUi.querySelector('.room-book__facts').appendChild(cleanCopy(facts));
+    }
+    function slideBook(out) {
+      var to = out ? { z: aboutBookHome.z + 0.38, rx: 0.22 } : aboutBookHome;   // pulled out, top tipped toward you
+      if (window.gsap) {
+        gsap.to(aboutBook.position, { z: to.z, duration: 0.9, delay: out ? 0.8 : 0, ease: 'power3.inOut', overwrite: true });
+        gsap.to(aboutBook.rotation, { x: to.rx, duration: 0.9, delay: out ? 0.8 : 0, ease: 'power3.inOut', overwrite: true });
+      } else {
+        aboutBook.position.z = to.z; aboutBook.rotation.x = to.rx;
+      }
+    }
+    var bookOpen = false;
+    function showBook(on) {
+      if (on === bookOpen) return;
+      bookOpen = on;
+      slideBook(on);
+      if (on) {
+        fillBook();
+        bookUi.hidden = false;
+        if (window.gsap) {
+          gsap.fromTo(bookUi, { autoAlpha: 0, x: 40, rotationY: -12, transformPerspective: 1200 },
+            { autoAlpha: 1, x: 0, rotationY: 0, duration: 0.7, delay: 1.3, ease: 'power3.out', clearProps: 'transform' });
+        }
+      } else {
+        if (window.gsap && gsap.killTweensOf) gsap.killTweensOf(bookUi);
+        bookUi.hidden = true;
+        bookUi.innerHTML = '';
+      }
     }
 
     /* ---------- Floating markers over clickable objects ---------- */
