@@ -1613,3 +1613,205 @@ html.has-cursor button { cursor: none; }
   .js .preloader { display: none; }
   .cursor { display: none; }
 }
+
+/* =========================================================
+   11. The 3D room (room.js). Desktop only; the flat site is the fallback.
+   ========================================================= */
+html.room-mode,
+html.room-mode body { overflow: hidden; }
+
+.room {
+  --room-ink: #1a1210;
+  --room-glass: rgba(26, 18, 16, 0.72);
+  position: fixed;
+  inset: 0;
+  z-index: 200;            /* above the site, below the custom cursor */
+  background: var(--room-ink);
+  color: var(--paper);
+}
+
+.room__stage { position: absolute; inset: 0; }
+.room__stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+
+/* Top bar: who you are, and the way out to the flat site */
+.room__top {
+  position: absolute;
+  inset: var(--space-5) var(--margin) auto var(--margin);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  pointer-events: none;
+}
+.room__top > * { pointer-events: auto; }
+
+.room__id { display: grid; gap: 2px; }
+.room__id strong {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-weight: 600;
+  font-variation-settings: "wdth" 88;
+}
+.room__id span { font-size: var(--step--1); color: var(--paper-muted); }
+
+.room__flat,
+.room__back {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--room-glass);
+  color: var(--paper);
+  font: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.room__flat:hover, .room__back:hover,
+.room__flat:focus-visible, .room__back:focus-visible { border-color: var(--paper); }
+
+.room__back {
+  position: absolute;
+  top: calc(var(--space-5) + 5rem);
+  left: var(--margin);
+}
+.room__back kbd {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-1);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 0.75em;
+  color: var(--paper-muted);
+}
+
+/* Bottom menu */
+.room__menu {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-5);
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--room-glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transform: translate(-50%, 140%);
+  transition: transform 0.7s var(--ease-out);
+}
+.room__menu.is-in { transform: translate(-50%, 0); }
+
+.room__menu button {
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--paper-muted);
+  font: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.room__menu button:hover,
+.room__menu button:focus-visible { color: var(--paper); }
+.room__menu button[aria-current="true"] { background: var(--signal); color: var(--signal-ink); }
+
+/* Floating markers over clickable objects */
+.room__hotspots { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.4s var(--ease-out); }
+.room__hotspots.is-hidden { opacity: 0; }
+.room__hotspots.is-hidden .room__marker { pointer-events: none; }
+
+.room__marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  padding: 0;
+  border: 2px solid var(--signal);
+  border-radius: 50%;
+  background: rgba(233, 193, 74, 0.25);
+  cursor: pointer;
+  pointer-events: auto;
+  will-change: transform;
+}
+.room__marker::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.room__marker span {
+  position: absolute;
+  left: 24px;
+  white-space: nowrap;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--room-glass);
+  color: var(--paper);
+  font-size: var(--step--1);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.room__marker:hover span { opacity: 1; transform: none; }
+
+/* Section panel (content arrives in later room stages) */
+.room__panel {
+  position: absolute;
+  right: var(--margin);
+  bottom: calc(var(--space-5) + 4rem);
+  width: min(420px, 90vw);
+  padding: var(--space-5);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--room-glass);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.room__panel-title {
+  margin-bottom: var(--space-2);
+  font-size: var(--step-2);
+}
+
+/* Loader: a short script run */
+.room__loader {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: var(--room-ink);
+}
+
+.room__terminal {
+  width: min(560px, 88vw);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--paper-muted);
+}
+.room__cmd { color: var(--paper); margin-bottom: var(--space-3); }
+.room__cmd span { color: var(--signal); }
+.room__log { margin: 0 0 var(--space-4); padding: 0; list-style: none; min-height: 10.5em; }
+.room__ok { color: #7fc8a9; margin-right: var(--space-2); }
+.room__bar { height: 3px; background: var(--rule); overflow: hidden; }
+.room__bar span {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.25s linear;
+}
+.room__ready { margin-top: var(--space-3); color: var(--paper); }
+
+/* Header link back into the room from the flat site (desktop only) */
+.site-nav__room a { color: var(--signal); }
