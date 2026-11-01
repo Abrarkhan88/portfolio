@@ -1631,7 +1631,7 @@ html.room-mode body { overflow: hidden; }
 }
 
 .room__stage { position: absolute; inset: 0; }
-.room__stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.room__stage canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 
 /* Top bar: who you are, and the way out to the flat site */
 .room__top {
@@ -1654,6 +1654,9 @@ html.room-mode body { overflow: hidden; }
 }
 .room__id span { font-size: var(--step--1); color: var(--paper-muted); }
 
+.room__actions { display: flex; gap: var(--space-2); }
+
+.room__sound,
 .room__flat,
 .room__back {
   padding: var(--space-2) var(--space-4);
@@ -1668,8 +1671,9 @@ html.room-mode body { overflow: hidden; }
   backdrop-filter: blur(8px);
   transition: border-color var(--dur-fast) var(--ease-out);
 }
-.room__flat:hover, .room__back:hover,
-.room__flat:focus-visible, .room__back:focus-visible { border-color: var(--paper); }
+.room__flat:hover, .room__back:hover, .room__sound:hover,
+.room__flat:focus-visible, .room__back:focus-visible, .room__sound:focus-visible { border-color: var(--paper); }
+.room__sound[aria-pressed="true"] { border-color: var(--signal); color: var(--signal); }
 
 .room__back {
   position: absolute;
@@ -2271,3 +2275,23 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 .room-book__facts dd { margin: 0; font-size: var(--step--1); }
 .room-book__more { margin-top: auto; font-size: var(--step--1); color: var(--book-muted); font-style: italic; }
 .room-book a:focus-visible { outline: 2px solid #2f7d77; outline-offset: 2px; }
+
+/* ---------- Room: first-visit hint ---------- */
+.room__hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--space-5) + 4.2rem);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 999px;
+  background: var(--room-glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--paper);
+  font-size: var(--step--1);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
+}
+.room__hint.is-in { opacity: 1; transform: translate(-50%, 0); }
