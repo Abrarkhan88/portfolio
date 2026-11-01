@@ -110,6 +110,7 @@
     'laying out the room: desk, wall, shelf',
     'lighting the Dhaka skyline at dusk',
     'switching on the ceiling fan',
+    'sitting Abrar down at his desk',
     'putting projects on the monitor',
     'pinning ID cards to the wall',
     'leaving the phone on the desk'
@@ -505,7 +506,7 @@
       }
     });
     var far = new T.Mesh(new T.PlaneGeometry(34, 17), new T.MeshBasicMaterial({ map: farTex }));
-    far.position.set(RX0 - 7, 4, -3);
+    far.position.set(RX0 - 7, 4.9, -3);
     far.rotation.y = Math.PI / 2;
     scene.add(far);
 
@@ -515,7 +516,7 @@
         colors: ['#3d2734', '#46303a', '#352230'], tanks: 0.7, tankColor: '#24161f', grills: true, ac: true });
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
-    near.position.set(RX0 - 3.6, 2.2, -1.5);
+    near.position.set(RX0 - 3.6, 3.0, -1.5);
     near.rotation.y = Math.PI / 2;
     scene.add(near);
 
@@ -660,6 +661,117 @@
     box(0.9, 0.06, 0.06, mat(C.metal), 0, 0.05, 0, chair);
     box(0.06, 0.06, 0.9, mat(C.metal), 0, 0.05, 0, chair);
 
+    /* ---------- You: a stylised figure sitting at the desk ----------
+       Built from rounded shapes. Faces the monitor (-z). Wavy black hair swept up,
+       stubble, light grey T-shirt, black trousers, white-soled trainers. */
+    var SKIN = 0x8d5a3b, SKIN_SHADE = 0x7a4c31, HAIR = 0x161214, STUBBLE = 0x4a3328,
+        TEE = 0xc9ccc8, TROUSERS = 0x1d1d22, SHOE = 0x2a2a2e, SOLE = 0xe8e4dc;
+    var skinM = mat(SKIN, { roughness: 0.75 }), hairM = mat(HAIR, { roughness: 0.6 }),
+        teeM = mat(TEE, { roughness: 0.95 }), trouserM = mat(TROUSERS, { roughness: 0.9 });
+
+    var me = new T.Group();
+    me.position.set(-0.3, 0, -0.45);
+    scene.add(me);
+
+    function part(geo, m, x, y, z, parent) {
+      var mesh = new T.Mesh(geo, m);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      (parent || me).add(mesh);
+      return mesh;
+    }
+    // A rounded limb between two points (local to `parent`)
+    function limb(from, to, radius, m, parent) {
+      var holder = new T.Group();
+      holder.position.set(from[0], from[1], from[2]);
+      (parent || me).add(holder);
+      holder.lookAt(new T.Vector3(to[0], to[1], to[2]));
+      var len = Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
+      var cap = new T.Mesh(new T.CapsuleGeometry(radius, Math.max(0.01, len - radius * 2), 6, 12), m);
+      cap.rotation.x = Math.PI / 2;      // capsule runs along y; turn it to run along the holder's z
+      cap.position.z = len / 2;
+      cap.castShadow = true;
+      holder.add(cap);
+      return holder;
+    }
+
+    // Legs: thighs forward along the seat, shins down to the floor
+    part(new T.BoxGeometry(0.74, 0.28, 0.6), trouserM, 0, 1.27, 0.02);
+    [-0.19, 0.19].forEach(function (x) {
+      limb([x, 1.27, -0.05], [x * 1.05, 1.25, -0.72], 0.15, trouserM);
+      limb([x * 1.05, 1.22, -0.72], [x * 1.05, 0.22, -0.78], 0.13, trouserM);
+      part(new T.BoxGeometry(0.24, 0.14, 0.46), mat(SHOE), x * 1.05, 0.12, -0.86);
+      part(new T.BoxGeometry(0.25, 0.05, 0.48), mat(SOLE), x * 1.05, 0.03, -0.86);
+    });
+
+    // Torso in the grey T-shirt, leaning slightly toward the screen
+    var torso = new T.Group();
+    torso.position.set(0, 1.42, 0.05);
+    torso.rotation.x = -0.1;
+    me.add(torso);
+    var chest = part(new T.CapsuleGeometry(0.33, 0.48, 6, 16), teeM, 0, 0.45, 0, torso);
+    chest.scale.set(1.12, 1, 0.74);
+    part(new T.CylinderGeometry(0.36, 0.34, 0.12, 16), teeM, 0, 0.08, 0, torso).scale.set(1.05, 1, 0.78);   // hem
+
+    // Arms: short grey sleeves, bare forearms reaching for the keyboard
+    var hands = [];
+    [-1, 1].forEach(function (side) {
+      var sh = [side * 0.44, 0.78, 0];
+      part(new T.SphereGeometry(0.15, 16, 12), teeM, sh[0], sh[1], sh[2], torso);              // shoulder
+      limb(sh, [side * 0.5, 0.48, -0.08], 0.135, teeM, torso);                                  // sleeve
+      limb([side * 0.5, 0.5, -0.08], [side * 0.5, 0.3, -0.2], 0.1, skinM, torso);              // upper arm below the sleeve
+      limb([side * 0.5, 0.3, -0.2], [side * 0.26, 0.4, -1.12], 0.085, skinM, torso);           // forearm
+      var hand = part(new T.SphereGeometry(0.1, 14, 10), skinM, side * 0.24, 0.4, -1.2, torso);
+      hand.scale.set(1, 0.6, 1.3);
+      hands.push(hand);
+    });
+
+    // Neck and head
+    part(new T.CylinderGeometry(0.1, 0.11, 0.2, 14), skinM, 0, 1.06, -0.02, torso);
+    var head = new T.Group();
+    head.position.set(0, 1.4, -0.04);
+    torso.add(head);
+
+    var skull = part(new T.SphereGeometry(0.3, 28, 20), skinM, 0, 0, 0, head);
+    skull.scale.set(0.9, 1.06, 0.98);
+    // Jaw with stubble: the lower front of the face, a little darker
+    var jaw = part(new T.SphereGeometry(0.296, 24, 14, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.55, Math.PI * 0.35), mat(STUBBLE, { roughness: 1 }), 0, 0, 0, head);
+    jaw.scale.set(0.92, 1.07, 1.0);
+    jaw.rotation.y = Math.PI;            // face the front (-z)
+    // Ears
+    [-1, 1].forEach(function (side) {
+      part(new T.SphereGeometry(0.07, 10, 8), mat(SKIN_SHADE), side * 0.27, -0.02, 0.02, head).scale.set(0.5, 1, 0.8);
+    });
+    // Eyes, brows and nose (small, since you mostly see him from behind)
+    [-1, 1].forEach(function (side) {
+      part(new T.SphereGeometry(0.03, 10, 8), mat(0x1a1210), side * 0.1, 0.04, -0.27, head);
+      part(new T.BoxGeometry(0.11, 0.025, 0.03), hairM, side * 0.1, 0.12, -0.27, head).rotation.z = side * -0.1;
+    });
+    part(new T.SphereGeometry(0.045, 10, 8), mat(SKIN_SHADE), 0, -0.04, -0.3, head);
+
+    // Hair: a cap plus wavy volume swept up and back
+    var cap = part(new T.SphereGeometry(0.315, 28, 16, 0, Math.PI * 2, 0, Math.PI * 0.42), hairM, 0, 0.03, 0.01, head);
+    cap.scale.set(0.95, 1.1, 1.04);
+    var hairBack = part(new T.SphereGeometry(0.3, 22, 14, 0, Math.PI, Math.PI * 0.3, Math.PI * 0.32), hairM, 0, 0.0, 0.04, head);
+    hairBack.scale.set(0.97, 1.05, 1.05);
+    [
+      [0, 0.3, -0.14, 0.15], [-0.11, 0.29, -0.08, 0.13], [0.11, 0.28, -0.1, 0.13],
+      [0, 0.33, 0.0, 0.16], [-0.13, 0.27, 0.07, 0.13], [0.13, 0.27, 0.06, 0.13],
+      [0, 0.28, 0.14, 0.14], [-0.06, 0.34, -0.04, 0.12], [0.07, 0.34, 0.03, 0.12]
+    ].forEach(function (w) {
+      part(new T.SphereGeometry(w[3], 14, 10), hairM, w[0], w[1], w[2], head).scale.set(1, 0.72, 1.1);
+    });
+    // A wave falling at the front
+    var wave = part(new T.SphereGeometry(0.09, 12, 8), hairM, 0.06, 0.24, -0.25, head);
+    wave.scale.set(1.3, 0.6, 0.8);
+
+    /* Where he looks: the monitor by default, the object you open, and now and then you */
+    var headTarget = new T.Vector3(-0.3, 3.03, -2.6);
+    var headYaw = 0, headPitch = 0;
+    var HEAD_WORLD = new T.Vector3(-0.3, 2.85, -0.55);   // roughly where the head sits in the room
+    function lookAt(x, y, z) { headTarget.set(x, y, z); }
+
     /* ---------- Bangladeshi home details ---------- */
     // Ceiling fan, turning slowly
     var fan = new T.Group();
@@ -681,7 +793,7 @@
 
     // Mora: a cane stool with a red cushion
     var mora = new T.Group();
-    mora.position.set(4.2, 0, 2.6);
+    mora.position.set(7.4, 0, -3.2);
     scene.add(mora);
     var caneM = mat(C.cane, { roughness: 0.95 });
     cyl(0.28, 0.5, 0.55, caneM, 0, 0.275, 0, mora);
@@ -693,9 +805,18 @@
     plant.position.set(-6.5, 0, 4.6);
     scene.add(plant);
     cyl(0.45, 0.35, 0.9, mat(0xc4553f), 0, 0.45, 0, plant);
-    for (var lf = 0; lf < 9; lf++) {
-      var leaf = box(0.12, between(1.2, 2.1), 0.32, mat(lf % 2 ? 0x4f8a45 : 0x3f7a3a), 0, 1.6, 0, plant);
-      leaf.rotation.set(between(-0.35, 0.35), lf * 0.7, between(-0.35, 0.35));
+    // Snake-plant style leaves: tall, thin and pointed, fanning out
+    for (var lf = 0; lf < 11; lf++) {
+      var lh = between(1.1, 2.0);
+      var leafHolder = new T.Group();
+      leafHolder.position.set(between(-0.15, 0.15), 0.85, between(-0.15, 0.15));
+      leafHolder.rotation.set(between(-0.3, 0.3), lf * 0.57, between(-0.3, 0.3));
+      plant.add(leafHolder);
+      var leaf = new T.Mesh(new T.ConeGeometry(0.13, lh, 4), mat(lf % 3 ? 0x4f8a45 : 0x6aa055, { roughness: 0.7 }));
+      leaf.scale.set(1, 1, 0.3);
+      leaf.position.y = lh / 2;
+      leaf.castShadow = true;
+      leafHolder.add(leaf);
     }
 
     // A floor cushion near the window, for reading
@@ -749,6 +870,8 @@
       if (!v) return;
       current = name === 'home' ? 'home' : name;
       yawTarget = 0; pitchTarget = 0;
+      if (name === 'home' || name === 'projects') lookAt(-0.3, 3.03, -2.6);   // back to the screen
+      else lookAt(v.look[0], v.look[1], v.look[2]);                         // turn toward what you opened
       var to = { x: v.pos[0], y: v.pos[1], z: v.pos[2], lx: v.look[0], ly: v.look[1], lz: v.look[2] };
       if (window.gsap) {
         gsap.to(cam, Object.assign({ duration: 1.4, ease: 'power3.inOut', overwrite: true }, to));
@@ -880,6 +1003,25 @@
       }
       lamp.intensity = 1.3 + Math.sin(t * 2.1) * 0.03;   // the faintest lamp flicker
       blades.rotation.y += dt * 2.4;                       // ceiling fan
+
+      // You: breathing, short typing bursts, and the head turning toward its target
+      chest.scale.y = 1 + Math.sin(t * 1.5) * 0.015;
+      var typing = (current === 'home' || current === 'projects') && (t % 5.5) < 2.4;
+      hands.forEach(function (hd, i) {
+        hd.position.y = 0.4 + (typing ? Math.abs(Math.sin(t * 17 + i * 1.7)) * 0.025 : 0);
+      });
+      var glance = current === 'home' && (t % 11) > 9.2;              // now and then, he looks back at you
+      var tx = glance ? camera.position.x : headTarget.x,
+          ty = glance ? camera.position.y : headTarget.y,
+          tz = glance ? camera.position.z : headTarget.z;
+      var hx = tx - HEAD_WORLD.x, hy = ty - HEAD_WORLD.y, hz = tz - HEAD_WORLD.z;
+      var wantYaw = Math.max(-1.25, Math.min(1.25, Math.atan2(-hx, -hz)));
+      var wantPitch = Math.max(-0.45, Math.min(0.45, Math.atan2(hy, Math.hypot(hx, hz))));
+      headYaw += (wantYaw - headYaw) * Math.min(1, dt * 3);
+      headPitch += (wantPitch - headPitch) * Math.min(1, dt * 3);
+      head.rotation.y = headYaw * 0.8;
+      head.rotation.x = headPitch + 0.1;                 // undo the torso's lean
+      torso.rotation.y = headYaw * 0.2;
       applyCamera();
       renderer.render(scene, camera);
       placeMarkers(W, H);
