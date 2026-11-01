@@ -413,6 +413,7 @@
       var x = -20;
       while (x < w + 20) {
         var bw = between(opts.minW, opts.maxW);
+        if (opts.clear && x + bw > opts.clear[0] && x < opts.clear[1]) { x = opts.clear[1] + between(0, 20); continue; }   // keep this view open
         var top = h * between(opts.topMin, opts.topMax);
         g.fillStyle = opts.colors[Math.floor(rnd() * opts.colors.length)];
         g.fillRect(x, top, bw, h - top);
@@ -483,21 +484,40 @@
       // Distant haze line of buildings
       drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.18,
         colors: ['#8a5a74', '#7d5270', '#94627a'], tanks: 0.4, tankColor: '#6d4762' });
-      // Mosque: dome and two minarets on the far skyline
-      var mx = w * 0.7, base = h * 0.66;
-      g.fillStyle = '#5c3a58';
-      g.fillRect(mx - 70, base - 40, 140, h - base + 40);
-      g.beginPath(); g.arc(mx, base - 40, 62, Math.PI, 0); g.fill();
-      g.fillRect(mx - 3, base - 118, 6, 18);
-      [mx - 110, mx + 104].forEach(function (px) {
-        g.fillRect(px, base - 190, 14, h - base + 190);
-        g.beginPath(); g.arc(px + 7, base - 190, 11, Math.PI, 0); g.fill();
-        g.fillRect(px + 6, base - 214, 2, 14);
-        g.fillRect(px - 4, base - 140, 22, 5);   // balcony ring
-      });
       // Mid-distance blocks
       drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.32,
         colors: ['#6b4462', '#5e3d58', '#734a66'], tanks: 0.55, tankColor: '#3f2840' });
+      // Mosque: dome and two minarets, placed where the window looks from the main view
+      var mx = w * 0.53, base = h * 0.68, k = 1.35;
+      g.fillStyle = '#5c3a58';
+      g.fillRect(mx - 70 * k, base - 40 * k, 140 * k, h - base + 40 * k);
+      g.beginPath(); g.arc(mx, base - 40 * k, 62 * k, Math.PI, 0); g.fill();
+      g.fillRect(mx - 3, base - 40 * k - 62 * k - 18, 6, 22);
+      g.beginPath(); g.arc(mx, base - 40 * k - 62 * k - 20, 6, 0, Math.PI * 2); g.fill();
+      [mx - 118 * k, mx + 104 * k].forEach(function (px) {
+        g.fillStyle = '#5c3a58';
+        g.fillRect(px, base - 190 * k, 14 * k, h - base + 190 * k);
+        g.beginPath(); g.arc(px + 7 * k, base - 190 * k, 11 * k, Math.PI, 0); g.fill();
+        g.fillRect(px + 6 * k, base - 214 * k, 3, 16 * k);
+        g.fillRect(px - 5, base - 140 * k, 14 * k + 10, 6);   // balcony ring
+        // small evening lights up the minarets
+        for (var li = 0; li < 6; li++) {
+          g.fillStyle = li % 2 ? 'rgba(170,255,190,0.95)' : 'rgba(255,250,225,0.95)';
+          g.beginPath(); g.arc(px + 7 * k, base - 170 * k + li * 26 * k, 3.5, 0, Math.PI * 2); g.fill();
+        }
+      });
+      // a soft glow behind the dome so it reads against the sky
+      var halo = g.createRadialGradient(mx, base - 70 * k, 20, mx, base - 70 * k, 160 * k);
+      halo.addColorStop(0, 'rgba(255,220,170,0.35)'); halo.addColorStop(1, 'rgba(255,220,170,0)');
+      g.globalCompositeOperation = 'destination-over';
+      g.fillStyle = halo; g.fillRect(mx - 200 * k, base - 260 * k, 400 * k, 300 * k);
+      g.globalCompositeOperation = 'source-over';
+      // lit arched windows on the prayer hall
+      g.fillStyle = 'rgba(255,214,140,0.9)';
+      for (var aw = -2; aw <= 2; aw++) {
+        g.beginPath(); g.arc(mx + aw * 24 * k, base - 8 * k, 6 * k, Math.PI, 0); g.fill();
+        g.fillRect(mx + aw * 24 * k - 6 * k, base - 8 * k, 12 * k, 16 * k);
+      }
       // A few birds over the sky
       g.strokeStyle = 'rgba(40,24,40,0.7)'; g.lineWidth = 3;
       for (var b = 0; b < 7; b++) {
@@ -513,7 +533,8 @@
     // Layer 2: closer residential blocks with balconies and AC units
     var nearTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
       drawBuildingsRow(g, w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.62, gap: 30, cell: 34, lit: 0.42,
-        colors: ['#3d2734', '#46303a', '#352230'], tanks: 0.7, tankColor: '#24161f', grills: true, ac: true });
+        colors: ['#3d2734', '#46303a', '#352230'], tanks: 0.7, tankColor: '#24161f', grills: true, ac: true,
+        clear: [w * 0.44, w * 0.6] });   // the mosque shows through here
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
     near.position.set(RX0 - 3.6, 3.0, -1.5);
@@ -665,7 +686,7 @@
        Built from rounded shapes. Faces the monitor (-z). Wavy black hair swept up,
        stubble, light grey T-shirt, black trousers, white-soled trainers. */
     var SKIN = 0x8d5a3b, SKIN_SHADE = 0x7a4c31, HAIR = 0x161214, STUBBLE = 0x4a3328,
-        TEE = 0xc9ccc8, TROUSERS = 0x1d1d22, SHOE = 0x2a2a2e, SOLE = 0xe8e4dc;
+        TEE = 0xa8aca9, TROUSERS = 0x1d1d22, SHOE = 0x2a2a2e, SOLE = 0xe8e4dc;
     var skinM = mat(SKIN, { roughness: 0.75 }), hairM = mat(HAIR, { roughness: 0.6 }),
         teeM = mat(TEE, { roughness: 0.95 }), trouserM = mat(TROUSERS, { roughness: 0.9 });
 
@@ -681,19 +702,18 @@
       (parent || me).add(mesh);
       return mesh;
     }
-    // A rounded limb between two points (local to `parent`)
+    // A rounded limb between two points, in the parent's own coordinates
+    var UP = new T.Vector3(0, 1, 0);
     function limb(from, to, radius, m, parent) {
-      var holder = new T.Group();
-      holder.position.set(from[0], from[1], from[2]);
-      (parent || me).add(holder);
-      holder.lookAt(new T.Vector3(to[0], to[1], to[2]));
-      var len = Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
+      var dx = to[0] - from[0], dy = to[1] - from[1], dz = to[2] - from[2];
+      var len = Math.hypot(dx, dy, dz);
       var cap = new T.Mesh(new T.CapsuleGeometry(radius, Math.max(0.01, len - radius * 2), 6, 12), m);
-      cap.rotation.x = Math.PI / 2;      // capsule runs along y; turn it to run along the holder's z
-      cap.position.z = len / 2;
+      cap.position.set(from[0] + dx / 2, from[1] + dy / 2, from[2] + dz / 2);
+      cap.quaternion.setFromUnitVectors(UP, new T.Vector3(dx / len, dy / len, dz / len));   // capsule runs along y; aim it at `to`
       cap.castShadow = true;
-      holder.add(cap);
-      return holder;
+      cap.receiveShadow = true;
+      (parent || me).add(cap);
+      return cap;
     }
 
     // Legs: thighs forward along the seat, shins down to the floor
@@ -718,12 +738,14 @@
     var hands = [];
     [-1, 1].forEach(function (side) {
       var sh = [side * 0.44, 0.78, 0];
-      part(new T.SphereGeometry(0.15, 16, 12), teeM, sh[0], sh[1], sh[2], torso);              // shoulder
-      limb(sh, [side * 0.5, 0.48, -0.08], 0.135, teeM, torso);                                  // sleeve
-      limb([side * 0.5, 0.5, -0.08], [side * 0.5, 0.3, -0.2], 0.1, skinM, torso);              // upper arm below the sleeve
-      limb([side * 0.5, 0.3, -0.2], [side * 0.26, 0.4, -1.12], 0.085, skinM, torso);           // forearm
-      var hand = part(new T.SphereGeometry(0.1, 14, 10), skinM, side * 0.24, 0.4, -1.2, torso);
-      hand.scale.set(1, 0.6, 1.3);
+      part(new T.SphereGeometry(0.125, 16, 12), teeM, sh[0], sh[1], sh[2], torso);             // shoulder
+      limb(sh, [side * 0.48, 0.5, -0.08], 0.118, teeM, torso);                                  // sleeve
+      var elbow = [side * 0.47, 0.38, -0.56], wrist = [side * 0.25, 0.43, -1.19];   // elbow just over the desk edge
+      limb([side * 0.48, 0.5, -0.08], elbow, 0.092, skinM, torso);                              // upper arm, down to the elbow
+      part(new T.SphereGeometry(0.088, 12, 10), skinM, elbow[0], elbow[1], elbow[2], torso);    // elbow
+      limb(elbow, wrist, 0.078, skinM, torso);                                                  // forearm, forward onto the desk
+      var hand = part(new T.SphereGeometry(0.09, 14, 10), skinM, side * 0.24, 0.44, -1.31, torso);   // hand on the keyboard
+      hand.scale.set(0.95, 0.42, 1.3);
       hands.push(hand);
     });
 
@@ -1008,7 +1030,7 @@
       chest.scale.y = 1 + Math.sin(t * 1.5) * 0.015;
       var typing = (current === 'home' || current === 'projects') && (t % 5.5) < 2.4;
       hands.forEach(function (hd, i) {
-        hd.position.y = 0.4 + (typing ? Math.abs(Math.sin(t * 17 + i * 1.7)) * 0.025 : 0);
+        hd.position.y = 0.44 + (typing ? Math.abs(Math.sin(t * 17 + i * 1.7)) * 0.025 : 0);
       });
       var glance = current === 'home' && (t % 11) > 9.2;              // now and then, he looks back at you
       var tx = glance ? camera.position.x : headTarget.x,
