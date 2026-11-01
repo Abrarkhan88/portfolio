@@ -1,7 +1,7 @@
 /* =========================================================
    Abrar Sami Khan, portfolio
-   room.js: the explorable 3D room (desktop).
-   Phones, reduced motion, no-WebGL browsers, and anyone who picks
+   room.js: the explorable 3D room, on desktop and phones.
+   Reduced motion, no-WebGL browsers, and anyone who picks
    "Flat version" get the regular site in index.html instead.
 
    Add ?flat to the URL to skip the room, or ?room to force it.
@@ -30,8 +30,7 @@
     try { localStorage.setItem('asks-view', v); } catch (err) { /* private mode: fine */ }
   }
 
-  var capable = window.matchMedia('(min-width: 900px)').matches &&
-    !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
+  var capable = !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
     webglAvailable();
   var wanted = params.has('room') || (ROOM_ENABLED_BY_DEFAULT && !prefersFlat() && !params.has('flat'));
 
@@ -386,9 +385,11 @@
       cane: 0xb98a4e
     };
 
-    var renderer = new T.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
+    // Phones and tablets get a lighter render: lower resolution and no shadows
+    var light = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900;
+    var renderer = new T.WebGLRenderer({ antialias: !light, powerPreference: light ? 'low-power' : 'default' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, light ? 1.5 : 2));
+    renderer.shadowMap.enabled = !light;
     renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.setClearColor(0x1a1210, 1);
     var canvas = renderer.domElement;
@@ -1343,9 +1344,43 @@
       camera.lookAt(cam.lx, cam.ly, cam.lz);
     }
 
+    /* On small screens each view is re-framed so its object fits the screen,
+       sitting above the sheet that slides up from the bottom */
+    var FIT = {
+      projects: { w: 2.5, h: 1.5, shift: 0.26 },
+      work:     { w: 4.7, h: 2.5, shift: 0.24, look: [3.65, 4.15, -5.8] },
+      about:    { w: 3.4, h: 2.4, shift: 0.24, look: [-4.4, 4.1, -5.55] },
+      contact:  { w: 0.34, h: 0.66, shift: 0.03, margin: 1.28 }
+    };
+    function isCompact() { return window.innerWidth < 900 || window.innerHeight < 500; }
+    function framed(name) {
+      var v = VIEWS[name];
+      if (!isCompact()) return v;
+      if (name === 'home') {                           // a little closer, so the desk and you fill a tall screen
+        return { pos: v.look.map(function (l, i) { return l + (v.pos[i] - l) * 0.74; }), look: v.look };
+      }
+      var f = FIT[name];
+      if (!f) return v;
+      var look = f.look || v.look;
+      if (name === 'work' && camera.aspect > 1.4) {   // sideways phone: board on the left, panel on the right
+        f = { w: f.w * 2.1, h: f.h, shift: 0, look: [look[0] + f.w * 0.55, look[1], look[2]] };
+        look = f.look;
+      }
+      var dir = [v.pos[0] - v.look[0], v.pos[1] - v.look[1], v.pos[2] - v.look[2]];
+      var len = Math.hypot(dir[0], dir[1], dir[2]);
+      var t = Math.tan(camera.fov * Math.PI / 360);
+      var d = Math.max(f.h / 2 / t, f.w / 2 / (t * camera.aspect)) * (f.margin || 1.12);
+      var drop = 2 * d * t * f.shift;                  // move the object up the screen
+      return {
+        pos: [look[0] + dir[0] / len * d, look[1] + dir[1] / len * d - drop, look[2] + dir[2] / len * d],
+        look: [look[0], look[1] - drop, look[2]]
+      };
+    }
+
     function flyTo(name) {
       var v = VIEWS[name];
       if (!v) return;
+      v = framed(name);
       if (name !== current) whoosh();
       current = name === 'home' ? 'home' : name;
       yawTarget = 0; pitchTarget = 0;
@@ -1571,6 +1606,10 @@
     var SCREEN_CORNERS = [[-1.48, 3.71, -2.585], [0.88, 3.71, -2.585], [-1.48, 2.35, -2.585], [0.88, 2.35, -2.585]];
     function placeDesk(w, h) {
       if (deskUi.hidden) return;
+      if (isCompact()) {                              // phones: a sheet, styled in CSS
+        if (deskUi.style.left) deskUi.removeAttribute('style');
+        return;
+      }
       var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       SCREEN_CORNERS.forEach(function (c) {
         tmp.set(c[0], c[1], c[2]).project(camera);
@@ -1790,7 +1829,8 @@
     function onMove(e) {
       if (dragging && current === 'home') {
         moved += Math.abs(e.clientX - dragX) + Math.abs(e.clientY - dragY);
-        yawTarget = Math.max(-0.25, Math.min(0.25, yawTarget - (e.clientX - dragX) * 0.003));
+        var range = isCompact() ? 0.5 : 0.25;          // a tall screen sees less, so let it look further
+        yawTarget = Math.max(-range, Math.min(range, yawTarget - (e.clientX - dragX) * (isCompact() ? 0.005 : 0.003)));
         pitchTarget = Math.max(-0.08, Math.min(0.08, pitchTarget + (e.clientY - dragY) * 0.0015));
         dragX = e.clientX; dragY = e.clientY;
       } else if (!dragging) {
@@ -1828,11 +1868,8 @@
     canvas.addEventListener('pointerdown', hideHint);
     menu.addEventListener('click', hideHint);
 
-    // If the graphics card gives up, or the window gets phone-narrow, fall back to the flat site
+    // If the graphics card gives up, fall back to the flat site
     canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); leaveRoom(); });
-    var narrow = window.matchMedia('(max-width: 899px)');
-    function onNarrow(e) { if (e.matches) leaveRoom(); }
-    if (narrow.addEventListener) narrow.addEventListener('change', onNarrow); else if (narrow.addListener) narrow.addListener(onNarrow);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
 
@@ -1843,7 +1880,13 @@
       if (!W || !H) return;
       renderer.setSize(W, H, false);
       camera.aspect = W / H;
+      camera.fov = W / H < 1 ? 55 : 40;              // a taller screen needs a wider lens
       camera.updateProjectionMatrix();
+      if (VIEWS[current] && cam.x !== 0 && !(window.gsap && gsap.isTweening && gsap.isTweening(cam))) {
+        var fv = framed(current);                     // phone turned: re-frame where you are
+        cam.x = fv.pos[0]; cam.y = fv.pos[1]; cam.z = fv.pos[2];
+        cam.lx = fv.look[0]; cam.ly = fv.look[1]; cam.lz = fv.look[2];
+      }
     }
     window.addEventListener('resize', resize);
     resize();
@@ -1906,7 +1949,6 @@
       dispose: function () {
         cancelAnimationFrame(raf);
         clearTimeout(hintTimer);
-        if (narrow.removeEventListener) narrow.removeEventListener('change', onNarrow); else if (narrow.removeListener) narrow.removeListener(onNarrow);
         closeApp(false);                      // put any open demo back on the flat page
         clearInterval(clockTimer);
         clearInterval(phoneTimer);
