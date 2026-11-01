@@ -1910,7 +1910,464 @@
     start();
   }
 
+  /* ---------- Demo: survive the enemy (Tank Wars 3D) ----------
+     The simulation is shared. It is drawn in 3D with Three.js on
+     desktop, and in 2D on phones, with reduced motion, or if 3D
+     fails for any reason. */
+  var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
+
+  function setupTankDemo() {
+    var host = document.querySelector('[data-demo="tank"]');
+    if (!host) return;
+
+    // Values copied from base.py
+    var SETTINGS = {
+      easy: { cooldown: 4.0, miss: 0.4, damage: 2 },
+      medium: { cooldown: 3.0, miss: 0.3, damage: 4 },
+      hard: { cooldown: 2.0, miss: 0.2, damage: 2 }
+    };
+    var DURATION = 30;   // seconds of game time
+    var SPEED = 3;       // played back 3x faster than real time
+    var BULLET_TIME = 0.5;
+
+    // Arena positions (0..1), shared by both views
+    var PLAYER = [0.2, 0.75], ENEMY = [0.8, 0.25];
+    var OBSTACLES = [ // centre x, centre y, width, depth, height (0..1 of arena)
+      [0.49, 0.48, 0.08, 0.12, 0.08],
+      [0.65, 0.67, 0.06, 0.10, 0.06]
+    ];
+
+    // ----- Build the widget -----
+    host.innerHTML = '';
+    var top = el('div', { class: 'demo__bar' });
+    var sw = el('div', { class: 'demo-switch', role: 'group', 'aria-label': 'Difficulty' });
+    var levels = ['easy', 'medium', 'hard'];
+    var levelBtns = levels.map(function (l, i) {
+      var b = el('button', { type: 'button', 'aria-pressed': i === 0 ? 'true' : 'false' }, l[0].toUpperCase() + l.slice(1));
+      sw.append(b);
+      return b;
+    });
+    var start = el('button', { class: 'btn', type: 'button' }, 'Start 30 seconds');
+    top.append(sw, start);
+
+    var wrap = el('div', { class: 'tank-canvas' });
+    var canvas = el('canvas', { role: 'img', 'aria-label': 'Top-down view: the enemy tank in the upper right fires at the player tank in the lower left' });
+    wrap.append(canvas);
+
+    var viewNote = el('p', { class: 'demo__file' }, '');
+
+    var readout = el('dl', { class: 'demo-readout demo-readout--3' });
+    function box(label) { var d = el('div'); var v = el('dd', null, '0'); d.append(el('dt', null, label), v); readout.append(d); return v; }
+    var shotsVal = box('Shots fired');
+    var hitsVal = box('Hits taken');
+    var healthVal = box('Your health');
+
+    var status = el('p', { class: 'demo__status', 'aria-live': 'polite' }, 'Pick a difficulty and press Start.');
+    host.append(top, wrap, viewNote, readout, status);
+
+    var ctx = canvas.getContext('2d');
+    var W = 0, H = 0;
+    var level = 'easy';
+    var sim = null, running = false, visible = false, raf = null, last = 0;
+    var view3d = null;      // set once the 3D view is ready
+    var tried3d = false;
+
+    // ----- Simulation -----
+    function newSim() {
+      return { t: 0, nextShot: 1.0, shots: 0, hits: 0, health: 100, bullets: [], flashes: [], done: false };
+    }
+
+    function step(s, dt) {
+      var cfg = SETTINGS[level];
+      s.t += dt;
+      while (s.t >= s.nextShot && s.nextShot <= DURATION) {
+        var miss = Math.random() < cfg.miss;
+        var off = miss ? [(Math.random() - 0.5) * 0.35, (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.1)] : [0, 0];
+        s.bullets.push({ born: s.nextShot, miss: miss, to: [PLAYER[0] + off[0], PLAYER[1] + off[1]] });
+        s.shots++;
+        s.nextShot += cfg.cooldown;
+      }
+      s.bullets = s.bullets.filter(function (b) {
+        if (s.t - b.born >= BULLET_TIME) {
+          if (!b.miss) { s.hits++; s.health = Math.max(0, s.health - cfg.damage); }
+          s.flashes.push({ at: b.to, born: s.t, hit: !b.miss });
+          return false;
+        }
+        return true;
+      });
+      s.flashes = s.flashes.filter(function (f) { return s.t - f.born < 0.4; });
+      if (s.t >= DURATION + BULLET_TIME) s.done = true;
+    }
+
+    // ----- 2D view -----
+    function draw2D(s) {
+      var ink = getComputedStyle(host).color;
+      ctx.clearRect(0, 0, W, H);
+      function X(v) { return v * W; }
+      function Y(v) { return v * H; }
+
+      ctx.strokeStyle = ink; ctx.globalAlpha = 0.08; ctx.lineWidth = 1;
+      for (var g = 1; g < 10; g++) {
+        ctx.beginPath(); ctx.moveTo(X(g / 10), 0); ctx.lineTo(X(g / 10), H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, Y(g / 10)); ctx.lineTo(W, Y(g / 10)); ctx.stroke();
+      }
+      ctx.globalAlpha = 0.25; ctx.fillStyle = ink;
+      OBSTACLES.forEach(function (o) { ctx.fillRect(X(o[0] - o[2] / 2), Y(o[1] - o[3] / 2), X(o[2]), Y(o[3])); });
+      ctx.globalAlpha = 1;
+
+      var size = Math.min(W, H) * 0.07;
+      function tank(p, filled, angle) {
+        ctx.save();
+        ctx.translate(X(p[0]), Y(p[1]));
+        ctx.rotate(angle);
+        ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = ink;
+        if (filled) ctx.fillRect(-size / 2, -size / 2, size, size); else ctx.strokeRect(-size / 2, -size / 2, size, size);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(size * 0.95, 0); ctx.stroke();
+        ctx.restore();
+      }
+      var aim = Math.atan2(Y(PLAYER[1]) - Y(ENEMY[1]), X(PLAYER[0]) - X(ENEMY[0]));
+      tank(ENEMY, false, aim);
+      tank(PLAYER, true, aim + Math.PI);
+
+      var hb = size * 1.6;
+      ctx.globalAlpha = 0.3; ctx.fillStyle = ink;
+      ctx.fillRect(X(PLAYER[0]) - hb / 2, Y(PLAYER[1]) - size * 1.2, hb, 4);
+      ctx.globalAlpha = 1;
+      ctx.fillRect(X(PLAYER[0]) - hb / 2, Y(PLAYER[1]) - size * 1.2, hb * (s ? s.health / 100 : 1), 4);
+
+      if (!s) return;
+      s.bullets.forEach(function (b) {
+        var k = Math.min(1, (s.t - b.born) / BULLET_TIME);
+        var x = ENEMY[0] + (b.to[0] - ENEMY[0]) * k, y = ENEMY[1] + (b.to[1] - ENEMY[1]) * k;
+        ctx.beginPath(); ctx.arc(X(x), Y(y), Math.max(2.5, size * 0.12), 0, Math.PI * 2); ctx.fillStyle = ink; ctx.fill();
+      });
+      s.flashes.forEach(function (f) {
+        var a = 1 - (s.t - f.born) / 0.4;
+        ctx.globalAlpha = Math.max(0, a);
+        ctx.beginPath(); ctx.arc(X(f.at[0]), Y(f.at[1]), size * (0.4 + (1 - a) * 0.6), 0, Math.PI * 2);
+        if (f.hit) { ctx.fillStyle = ink; ctx.fill(); } else { ctx.lineWidth = 1.5; ctx.stroke(); }
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    // ----- 3D view (Three.js) -----
+    function build3D() {
+      var T = window.THREE;
+      var ARENA = 50;                                  // world units across
+      function wx(u) { return (u - 0.5) * ARENA; }     // 0..1 -> world
+
+      var renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setClearColor(0x000000, 0);
+      var c3 = renderer.domElement;
+      c3.setAttribute('role', 'img');
+      c3.setAttribute('aria-label', '3D view of the arena: the enemy tank fires at the player tank. Drag to turn the camera.');
+      c3.style.touchAction = 'pan-y';
+      c3.style.cursor = 'grab';
+
+      var scene = new T.Scene();
+      var camera = new T.PerspectiveCamera(38, 16 / 10, 0.1, 500);
+      var paper = new T.Color(getComputedStyle(host).color);
+
+      scene.add(new T.HemisphereLight(0xffffff, 0x1a1c14, 0.9));
+      var sun = new T.DirectionalLight(0xffffff, 0.8);
+      sun.position.set(20, 40, 15);
+      scene.add(sun);
+
+      // Floor, grid and walls (like draw_arena)
+      var floor = new T.Mesh(new T.PlaneGeometry(ARENA, ARENA), new T.MeshStandardMaterial({ color: 0x1c1f15, roughness: 1 }));
+      floor.rotation.x = -Math.PI / 2;
+      scene.add(floor);
+      var grid = new T.GridHelper(ARENA, 10, paper, paper);
+      grid.material.transparent = true;
+      grid.material.opacity = 0.16;
+      grid.position.y = 0.02;
+      scene.add(grid);
+
+      var wallMat = new T.MeshStandardMaterial({ color: paper, transparent: true, opacity: 0.28 });
+      [[ARENA, 0.6, 0, -ARENA / 2], [ARENA, 0.6, 0, ARENA / 2], [0.6, ARENA, -ARENA / 2, 0], [0.6, ARENA, ARENA / 2, 0]].forEach(function (w) {
+        var m = new T.Mesh(new T.BoxGeometry(w[0], 2.5, w[1]), wallMat);
+        m.position.set(w[2], 1.25, w[3]);
+        scene.add(m);
+      });
+
+      var blockMat = new T.MeshStandardMaterial({ color: 0x5b6048, roughness: 0.9 });
+      OBSTACLES.forEach(function (o) {
+        var h = o[4] * ARENA;
+        var m = new T.Mesh(new T.BoxGeometry(o[2] * ARENA, h, o[3] * ARENA), blockMat);
+        m.position.set(wx(o[0]), h / 2, wx(o[1]));
+        scene.add(m);
+      });
+
+      // Tanks: body, turret and barrel (like draw_tank)
+      var lineMat = new T.LineBasicMaterial({ color: paper });
+      function makeTank(mat, outline) {
+        var g = new T.Group();
+        var bodyGeo = new T.BoxGeometry(3.2, 1.4, 4.2);
+        var body = new T.Mesh(bodyGeo, mat);
+        body.position.y = 0.9;
+        if (outline) body.add(new T.LineSegments(new T.EdgesGeometry(bodyGeo), lineMat));
+        var turret = new T.Group();
+        turret.position.y = 1.9;
+        var head = new T.Mesh(new T.CylinderGeometry(1.0, 1.15, 0.9, 16), mat);
+        var barrel = new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 3.2, 10), mat);
+        barrel.rotation.x = Math.PI / 2;
+        barrel.position.z = 1.9;
+        turret.add(head, barrel);
+        g.add(body, turret);
+        scene.add(g);
+        return g;
+      }
+      var player = makeTank(new T.MeshStandardMaterial({ color: paper, roughness: 0.55 }), false);
+      var enemy = makeTank(new T.MeshStandardMaterial({ color: 0x2b2f22, roughness: 0.7 }), true);
+      player.position.set(wx(PLAYER[0]), 0, wx(PLAYER[1]));
+      enemy.position.set(wx(ENEMY[0]), 0, wx(ENEMY[1]));
+      var dx = player.position.x - enemy.position.x, dz = player.position.z - enemy.position.z;
+      enemy.rotation.y = Math.atan2(dx, dz);
+      player.rotation.y = Math.atan2(-dx, -dz);
+
+      // Floating health bar over the player (always faces the camera)
+      var hb = new T.Group();
+      var hbBack = new T.Mesh(new T.PlaneGeometry(4, 0.35), new T.MeshBasicMaterial({ color: paper, transparent: true, opacity: 0.3 }));
+      var hbFront = new T.Mesh(new T.PlaneGeometry(4, 0.35), new T.MeshBasicMaterial({ color: paper }));
+      hbFront.position.z = 0.01;
+      hb.add(hbBack, hbFront);
+      hb.position.set(player.position.x, 4.4, player.position.z);
+      scene.add(hb);
+
+      // Pools for shells and impacts
+      var shellGeo = new T.SphereGeometry(0.35, 12, 8);
+      var shellMat = new T.MeshBasicMaterial({ color: paper });
+      var shells = [];
+      var burstGeo = new T.SphereGeometry(1, 16, 12);
+      var ringGeo = new T.RingGeometry(0.7, 0.95, 32);
+      var impacts = [];
+      function pooled(list, make, i) {
+        if (!list[i]) { list[i] = make(); scene.add(list[i]); }
+        list[i].visible = true;
+        return list[i];
+      }
+
+      var muzzle = new T.Vector3();
+      function draw(s) {
+        var h = s ? s.health / 100 : 1;
+        hbFront.scale.x = Math.max(h, 0.0001);
+        hbFront.position.x = -2 * (1 - h);
+        hb.quaternion.copy(camera.quaternion);
+
+        shells.forEach(function (m) { m.visible = false; });
+        impacts.forEach(function (m) { m.visible = false; });
+        if (s) {
+          muzzle.set(enemy.position.x + Math.sin(enemy.rotation.y) * 3.6, 1.9, enemy.position.z + Math.cos(enemy.rotation.y) * 3.6);
+          s.bullets.forEach(function (b, i) {
+            var k = Math.min(1, (s.t - b.born) / BULLET_TIME);
+            var tx = wx(b.to[0]), tz = wx(b.to[1]);
+            var ty = b.miss ? 0.3 : 1.4;
+            var m = pooled(shells, function () { return new T.Mesh(shellGeo, shellMat); }, i);
+            m.position.set(muzzle.x + (tx - muzzle.x) * k, muzzle.y + (ty - muzzle.y) * k + Math.sin(k * Math.PI) * 1.2, muzzle.z + (tz - muzzle.z) * k);
+          });
+          s.flashes.forEach(function (f, i) {
+            var a = Math.max(0, 1 - (s.t - f.born) / 0.4);
+            var m = pooled(impacts, function () {
+              return new T.Mesh(burstGeo, new T.MeshBasicMaterial({ color: paper, transparent: true, side: T.DoubleSide }));
+            }, i);
+            m.geometry = f.hit ? burstGeo : ringGeo;
+            m.material.opacity = a;
+            if (f.hit) {
+              m.rotation.set(0, 0, 0);
+              m.position.set(wx(f.at[0]), 1.4, wx(f.at[1]));
+              m.scale.setScalar(0.6 + (1 - a) * 1.6);
+            } else {
+              m.rotation.set(-Math.PI / 2, 0, 0);
+              m.position.set(wx(f.at[0]), 0.05, wx(f.at[1]));
+              m.scale.setScalar(1 + (1 - a) * 2.2);
+            }
+          });
+        }
+        renderer.render(scene, camera);
+      }
+
+      // Orbiting camera: turns slowly on its own, drag to turn it yourself
+      var az = -0.9, dragging = false, lastX = 0;
+      function placeCamera() {
+        camera.position.set(Math.sin(az) * 54, 34, Math.cos(az) * 54);
+        camera.lookAt(0, 0, 0);
+      }
+      function down(e) { dragging = true; lastX = e.clientX; c3.style.cursor = 'grabbing'; c3.setPointerCapture && c3.setPointerCapture(e.pointerId); }
+      function move(e) { if (!dragging) return; az -= (e.clientX - lastX) * 0.008; lastX = e.clientX; placeCamera(); if (!raf) draw(sim); }
+      function up() { dragging = false; c3.style.cursor = 'grab'; }
+      c3.addEventListener('pointerdown', down);
+      c3.addEventListener('pointermove', move);
+      c3.addEventListener('pointerup', up);
+      c3.addEventListener('pointercancel', up);
+
+      function tick(dt) {
+        if (!dragging) az += dt * 0.07;
+        placeCamera();
+      }
+
+      function resize(w, h) {
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+
+      placeCamera();
+      return { canvas: c3, draw: draw, tick: tick, resize: resize, dispose: function () { renderer.dispose(); } };
+    }
+
+    function webglAvailable() {
+      try {
+        var c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch (err) { return false; }
+    }
+
+    function fallbackTo2D(reason) {
+      if (view3d) {
+        try { view3d.dispose(); } catch (err) { /* ignore */ }
+        if (view3d.canvas.parentNode) view3d.canvas.parentNode.removeChild(view3d.canvas);
+      }
+      view3d = null;
+      canvas.hidden = false;
+      viewNote.textContent = reason ? 'Showing the 2D view.' : '';
+      resize();
+    }
+
+    function try3D() {
+      if (tried3d) return;
+      tried3d = true;
+      if (prefersReducedMotion() || !window.matchMedia('(min-width: 760px)').matches || !webglAvailable()) return;
+
+      function ready() {
+        try {
+          view3d = build3D();
+          canvas.hidden = true;
+          wrap.append(view3d.canvas);
+          viewNote.textContent = '3D view. Drag to turn the camera.';
+          resize();
+          ensureLoop();
+        } catch (err) {
+          fallbackTo2D('error');
+        }
+      }
+
+      if (window.THREE) { ready(); return; }
+      viewNote.textContent = 'Loading 3D view…';
+      var script = document.createElement('script');
+      script.src = THREE_URL;
+      script.async = true;
+      script.onload = function () { if (window.THREE) ready(); else fallbackTo2D('load'); };
+      script.onerror = function () { fallbackTo2D('load'); };
+      document.head.appendChild(script);
+    }
+
+    // ----- Render loop: runs while a duel is playing or the 3D view is on screen -----
+    function render() {
+      if (view3d) {
+        try { view3d.draw(sim); } catch (err) { fallbackTo2D('error'); draw2D(sim); }
+      } else draw2D(sim);
+    }
+
+    function ensureLoop() {
+      if (raf) return;
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    }
+
+    function frame(now) {
+      var dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+      last = now;
+      if (running) {
+        step(sim, dt * SPEED);
+        show(sim);
+        if (sim.done) { running = false; finish(sim); }
+      }
+      if (view3d && !prefersReducedMotion()) {
+        try { view3d.tick(dt); } catch (err) { fallbackTo2D('error'); }
+      }
+      render();
+      if (running || (view3d && visible && !prefersReducedMotion())) raf = requestAnimationFrame(frame);
+      else raf = null;
+    }
+
+    function show(s) {
+      shotsVal.textContent = String(s.shots);
+      hitsVal.textContent = String(s.hits);
+      healthVal.textContent = s.health + ' / 100';
+    }
+
+    function finish(s) {
+      var cfg = SETTINGS[level];
+      status.textContent = level[0].toUpperCase() + level.slice(1) + ': ' + s.shots + ' shots, ' + s.hits + ' hits at ' + cfg.damage +
+        ' damage each, so you lost ' + (100 - s.health) + ' health in 30 seconds.';
+      start.textContent = 'Run again';
+      start.disabled = false;
+    }
+
+    function run() {
+      sim = newSim();
+      start.disabled = true;
+      start.textContent = 'Running…';
+      status.textContent = 'Running ' + level + '…';
+      if (prefersReducedMotion()) {
+        // Reduced motion: compute the whole run at once
+        while (!sim.done) step(sim, 0.05);
+        sim.bullets = []; sim.flashes = [];
+        show(sim); render(); finish(sim);
+        return;
+      }
+      running = true;
+      ensureLoop();
+    }
+
+    levelBtns.forEach(function (b, i) {
+      b.addEventListener('click', function () {
+        if (running) return; // finish the current run first
+        level = levels[i];
+        levelBtns.forEach(function (x, j) { x.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+        var cfg = SETTINGS[level];
+        status.textContent = b.textContent + ': fires every ' + cfg.cooldown + ' s, misses ' + Math.round(cfg.miss * 100) + '% of shots, ' + cfg.damage + ' damage per hit.';
+        start.textContent = 'Start 30 seconds';
+      });
+    });
+    start.addEventListener('click', run);
+
+    function resize() {
+      var rect = wrap.getBoundingClientRect();
+      W = rect.width; H = rect.height;
+      if (!W || !H) return;
+      if (view3d) {
+        view3d.resize(W, H);
+      } else {
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.max(1, Math.round(W * dpr));
+        canvas.height = Math.max(1, Math.round(H * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      render();
+    }
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+    else window.addEventListener('resize', resize);
+    resize();
+
+    // Load the 3D view only when the demo comes near the screen,
+    // and only animate while it is visible
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          visible = en.isIntersecting;
+          if (visible) { try3D(); if (view3d) ensureLoop(); }
+        });
+      }, { rootMargin: '300px 0px' }).observe(host);
+    } else {
+      visible = true;
+      try3D();
+    }
+  }
+
   /* ---------- Start ---------- */
+  setupTankDemo();
   setupLibraryDemo();
   setupPasswordDemo();
   setupDjangoDemo();
