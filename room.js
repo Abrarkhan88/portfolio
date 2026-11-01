@@ -52,8 +52,8 @@
       '<div class="room__stage"></div>' +
       '<div class="room__hotspots" aria-hidden="true"></div>' +
 
+      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation &amp; ML, Dhaka</span></p>' +
       '<div class="room__top">' +
-        '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation and machine learning, Dhaka</span></p>' +
         '<div class="room__actions">' +
           '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
           '<button class="room__flat" type="button">Flat version</button>' +
@@ -80,19 +80,19 @@
       '</div>' +
 
       '<p class="room__hint" hidden>' + (window.matchMedia('(pointer: coarse)').matches
-        ? 'Pinch to zoom, drag to look around. Tap a glowing ring, or use the menu below.'
-        : 'Drag to look around, scroll to zoom. Click a glowing ring, or use the menu below.') + '</p>' +
+        ? 'Pinch to zoom, drag to look around. Tap a glowing diamond, or use the menu below.'
+        : 'Drag to look around, scroll to zoom. Click a glowing diamond, or use the menu below.') + '</p>' +
 
       '<nav class="room__menu" aria-label="Room">' +
-        '<button type="button" data-view="projects">Projects</button>' +
-        '<button type="button" data-view="work">Work</button>' +
-        '<button type="button" data-view="about">About</button>' +
-        '<button type="button" data-view="contact">Contact</button>' +
+        '<button type="button" data-view="projects"><span class="room__num">01</span> Projects</button>' +
+        '<button type="button" data-view="work"><span class="room__num">02</span> Work</button>' +
+        '<button type="button" data-view="about"><span class="room__num">03</span> About</button>' +
+        '<button type="button" data-view="contact"><span class="room__num">04</span> Contact</button>' +
       '</nav>' +
 
       '<div class="room__loader" role="status">' +
         '<div class="room__terminal">' +
-          '<p class="room__cmd">abrar@dhaka:~$ <span>./open-room --city dhaka --time dusk</span></p>' +
+          '<p class="room__cmd">abrar@dhaka:~$ <span>./open-room --city dhaka --time night</span></p>' +
           '<ol class="room__log"></ol>' +
           '<div class="room__bar"><span></span></div>' +
         '</div>' +
@@ -132,7 +132,7 @@
   var LOG_LINES = [
     'fetching three.js',
     'laying out the room: desk, wall, shelf',
-    'lighting the Dhaka skyline at dusk',
+    'lighting up Dhaka at night',
     'switching on the ceiling fan',
     'sitting Abrar down at his desk',
     'putting projects on the monitor',
@@ -372,19 +372,19 @@
   function buildWorld() {
     var T = window.THREE;
 
-    // Dhaka dusk palette
+    // Night palette: charcoal room, violet moonlight, pink neon accents
     var C = {
-      wall: 0x7b4a3a,       // warm terracotta
-      wallDark: 0x6a3f33,
-      floor: 0x8a5c3c,      // warm wood
-      desk: 0x3a2e28,
-      deskTop: 0x4a3b33,
-      metal: 0x24201d,
-      board: 0x3a2d26,
+      wall: 0x3b3843,
+      wallDark: 0x353240,
+      desk: 0x2b2932,
+      deskTop: 0x34313b,
+      metal: 0x1c1b21,
+      board: 0x24222a,
       paper: 0xece6da,
+      neon: 0xff5fd2,       // pink neon
+      violet: 0x9b6bff,
       marigold: 0xe9c14a,
-      teal: 0x2f7d77,
-      cane: 0xb98a4e
+      teal: 0x2f7d77
     };
 
     // Phones and tablets get a lighter render: lower resolution and no shadows
@@ -393,7 +393,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, light ? 1.5 : 2));
     renderer.shadowMap.enabled = !light;
     renderer.shadowMap.type = T.PCFSoftShadowMap;
-    renderer.setClearColor(0x1a1210, 1);
+    renderer.setClearColor(0x141219, 1);
     var canvas = renderer.domElement;
     canvas.setAttribute('aria-hidden', 'true');
     stage.appendChild(canvas);
@@ -411,10 +411,10 @@
     }
     function between(a, b) { return a + rnd() * (b - a); }
 
-    /* ---------- Lights ---------- */
-    scene.add(new T.HemisphereLight(0xffe2c4, 0x3a2418, 1.05));   // warm evening fill
+    /* ---------- Lights: night in the room ---------- */
+    scene.add(new T.HemisphereLight(0xb9adff, 0x1c1822, 0.8));      // cool night fill
 
-    var sunset = new T.DirectionalLight(0xffa463, 1.25);           // low dusk sun through the window
+    var sunset = new T.DirectionalLight(0x9d86ff, 0.75);             // violet moonlight through the window
     sunset.position.set(-14, 8.5, 3);
     sunset.castShadow = true;
     sunset.shadow.mapSize.width = 2048;
@@ -423,18 +423,18 @@
     sunset.shadow.camera.top = 12; sunset.shadow.camera.bottom = -12;
     scene.add(sunset);
 
-    var lamp = new T.PointLight(0xffc27a, 1.3, 9, 2);              // desk lamp
-    lamp.position.set(-1.9, 3.3, -2.5);
+    var lamp = new T.PointLight(0xff7ad9, 1.5, 8, 2);               // pink desk lamp
+    lamp.position.set(1.45, 2.8, -2.55);
     lamp.castShadow = true;
     scene.add(lamp);
 
-    // Wall lights above the shelf and the board, and the fan light
-    [[-4.4, 6.4, -5.3], [3.6, 6.4, -5.3]].forEach(function (p) {
-      var l = new T.PointLight(0xffb870, 0.7, 7, 2);
+    // Neon glow from the desk edge and the board frame, a soft wall light over the shelf, and the fan light
+    [[0.1, 1.3, -0.7, 0xff5fd2, 1.0, 5], [3.6, 4.2, -4.9, 0xff5fd2, 1.1, 6], [-4.4, 6.2, -5.1, 0xb28cff, 0.6, 6]].forEach(function (p) {
+      var l = new T.PointLight(p[3], p[4], p[5], 2);
       l.position.set(p[0], p[1], p[2]);
       scene.add(l);
     });
-    var fanLight = new T.PointLight(0xfff0d6, 0.45, 14, 2);
+    var fanLight = new T.PointLight(0xd8d0ff, 0.35, 14, 2);
     fanLight.position.set(0.6, 6.5, 1);
     scene.add(fanLight);
 
@@ -472,75 +472,86 @@
     var RX0 = -8, RX1 = 13, RZ0 = -6, RZ1 = 14, RH = 7.5;
     var RW = RX1 - RX0, RD = RZ1 - RZ0, CX = (RX0 + RX1) / 2, CZ = (RZ0 + RZ1) / 2;
 
-    // Floor boards
+    // Dark herringbone parquet
     var floorTex = canvasTex(1024, 1024, function (g, w, h) {
-      g.fillStyle = '#8a5c3c'; g.fillRect(0, 0, w, h);
-      for (var y = 0; y < h; y += 64) {
-        g.fillStyle = 'rgba(0,0,0,' + (0.04 + rnd() * 0.06) + ')';
-        g.fillRect(0, y, w, 64);
-        g.fillStyle = 'rgba(30,15,8,0.35)';
-        g.fillRect(0, y, w, 2);
-        var off = rnd() * w;
-        g.fillRect(off, y, 2, 64);
+      g.fillStyle = '#2a2430'; g.fillRect(0, 0, w, h);
+      // Chevron parquet: columns of slanted planks that meet in a V
+      var cw = 128, W = 32, tones = ['#3a3138', '#342c34', '#40363d', '#2f282f', '#372e36'];
+      for (var c = 0; c < w / cw; c++) {
+        var x0 = c * cw, slope = c % 2 ? cw : -cw;
+        for (var y = -cw - W; y < h + cw; y += W) {
+          g.fillStyle = tones[Math.floor(rnd() * tones.length)];
+          var y0 = c % 2 ? y : y + cw;
+          g.beginPath();
+          g.moveTo(x0, y0); g.lineTo(x0 + cw, y0 + slope); g.lineTo(x0 + cw, y0 + slope + W - 2); g.lineTo(x0, y0 + W - 2);
+          g.closePath(); g.fill();
+        }
       }
+      g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, 0, w, h);
     });
-    var floor = new T.Mesh(new T.PlaneGeometry(RW, RD), new T.MeshStandardMaterial({ map: floorTex, roughness: 0.7 }));
+    if (floorTex.wrapS !== undefined) { floorTex.wrapS = floorTex.wrapT = T.RepeatWrapping; if (floorTex.repeat) floorTex.repeat.set(3, 3); }
+    var floor = new T.Mesh(new T.PlaneGeometry(RW, RD), new T.MeshStandardMaterial({ map: floorTex, roughness: 0.55 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(CX, 0, CZ);
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Kantha-style rug: deep teal with running-stitch borders and a simple centre motif
-    var rugTex = canvasTex(1024, 740, function (g, w, h) {
-      g.fillStyle = '#245f5a'; g.fillRect(0, 0, w, h);
-      g.strokeStyle = '#e9c14a'; g.lineWidth = 6; g.setLineDash([18, 12]);
-      for (var i = 0; i < 4; i++) { g.strokeRect(30 + i * 22, 30 + i * 22, w - 60 - i * 44, h - 60 - i * 44); }
-      g.strokeStyle = '#c4553f'; g.setLineDash([10, 10]); g.lineWidth = 5;
-      g.strokeRect(140, 140, w - 280, h - 280);
-      g.setLineDash([]);
-      g.translate(w / 2, h / 2);
-      for (var k = 0; k < 8; k++) {
-        g.rotate(Math.PI / 4);
-        g.fillStyle = k % 2 ? '#ece6da' : '#e9c14a';
-        g.beginPath(); g.ellipse(0, -60, 22, 56, 0, 0, Math.PI * 2); g.fill();
-      }
-      g.fillStyle = '#c4553f'; g.beginPath(); g.arc(0, 0, 26, 0, Math.PI * 2); g.fill();
+    // Rug: charcoal with pale grey bands and a faint pink line, like a frame around the desk
+    var rugTex = canvasTex(1024, 1024, function (g, w, h) {
+      g.fillStyle = '#2c2933'; g.fillRect(0, 0, w, h);
+      [[24, 26, '#9a93a6'], [70, 10, '#2c2933'], [92, 16, '#c9c2d2'], [128, 4, '#ff7ad9'], [150, 40, '#38343f']].forEach(function (b) {
+        g.strokeStyle = b[2]; g.lineWidth = b[1];
+        g.strokeRect(b[0], b[0], w - b[0] * 2, h - b[0] * 2);
+      });
+      g.strokeStyle = 'rgba(201,194,210,0.35)'; g.lineWidth = 6;             // a faint diamond in the middle
+      g.beginPath(); g.moveTo(w / 2, 240); g.lineTo(w - 240, h / 2); g.lineTo(w / 2, h - 240); g.lineTo(240, h / 2); g.closePath(); g.stroke();
     });
-    var rug = new T.Mesh(new T.PlaneGeometry(6.4, 4.6), new T.MeshStandardMaterial({ map: rugTex, roughness: 1 }));
+    var rug = new T.Mesh(new T.PlaneGeometry(7, 7), new T.MeshStandardMaterial({ map: rugTex, roughness: 1 }));
     rug.rotation.x = -Math.PI / 2;
-    rug.position.set(0.6, 0.01, 0.8);
+    rug.position.set(0.4, 0.012, -0.6);
     rug.receiveShadow = true;
     scene.add(rug);
 
-    var wallM = mat(C.wall), wallDarkM = mat(C.wallDark);
+    // Walls: dark grey panels with fine seams
+    var panelCanvas = document.createElement('canvas');
+    panelCanvas.width = 256; panelCanvas.height = 256;
+    (function (g, w, h) {
+      var pg = g.createLinearGradient(0, 0, w, h);
+      pg.addColorStop(0, '#46424e'); pg.addColorStop(1, '#3c3945');
+      g.fillStyle = pg; g.fillRect(0, 0, w, h);
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(0, 0, w, 3); g.fillRect(0, 0, 3, h);
+      g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(3, 3, w - 3, 2); g.fillRect(3, 3, 2, h - 3);
+    })(panelCanvas.getContext('2d'), 256, 256);
+    function panelMat(across, up) {
+      var t = new T.CanvasTexture(panelCanvas);
+      if (t.repeat) { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(across, up); }
+      return new T.MeshStandardMaterial({ map: t, roughness: 0.85 });
+    }
+    var wallM = panelMat(9, 3), wallDarkM = panelMat(1.2, 3);
     box(RW + 0.6, RH, 0.3, wallM, CX, RH / 2, RZ0);                  // back wall
-    box(0.3, RH, RD, wallM, RX1, RH / 2, CZ);                         // right wall
+    box(0.3, RH, RD, panelMat(8, 3), RX1, RH / 2, CZ);                  // right wall
     box(RW + 0.6, RH, 0.3, wallM, CX, RH / 2, RZ1);                   // front wall (behind the camera)
-    box(RW + 0.6, 0.3, RD + 0.6, mat(0x5a3a30, { roughness: 1 }), CX, RH + 0.15, CZ);  // ceiling
+    box(RW + 0.6, 0.3, RD + 0.6, mat(0x25222b, { roughness: 1 }), CX, RH + 0.15, CZ);  // ceiling
     // Skirting along the walls
-    box(RW, 0.25, 0.08, mat(0x4a2e25), CX, 0.125, RZ0 + 0.18);
-    box(0.08, 0.25, RD, mat(0x4a2e25), RX0 + 0.18, 0.125, CZ);
+    box(RW, 0.25, 0.08, mat(0x1d1b22), CX, 0.125, RZ0 + 0.18);
+    box(0.08, 0.25, RD, mat(0x1d1b22), RX0 + 0.18, 0.125, CZ);
 
     // Left wall (x = -8), built around a window opening from z -3 to 3, y 1.6 to 5.6
     box(0.3, RH, 3.0, wallDarkM, RX0, RH / 2, -4.5);
-    box(0.3, RH, RZ1 - 3, wallDarkM, RX0, RH / 2, (3 + RZ1) / 2);
-    box(0.3, 1.6, 6.0, wallDarkM, RX0, 0.8, 0);
-    box(0.3, RH - 5.6, 6.0, wallDarkM, RX0, (5.6 + RH) / 2, 0);
+    box(0.3, RH, RZ1 - 3, panelMat(4.4, 3), RX0, RH / 2, (3 + RZ1) / 2);
+    box(0.3, 1.6, 6.0, panelMat(2.4, 0.65), RX0, 0.8, 0);
+    box(0.3, RH - 5.6, 6.0, panelMat(2.4, 0.75), RX0, (5.6 + RH) / 2, 0);
     var frameM = mat(C.metal, { roughness: 0.6 });
     box(0.36, 0.12, 6.0, frameM, RX0, 1.62, 0);
     box(0.36, 0.12, 6.0, frameM, RX0, 5.58, 0);
     box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 0);
     box(0.36, 4.0, 0.12, frameM, RX0, 3.6, -2.95);
     box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 2.95);
-    box(0.7, 0.1, 6.3, mat(0x4a2e25), RX0 + 0.3, 1.58, 0);            // window sill
-    // Window grill, common on Dhaka windows
-    for (var gz = -2.5; gz <= 2.5; gz += 0.5) box(0.04, 3.9, 0.04, frameM, RX0 - 0.12, 3.6, gz);
-
-    // Teal curtains drawn to the sides
-    var curtainM = mat(C.teal, { roughness: 1 });
-    box(0.15, 4.8, 1.1, curtainM, RX0 + 0.35, 3.4, -3.65);
-    box(0.15, 4.8, 1.1, curtainM, RX0 + 0.35, 3.4, 3.65);
-    box(0.1, 0.1, 8.6, frameM, RX0 + 0.4, 5.85, 0);                     // curtain rod
+    box(0.7, 0.1, 6.3, mat(0x2b2932), RX0 + 0.3, 1.58, 0);            // window sill
+    box(0.3, 0.08, 6.0, frameM, RX0 - 0.05, 3.9, 0);                    // transom bar
+    var windowGlow = new T.PointLight(0xc58cff, 0.8, 9, 2);              // the city's glow spilling in
+    windowGlow.position.set(RX0 + 1.2, 3.6, 0);
+    scene.add(windowGlow);
 
     /* ---------- Dhaka at dusk, outside the window ----------
        Three layers at different depths so the city shifts as the camera moves. */
@@ -564,7 +575,7 @@
           for (var c = 0; c < cols; c++) {
             var lit = rnd();
             if (lit < opts.lit) {
-              g.fillStyle = rnd() < 0.35 ? 'rgba(232,244,255,0.9)' : 'rgba(255,205,120,0.92)';
+              var tone = rnd(); g.fillStyle = tone < 0.3 ? 'rgba(232,244,255,0.9)' : tone < 0.5 ? 'rgba(255,140,220,0.9)' : 'rgba(255,205,140,0.92)';
               g.fillRect(x + c * cw + cw * 0.22, top + 10 + r * opts.cell * 1.25, cw * 0.56, opts.cell * 0.6);
             } else if (opts.grills) {
               g.fillStyle = 'rgba(0,0,0,0.25)';
@@ -601,37 +612,40 @@
     // Layer 1: sky, sun, far skyline with a mosque
     var farTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
       var sk = g.createLinearGradient(0, 0, 0, h);
-      sk.addColorStop(0, '#3a2a5a');
-      sk.addColorStop(0.32, '#8b4d7c');
-      sk.addColorStop(0.55, '#ef7f58');
-      sk.addColorStop(0.7, '#ffc373');
-      sk.addColorStop(1, '#ffd9a0');
+      sk.addColorStop(0, '#160f2e');
+      sk.addColorStop(0.35, '#3b2466');
+      sk.addColorStop(0.6, '#8a4f9e');
+      sk.addColorStop(0.78, '#d681b9');
+      sk.addColorStop(1, '#f2a9cf');
       g.fillStyle = sk; g.fillRect(0, 0, w, h);
-      // Low sun with a soft glow
-      var sx = w * 0.36, sy = h * 0.64;
-      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 320);
-      glow.addColorStop(0, 'rgba(255,240,190,1)');
-      glow.addColorStop(0.18, 'rgba(255,214,140,0.8)');
-      glow.addColorStop(1, 'rgba(255,170,100,0)');
+      for (var st = 0; st < 140; st++) {                                  // stars
+        g.fillStyle = 'rgba(255,255,255,' + between(0.3, 0.9) + ')';
+        g.fillRect(between(0, w), between(0, h * 0.45), between(1, 3), between(1, 3));
+      }
+      // A pale moon with a soft halo
+      var sx = w * 0.36, sy = h * 0.3;
+      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 220);
+      glow.addColorStop(0, 'rgba(255,235,255,0.55)');
+      glow.addColorStop(1, 'rgba(255,200,255,0)');
       g.fillStyle = glow; g.fillRect(0, 0, w, h);
-      g.fillStyle = '#fff1c8'; g.beginPath(); g.arc(sx, sy, 46, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fbeaff'; g.beginPath(); g.arc(sx, sy, 30, 0, Math.PI * 2); g.fill();
       // Long thin clouds
-      g.fillStyle = 'rgba(255,190,170,0.35)';
+      g.fillStyle = 'rgba(255,170,230,0.18)';
       for (var i = 0; i < 9; i++) {
         g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
       }
       // Distant haze line of buildings
       drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.18,
-        colors: ['#8a5a74', '#7d5270', '#94627a'], tanks: 0.4, tankColor: '#6d4762' });
+        colors: ['#5d4380', '#563d78', '#664a88'], tanks: 0.4, tankColor: '#4a3468' });
       // Mosque: dome and two minarets, off to one side of the window view, behind the city
       var mx = w * 0.603, base = h * 0.7, k = 0.62;
-      g.fillStyle = '#5c3a58';
+      g.fillStyle = '#3e2a5e';
       g.fillRect(mx - 70 * k, base - 40 * k, 140 * k, h - base + 40 * k);
       g.beginPath(); g.arc(mx, base - 40 * k, 62 * k, Math.PI, 0); g.fill();
       g.fillRect(mx - 2, base - 40 * k - 62 * k - 14, 4, 16);
       g.beginPath(); g.arc(mx, base - 40 * k - 62 * k - 15, 4, 0, Math.PI * 2); g.fill();
       [mx - 118 * k, mx + 104 * k].forEach(function (px) {
-        g.fillStyle = '#5c3a58';
+        g.fillStyle = '#3e2a5e';
         g.fillRect(px, base - 190 * k, 14 * k, h - base + 190 * k);
         g.beginPath(); g.arc(px + 7 * k, base - 190 * k, 11 * k, Math.PI, 0); g.fill();
         g.fillRect(px + 6 * k, base - 214 * k, 2, 16 * k);
@@ -643,10 +657,10 @@
       });
       // Mid-distance blocks, kept a little lower in front of the dome so it peeks over them
       drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.32,
-        colors: ['#6b4462', '#5e3d58', '#734a66'], tanks: 0.55, tankColor: '#3f2840',
+        colors: ['#3a2a55', '#33254d', '#42305e'], tanks: 0.55, tankColor: '#271b3d',
         low: [mx - 80 * k, mx + 80 * k, 0.735] });
       // A few birds over the sky
-      g.strokeStyle = 'rgba(40,24,40,0.7)'; g.lineWidth = 3;
+      g.strokeStyle = 'rgba(30,18,44,0.55)'; g.lineWidth = 3;
       for (var b = 0; b < 7; b++) {
         var bx = between(w * 0.15, w * 0.85), by = between(h * 0.2, h * 0.45), s = between(8, 14);
         g.beginPath(); g.moveTo(bx - s, by); g.quadraticCurveTo(bx - s / 2, by - s / 2, bx, by); g.quadraticCurveTo(bx + s / 2, by - s / 2, bx + s, by); g.stroke();
@@ -667,30 +681,30 @@
       var blocks = document.createElement('canvas'); blocks.width = w; blocks.height = h;
       var rects = [];
       drawBuildingsRow(blocks.getContext('2d'), w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.66, gap: 30, cell: 34, lit: 0.42,
-        colors: ['#3d2734', '#46303a', '#352230'], tanks: 0.7, tankColor: '#24161f', grills: true, ac: true,
+        colors: ['#241b33', '#2a203b', '#1f172c'], tanks: 0.7, tankColor: '#150f20', grills: true, ac: true,
         clear: [w * 0.58, w * 0.63], out: rects });   // a side street, looking through to the mosque
       g.drawImage(blocks, 0, 0);
 
       // Elevated expressway weaving through the blocks: concrete deck on pillars, traffic streaking along
       var deckY = function (x) { return h * deckV(x / w); };
       var line = function (off) { g.beginPath(); for (var dx = -10; dx <= w + 10; dx += 20) { if (dx < 0) g.moveTo(dx, deckY(dx) + off); else g.lineTo(dx, deckY(dx) + off); } g.stroke(); };
-      g.fillStyle = '#4e3846';
+      g.fillStyle = '#2e2440';
       for (var px = 70; px < w; px += 240) {                       // pillars with pier caps
         var py = deckY(px);
         g.fillRect(px - 13, py + 18, 26, h - py);
         g.fillRect(px - 26, py + 14, 52, 9);
       }
       g.lineCap = 'butt';
-      g.strokeStyle = '#5f4654'; g.lineWidth = 24; line(0);          // deck
-      g.strokeStyle = '#3e2c38'; g.lineWidth = 6; line(12);          // shadowed underside edge
-      g.strokeStyle = '#a07b80'; g.lineWidth = 4; line(-13);         // parapet catching the sunset
+      g.strokeStyle = '#3a2e4c'; g.lineWidth = 24; line(0);          // deck
+      g.strokeStyle = '#211a2e'; g.lineWidth = 6; line(12);          // shadowed underside edge
+      g.strokeStyle = '#b07fd0'; g.lineWidth = 4; line(-13);         // parapet catching the city glow
       for (var cl = 0; cl < 16; cl++) {                               // a few far-off lights; real cars drive past below
         var cx = between(0, w), head = rnd() < 0.5;
         g.fillStyle = head ? 'rgba(255,244,210,0.95)' : 'rgba(255,80,64,0.9)';
         g.fillRect(cx, deckY(cx) + (head ? -6 : 2), between(10, 22), 3);
       }
       for (var lp = 50; lp < w; lp += 170) {                          // lamp posts along the parapet
-        g.fillStyle = '#3e2c38'; g.fillRect(lp, deckY(lp) - 48, 3, 36); g.fillRect(lp, deckY(lp) - 48, 10, 3);
+        g.fillStyle = '#211a2e'; g.fillRect(lp, deckY(lp) - 48, 3, 36); g.fillRect(lp, deckY(lp) - 48, 10, 3);
         g.fillStyle = 'rgba(255,214,140,0.95)'; g.beginPath(); g.arc(lp + 10, deckY(lp) - 45, 4, 0, Math.PI * 2); g.fill();
       }
       // Every other block stands in front of the road (on its own layer, so passing cars slip behind them)
@@ -698,6 +712,23 @@
       rects.forEach(function (r, i) {
         if (i % 2) return;
         fg.drawImage(blocks, r[0], r[1], r[2], h - r[1], r[0], r[1], r[2], h - r[1]);
+      });
+      // Two palm trees just outside the window, in silhouette
+      [[0.415, 0.5, 1], [0.665, 0.56, -1]].forEach(function (pt) {
+        var bx = w * pt[0], top = h * pt[1], lean = pt[2] * 26;
+        fg.strokeStyle = '#120d1a'; fg.lineCap = 'round';
+        fg.lineWidth = 14;
+        fg.beginPath(); fg.moveTo(bx, h); fg.quadraticCurveTo(bx + lean * 2, (h + top) / 2, bx + lean, top); fg.stroke();
+        fg.fillStyle = '#120d1a';
+        for (var fr = 0; fr < 9; fr++) {
+          var ang = -Math.PI + fr * (Math.PI / 8) + between(-0.1, 0.1), len = between(90, 140);
+          var ex = bx + lean + Math.cos(ang) * len, ey = top + Math.sin(ang) * len * 0.55 + len * 0.25;
+          fg.beginPath();
+          fg.moveTo(bx + lean, top);
+          fg.quadraticCurveTo((bx + lean + ex) / 2, top - 30, ex, ey);
+          fg.quadraticCurveTo((bx + lean + ex) / 2, top - 8, bx + lean, top + 6);
+          fg.fill();
+        }
       });
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
@@ -803,8 +834,10 @@
     box(5.2, 0.16, 2.2, mat(C.deskTop, { roughness: 0.5 }), 0, 1.55, 0, desk);
     box(0.16, 1.5, 2.0, mat(C.desk), -2.45, 0.75, 0, desk);
     box(1.6, 1.5, 2.0, mat(C.desk), 1.8, 0.75, 0, desk);
-    box(1.4, 0.04, 0.04, mat(C.marigold, { metalness: 0.5 }), 1.8, 1.1, 1.01, desk);   // drawer handle
-    box(5.2, 0.03, 0.03, new T.MeshBasicMaterial({ color: C.marigold }), 0, 1.46, 1.1, desk);
+    var neonM = new T.MeshBasicMaterial({ color: C.neon });
+    box(1.4, 0.04, 0.04, neonM, 1.8, 1.1, 1.01, desk);                                  // drawer handle
+    box(5.24, 0.05, 0.05, neonM, 0, 1.47, 1.12, desk);                                   // neon strip along the front edge
+    box(0.05, 0.05, 2.24, neonM, 2.62, 1.47, 0, desk);                                   // and down the right side
 
     var monitor = new T.Group();
     monitor.position.set(-0.3, 1.63, -0.45);
@@ -812,29 +845,24 @@
     box(0.5, 0.06, 0.4, mat(C.metal), 0, 0.03, 0, monitor);
     box(0.12, 0.7, 0.08, mat(C.metal), 0, 0.4, -0.05, monitor);
     box(2.5, 1.5, 0.12, mat(C.metal, { roughness: 0.4 }), 0, 1.4, 0, monitor);
-    // Glowing screen: the projects desktop (the HTML desktop sits exactly over it up close)
+    // Glowing screen: says HOME from across the room; up close the projects desktop sits over it
     var screenTex = canvasTex(1024, 590, function (g, w, h) {
       var bg = g.createLinearGradient(0, 0, w, h);
-      bg.addColorStop(0, '#16262b'); bg.addColorStop(1, '#221b2e');
+      bg.addColorStop(0, '#2a1446'); bg.addColorStop(1, '#5a1f5e');
       g.fillStyle = bg; g.fillRect(0, 0, w, h);
-      g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, 0, w, 34);
-      g.fillStyle = '#ece6da'; g.font = '600 17px sans-serif'; g.fillText('abrar@desk', 22, 23);
-      var rows = [['#2e2f45', '#34391f', '#3b2b36', '#3d2f28'], ['#29323b', '#263530', '#2e2f45', '#34391f', '#3d2f28'], ['#34391f']];
-      rows.forEach(function (row, r) {
-        var y = 64 + r * 172;
-        g.fillStyle = 'rgba(236,230,218,0.55)'; g.fillRect(40, y, 90, 8);
-        row.forEach(function (c, i) {
-          var x = 40 + i * 132;
-          g.fillStyle = c; g.fillRect(x, y + 26, 88, 88);
-          g.strokeStyle = 'rgba(233,193,74,0.7)'; g.lineWidth = 3; g.strokeRect(x + 26, y + 52, 36, 36);
-          g.fillStyle = 'rgba(236,230,218,0.4)'; g.fillRect(x + 6, y + 126, 76, 7);
-        });
-      });
+      var halo = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.45);
+      halo.addColorStop(0, 'rgba(255,120,220,0.35)'); halo.addColorStop(1, 'rgba(255,120,220,0)');
+      g.fillStyle = halo; g.fillRect(0, 0, w, h);
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '600 120px "Instrument Sans", "Helvetica Neue", Arial, sans-serif';
+      if ('letterSpacing' in g) g.letterSpacing = '18px';
+      g.shadowColor = 'rgba(255,110,220,0.9)'; g.shadowBlur = 30;
+      g.fillStyle = '#ffd6f3'; g.fillText('HOME', w / 2, h / 2);
     });
     var screen = new T.Mesh(new T.PlaneGeometry(2.36, 1.36), new T.MeshBasicMaterial({ map: screenTex }));
     screen.position.set(0, 1.4, 0.065);
     monitor.add(screen);
-    var screenGlow = new T.PointLight(0x8fd1ff, 0.35, 4, 2);
+    var screenGlow = new T.PointLight(0xc27bff, 0.6, 4.5, 2);
     screenGlow.position.set(0, 1.4, 0.6);
     monitor.add(screenGlow);
     box(1.9, 0.05, 0.6, mat(0x2e2a28), -0.3, 1.66, 0.45, desk);                       // keyboard
@@ -842,12 +870,18 @@
     cyl(0.14, 0.12, 0.3, mat(0xece6da), 1.1, 1.78, -0.35, desk);                       // tea cup
     box(0.04, 0.12, 0.04, mat(0xece6da), 1.27, 1.8, -0.35, desk);                     // cup handle
 
+    // Arm lamp with a pink shade
     var lampArm = new T.Group();
-    lampArm.position.set(-2.1, 1.63, -0.6);
+    lampArm.position.set(2.1, 1.63, -0.55);
     desk.add(lampArm);
-    box(0.4, 0.06, 0.4, mat(C.metal), 0, 0.03, 0, lampArm);
-    box(0.06, 1.4, 0.06, mat(C.metal), 0, 0.73, 0, lampArm);
-    box(0.5, 0.25, 0.35, mat(C.marigold, { emissive: 0x6a4a10 }), 0.15, 1.45, 0.1, lampArm);
+    var lampM = mat(0x2b2932, { roughness: 0.4, metalness: 0.4 });
+    cyl(0.22, 0.26, 0.08, lampM, 0, 0.04, 0, lampArm);
+    var arm1 = box(0.06, 1.0, 0.06, lampM, 0.0, 0.5, 0.12, lampArm); arm1.rotation.x = -0.28;
+    var arm2 = box(0.06, 0.9, 0.06, lampM, -0.25, 1.15, 0.2, lampArm); arm2.rotation.z = 1.05;
+    var shade = new T.Mesh(new T.ConeGeometry(0.26, 0.36, 20, 1, true), new T.MeshStandardMaterial({ color: C.neon, emissive: 0x8a1f72, roughness: 0.5, side: T.DoubleSide }));
+    shade.position.set(-0.62, 1.32, 0.2); shade.rotation.z = 0.7;
+    lampArm.add(shade);
+    cyl(0.08, 0.08, 0.06, new T.MeshBasicMaterial({ color: 0xffe6f6 }), -0.66, 1.24, 0.2, lampArm);
 
     var phone = box(0.34, 0.04, 0.66, mat(0x111214, { roughness: 0.3 }), 1.55, 1.65, 0.35, desk);
     phone.rotation.y = -0.35;
@@ -858,12 +892,12 @@
     var PHONE_REST = { x: 1.55, y: 1.65, z: 0.35, rx: 0, ry: -0.35 };
     var PHONE_UP = { x: 1.55, y: 2.55, z: 0.75, rx: Math.PI / 2, ry: 0 };   // lifted, facing you (desk sits at z -2.2)
 
-    /* ---------- Back wall: ID card board, shelf and a rickshaw-art poster ---------- */
+    /* ---------- Back wall: ID card board and the shelf ---------- */
     var boardTex = canvasTex(920, 480, function (g, w, h) {
-      g.fillStyle = '#3a2d26'; g.fillRect(0, 0, w, h);
-      g.fillStyle = '#271d18';
+      g.fillStyle = '#26242c'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#121116';
       for (var y = 20; y < h; y += 28) for (var x = 20; x < w; x += 28) { g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); }
-      g.strokeStyle = '#5a4436'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+      g.strokeStyle = '#1b1a20'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
     });
     var board = new T.Mesh(new T.BoxGeometry(4.6, 2.4, 0.08), [
       mat(C.board), mat(C.board), mat(C.board), mat(C.board),
@@ -872,7 +906,10 @@
     board.position.set(3.6, 4.2, -5.8);
     board.castShadow = true; board.receiveShadow = true;
     scene.add(board);
-    box(4.6, 0.04, 0.12, new T.MeshBasicMaterial({ color: C.marigold }), 3.6, 2.97, -5.78);
+    // Pink neon frame around the board
+    [[4.76, 0.06, 0, 1.23], [4.76, 0.06, 0, -1.23], [0.06, 2.52, 2.38, 0], [0.06, 2.52, -2.38, 0]].forEach(function (n) {
+      box(n[0], n[1], 0.06, neonM, 3.6 + n[2], 4.2 + n[3], -5.74);
+    });
 
     /* ---------- Work: ID cards on lanyards, hanging from the board ---------- */
     var workItems = Array.prototype.slice.call(document.querySelectorAll('#work .story__title')).map(function (el) { return el.textContent.trim(); });
@@ -1132,27 +1169,6 @@
     cyl(0.16, 0.12, 0.35, mat(C.teal), 1.3, 3.64, 0, shelf);                        // small pot
     box(0.08, 0.4, 0.08, mat(0x4f8a45), 1.3, 3.95, 0, shelf);
 
-    // Rickshaw-art inspired poster: bright border, flowers and a peacock-blue field
-    var posterTex = canvasTex(400, 560, function (g, w, h) {
-      g.fillStyle = '#0f6f7a'; g.fillRect(0, 0, w, h);
-      var stripes = ['#e9c14a', '#c4553f', '#ece6da', '#2a9d4b'];
-      for (var s = 0; s < 4; s++) { g.strokeStyle = stripes[s]; g.lineWidth = 10; g.strokeRect(10 + s * 10, 10 + s * 10, w - 20 - s * 20, h - 20 - s * 20); }
-      function flower(x, y, r, petal, centre) {
-        g.fillStyle = petal;
-        for (var p = 0; p < 8; p++) { g.beginPath(); g.ellipse(x + Math.cos(p * Math.PI / 4) * r, y + Math.sin(p * Math.PI / 4) * r, r * 0.55, r * 0.32, p * Math.PI / 4, 0, Math.PI * 2); g.fill(); }
-        g.fillStyle = centre; g.beginPath(); g.arc(x, y, r * 0.5, 0, Math.PI * 2); g.fill();
-      }
-      flower(w / 2, h * 0.42, 70, '#e64b6b', '#e9c14a');
-      flower(w * 0.27, h * 0.72, 38, '#e9c14a', '#c4553f');
-      flower(w * 0.73, h * 0.72, 38, '#ece6da', '#e64b6b');
-      flower(w * 0.27, h * 0.18, 26, '#2a9d4b', '#ece6da');
-      flower(w * 0.73, h * 0.18, 26, '#2a9d4b', '#ece6da');
-    });
-    var poster = new T.Mesh(new T.PlaneGeometry(1.6, 2.24), new T.MeshStandardMaterial({ map: posterTex, roughness: 0.8 }));
-    poster.position.set(8.4, 4.3, -5.83);
-    scene.add(poster);
-    box(1.72, 2.36, 0.06, mat(0x2a1d19), 8.4, 4.3, -5.88);
-
     /* ---------- Chair (the character sits here in stage 3) ---------- */
     var chair = new T.Group();
     chair.position.set(-0.3, 0, -0.4);
@@ -1280,8 +1296,8 @@
     var fan = new T.Group();
     fan.position.set(0.6, RH, 1);
     scene.add(fan);
-    cyl(0.06, 0.06, 0.9, mat(0xd9d2c4), 0, -0.45, 0, fan, 8);
-    cyl(0.35, 0.3, 0.25, mat(0xd9d2c4), 0, -0.95, 0, fan);
+    cyl(0.06, 0.06, 0.9, mat(0x3a3742), 0, -0.45, 0, fan, 8);
+    cyl(0.35, 0.3, 0.25, mat(0x3a3742), 0, -0.95, 0, fan);
     var blades = new T.Group();
     blades.position.y = -0.98;
     fan.add(blades);
@@ -1289,42 +1305,56 @@
       var arm = new T.Group();
       arm.rotation.y = bl * (Math.PI * 2 / 3);
       blades.add(arm);
-      var blade = box(2.4, 0.04, 0.45, mat(0xd9d2c4), 1.4, 0, 0, arm);
+      var blade = box(2.4, 0.04, 0.45, mat(0x3a3742), 1.4, 0, 0, arm);
       blade.rotation.x = 0.12;
     }
-    cyl(0.12, 0.12, 0.05, new T.MeshBasicMaterial({ color: 0xfff0d6 }), 0, -1.1, 0, fan);
+    cyl(0.12, 0.12, 0.05, new T.MeshBasicMaterial({ color: 0xf2eaff }), 0, -1.1, 0, fan);
 
-    // Mora: a cane stool with a red cushion
-    var mora = new T.Group();
-    mora.position.set(7.4, 0, -3.2);
-    scene.add(mora);
-    var caneM = mat(C.cane, { roughness: 0.95 });
-    cyl(0.28, 0.5, 0.55, caneM, 0, 0.275, 0, mora);
-    cyl(0.5, 0.28, 0.55, caneM, 0, 0.825, 0, mora);
-    cyl(0.48, 0.48, 0.1, mat(0xc4553f), 0, 1.15, 0, mora);
-
-    // Plant by the window
+    // A big leafy plant in a white pot on a wooden stand, by the window
     var plant = new T.Group();
-    plant.position.set(-6.5, 0, 4.6);
+    plant.position.set(-6.5, 0, 4.4);
     scene.add(plant);
-    cyl(0.45, 0.35, 0.9, mat(0xc4553f), 0, 0.45, 0, plant);
-    // Snake-plant style leaves: tall, thin and pointed, fanning out
-    for (var lf = 0; lf < 11; lf++) {
-      var lh = between(1.1, 2.0);
-      var leafHolder = new T.Group();
-      leafHolder.position.set(between(-0.15, 0.15), 0.85, between(-0.15, 0.15));
-      leafHolder.rotation.set(between(-0.3, 0.3), lf * 0.57, between(-0.3, 0.3));
-      plant.add(leafHolder);
-      var leaf = new T.Mesh(new T.ConeGeometry(0.13, lh, 4), mat(lf % 3 ? 0x4f8a45 : 0x6aa055, { roughness: 0.7 }));
-      leaf.scale.set(1, 1, 0.3);
-      leaf.position.y = lh / 2;
+    var standM = mat(0x5a3a26, { roughness: 0.7 });
+    [[-0.32, -0.32], [0.32, -0.32], [-0.32, 0.32], [0.32, 0.32]].forEach(function (lg) {
+      var leg = box(0.07, 1.1, 0.07, standM, lg[0], 0.55, lg[1], plant);
+      leg.rotation.z = lg[0] * 0.25; leg.rotation.x = -lg[1] * 0.25;
+    });
+    box(0.8, 0.06, 0.8, standM, 0, 1.08, 0, plant);
+    cyl(0.42, 0.32, 0.75, mat(0xf1eee9, { roughness: 0.5 }), 0, 1.48, 0, plant, 28);
+    for (var lf = 0; lf < 12; lf++) {
+      var stem = new T.Group();
+      stem.position.set(0, 1.8, 0);
+      stem.rotation.set(between(0.5, 1.15), lf * 0.52 + between(-0.15, 0.15), 0, 'YXZ');
+      plant.add(stem);
+      var sl = between(0.7, 1.3);
+      var stalk = new T.Mesh(new T.CylinderGeometry(0.02, 0.025, sl, 6), mat(0x2f6b3a));
+      stalk.position.y = sl / 2;
+      stem.add(stalk);
+      var leaf = new T.Mesh(new T.SphereGeometry(0.42, 16, 10), mat(lf % 3 ? 0x2f7a3f : 0x3b8c4a, { roughness: 0.6, side: T.DoubleSide }));
+      leaf.scale.set(1, 0.08, 0.72);
+      leaf.position.set(0, sl + 0.05, 0.2);
+      leaf.rotation.x = -0.5;
       leaf.castShadow = true;
-      leafHolder.add(leaf);
+      stem.add(leaf);
     }
 
-    // A floor cushion near the window, for reading
-    box(1.6, 0.35, 1.6, mat(0xe9c14a, { roughness: 1 }), -5.8, 0.18, -3.6);
-    box(1.2, 0.5, 0.35, mat(0xc4553f, { roughness: 1 }), -6.4, 0.55, -3.6).rotation.y = Math.PI / 2;
+    // Low cabinet under the board's right end, with a speaker glowing pink
+    var cab = new T.Group();
+    cab.position.set(7.4, 0, -5.25);
+    scene.add(cab);
+    box(2.4, 1.3, 0.85, mat(C.desk, { roughness: 0.6 }), 0, 0.65, 0, cab);
+    box(0.02, 1.1, 0.02, mat(C.metal), 0, 0.68, 0.43, cab);                                // door gap
+    box(0.3, 0.03, 0.03, mat(0x8d8698, { metalness: 0.6 }), -0.3, 0.75, 0.44, cab);        // handles
+    box(0.3, 0.03, 0.03, mat(0x8d8698, { metalness: 0.6 }), 0.3, 0.75, 0.44, cab);
+    box(0.62, 0.86, 0.55, mat(0x1f1d24, { roughness: 0.5 }), -0.5, 1.73, 0, cab);          // speaker
+    var ring = new T.Mesh(new T.RingGeometry(0.15, 0.2, 32), new T.MeshBasicMaterial({ color: C.neon, side: T.DoubleSide }));
+    ring.position.set(-0.5, 1.82, 0.28);
+    cab.add(ring);
+    cyl(0.14, 0.14, 0.02, mat(0x0f0e12), -0.5, 1.82, 0.28, cab, 24).rotation.x = Math.PI / 2;
+    box(0.9, 0.22, 0.5, mat(0x2f2c36, { roughness: 0.5 }), 0.45, 1.41, 0, cab);           // a small receiver
+    var speakerGlow = new T.PointLight(0xff5fd2, 0.5, 3, 2);
+    speakerGlow.position.set(6.9, 2.0, -4.6);
+    scene.add(speakerGlow);
 
     /* ---------- Views: where the camera goes for each section ---------- */
     var VIEWS = {
