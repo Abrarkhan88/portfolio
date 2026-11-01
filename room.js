@@ -626,8 +626,14 @@
       scene.add(m);
       var dir = i % 2 ? 1 : -1;                             // two directions, two lanes
       if (dir < 0) m.scale.x = -1;                          // face the other way
-      traffic.push({ mesh: m, dir: dir, len: lenU / 26, speed: between(0.06, 0.1) * (long ? 0.75 : 1),
-        u: 0, wait: between(0.5, 9) + i * 1.3 });
+      traffic.push({
+        mesh: m,
+        dir: dir,
+        len: lenU / 26,
+        speed: between(0.06, 0.1) * (long ? 0.75 : 1),
+        u: i / 7,    // spreads the 7 vehicles across the length of the road (0 to 1)
+        wait: 0
+      });
     });
     function moveTraffic(dt) {
       traffic.forEach(function (v) {
