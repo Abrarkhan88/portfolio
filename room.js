@@ -412,9 +412,9 @@
     function between(a, b) { return a + rnd() * (b - a); }
 
     /* ---------- Lights: night in the room ---------- */
-    scene.add(new T.HemisphereLight(0xb9adff, 0x1c1822, 0.8));      // cool night fill
+    scene.add(new T.HemisphereLight(0xd8d2f0, 0x2a2633, 1.05));     // soft night fill
 
-    var sunset = new T.DirectionalLight(0x9d86ff, 0.75);             // violet moonlight through the window
+    var sunset = new T.DirectionalLight(0xbcaaff, 0.6);              // violet moonlight through the window
     sunset.position.set(-14, 8.5, 3);
     sunset.castShadow = true;
     sunset.shadow.mapSize.width = 2048;
@@ -543,8 +543,8 @@
     box(0.3, RH - 5.6, 6.0, panelMat(2.4, 0.75), RX0, (5.6 + RH) / 2, 0);
     /* Window: a deep dark casing, a fixed fanlight across the top,
        a closed left pane and the right pane swung open into the room */
-    var frameM = mat(0x2a2830, { roughness: 0.55, metalness: 0.2 });
-    var glassM = new T.MeshStandardMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0.12, roughness: 0.05, metalness: 0.3, depthWrite: false, side: T.DoubleSide });
+    var frameM = mat(0x3a3843, { roughness: 0.55, metalness: 0.15 });
+    var glassM = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.035, depthWrite: false, side: T.DoubleSide });
     function glass(wz, hy, x, y, z, parent) {
       var g = new T.Mesh(new T.PlaneGeometry(wz, hy), glassM);
       g.rotation.y = Math.PI / 2;
@@ -575,14 +575,14 @@
     // right pane, swung open on its hinge by the right jamb
     var sash = new T.Group();
     sash.position.set(RX0 + 0.04, 3.22, 2.86);
-    sash.rotation.y = -0.85;                                            // opened into the room
+    sash.rotation.y = -0.42;                                            // opened a little into the room
     scene.add(sash);
     box(0.06, 0.07, 2.78, frameM, 0, 1.47, -1.39, sash);
     box(0.06, 0.07, 2.78, frameM, 0, -1.47, -1.39, sash);
     box(0.06, 2.94, 0.07, frameM, 0, 0, -0.02, sash);
     box(0.06, 2.94, 0.07, frameM, 0, 0, -2.76, sash);
     glass(2.7, 2.88, 0, 0, -1.39, sash);
-    var windowGlow = new T.PointLight(0xc58cff, 0.8, 9, 2);              // the city's glow spilling in
+    var windowGlow = new T.PointLight(0xd7a6ff, 0.6, 8, 2);              // the city's glow spilling in
     windowGlow.position.set(RX0 + 1.2, 3.6, 0);
     scene.add(windowGlow);
 
@@ -645,11 +645,11 @@
     // Layer 1: sky, sun, far skyline with a mosque
     var farTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
       var sk = g.createLinearGradient(0, 0, 0, h);
-      sk.addColorStop(0, '#160f2e');
-      sk.addColorStop(0.35, '#3b2466');
-      sk.addColorStop(0.6, '#8a4f9e');
-      sk.addColorStop(0.78, '#d681b9');
-      sk.addColorStop(1, '#f2a9cf');
+      sk.addColorStop(0, '#2c2558');
+      sk.addColorStop(0.35, '#5d4d99');
+      sk.addColorStop(0.6, '#a07cc0');
+      sk.addColorStop(0.8, '#d99cc8');
+      sk.addColorStop(1, '#f2bccf');
       g.fillStyle = sk; g.fillRect(0, 0, w, h);
       for (var st = 0; st < 140; st++) {                                  // stars
         g.fillStyle = 'rgba(255,255,255,' + between(0.3, 0.9) + ')';
@@ -747,21 +747,24 @@
         fg.drawImage(blocks, r[0], r[1], r[2], h - r[1], r[0], r[1], r[2], h - r[1]);
       });
       // Two palm trees just outside the window, in silhouette
-      [[0.415, 0.5, 1], [0.665, 0.56, -1]].forEach(function (pt) {
+      [[0.4, 0.47, 1], [0.662, 0.5, -1]].forEach(function (pt) {
         var bx = w * pt[0], top = h * pt[1], lean = pt[2] * 26;
         fg.strokeStyle = '#120d1a'; fg.lineCap = 'round';
-        fg.lineWidth = 14;
+        fg.lineWidth = 18;
         fg.beginPath(); fg.moveTo(bx, h); fg.quadraticCurveTo(bx + lean * 2, (h + top) / 2, bx + lean, top); fg.stroke();
         fg.fillStyle = '#120d1a';
-        for (var fr = 0; fr < 9; fr++) {
-          var ang = -Math.PI + fr * (Math.PI / 8) + between(-0.1, 0.1), len = between(90, 140);
-          var ex = bx + lean + Math.cos(ang) * len, ey = top + Math.sin(ang) * len * 0.55 + len * 0.25;
+        var cx0 = bx + lean;
+        for (var fr = 0; fr < 11; fr++) {
+          var ang = -Math.PI * 1.05 + fr * (Math.PI * 1.1 / 10) + between(-0.08, 0.08), len = between(140, 190);
+          var ex = cx0 + Math.cos(ang) * len, ey = top + Math.sin(ang) * len * 0.45 + len * 0.42;   // fronds droop at the tips
+          var mx2 = cx0 + Math.cos(ang) * len * 0.55, my2 = top + Math.sin(ang) * len * 0.55 - 26;
           fg.beginPath();
-          fg.moveTo(bx + lean, top);
-          fg.quadraticCurveTo((bx + lean + ex) / 2, top - 30, ex, ey);
-          fg.quadraticCurveTo((bx + lean + ex) / 2, top - 8, bx + lean, top + 6);
+          fg.moveTo(cx0, top - 6);
+          fg.quadraticCurveTo(mx2, my2 - 10, ex, ey);
+          fg.quadraticCurveTo(mx2, my2 + 18, cx0, top + 10);
           fg.fill();
         }
+        fg.beginPath(); fg.arc(cx0, top, 16, 0, Math.PI * 2); fg.fill();   // the crown
       });
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
@@ -834,31 +837,6 @@
       });
     }
 
-    // Layer 3: overhead electric wires, sagging across the view, with a few crows
-    var wireTex = canvasTex(SKY_W, 512, function (g, w, h) {
-      g.strokeStyle = 'rgba(28,16,22,0.92)';
-      for (var i = 0; i < 9; i++) {
-        var y0 = between(60, 260), y1 = between(60, 260), sag = between(40, 120);
-        g.lineWidth = between(2, 4);
-        g.beginPath(); g.moveTo(-10, y0); g.quadraticCurveTo(w / 2, Math.max(y0, y1) + sag, w + 10, y1); g.stroke();
-      }
-      // a tangle near one side
-      for (var j = 0; j < 14; j++) {
-        g.lineWidth = 2;
-        g.beginPath(); g.moveTo(w * 0.12, between(80, 200)); g.bezierCurveTo(w * between(0.2, 0.4), between(100, 380), w * between(0.4, 0.6), between(60, 300), w + 10, between(80, 340)); g.stroke();
-      }
-      // crows sitting on a wire
-      g.fillStyle = 'rgba(20,12,18,0.95)';
-      [[0.55, 214], [0.58, 216], [0.62, 219]].forEach(function (c) {
-        var cx = w * c[0], cy = c[1];
-        g.beginPath(); g.ellipse(cx, cy - 12, 9, 13, 0, 0, Math.PI * 2); g.fill();
-        g.beginPath(); g.arc(cx + 5, cy - 26, 6, 0, Math.PI * 2); g.fill();
-      });
-    });
-    var wires = new T.Mesh(new T.PlaneGeometry(16, 4), new T.MeshBasicMaterial({ map: wireTex, transparent: true }));
-    wires.position.set(RX0 - 1.4, 5.0, 0);
-    wires.rotation.y = Math.PI / 2;
-    scene.add(wires);
 
     /* ---------- Desk with monitor, lamp and phone ---------- */
     var desk = new T.Group();
