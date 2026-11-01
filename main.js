@@ -1802,7 +1802,116 @@
     analyze();
   }
 
+  /* ---------- Demo: borrow and return (Online Library) ---------- */
+  function setupLibraryDemo() {
+    var host = document.querySelector('[data-demo="library"]');
+    if (!host) return;
+
+    var LOAN_DAYS = 14; // this demo's loan period
+    var BOOKS = [
+      { id: 'b1', title: 'Pride and Prejudice', author: 'Jane Austen' },
+      { id: 'b2', title: 'Frankenstein', author: 'Mary Shelley' },
+      { id: 'b3', title: 'The Time Machine', author: 'H. G. Wells' },
+      { id: 'b4', title: 'Moby-Dick', author: 'Herman Melville' },
+      { id: 'b5', title: 'Dracula', author: 'Bram Stoker' }
+    ];
+    var DAY = 86400000;
+    var today, loans; // loans: id -> due timestamp
+
+    var fmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+
+    host.innerHTML = '';
+    var bar = el('div', { class: 'demo__bar' });
+    var who = el('p', { class: 'demo__file' }, 'Signed in as Member 104 (mock)');
+    var dateText = el('p', { class: 'demo__file' });
+    bar.append(who, dateText);
+
+    var shelfTitle = el('p', null, 'Catalogue');
+    var shelf = el('ul', { class: 'lib-list', 'aria-label': 'Catalogue' });
+    var loansTitle = el('p', null, 'My loans');
+    var loanList = el('ul', { class: 'lib-list', 'aria-label': 'My loans' });
+
+    var actions = el('div', { class: 'quiz__options' });
+    var jump = el('button', { class: 'btn btn--quiet', type: 'button' }, 'Jump ahead 3 weeks');
+    var reset = el('button', { class: 'btn btn--quiet', type: 'button' }, 'Reset');
+    actions.append(jump, reset);
+
+    var status = el('p', { class: 'demo__status', 'aria-live': 'polite' });
+    host.append(bar, shelfTitle, shelf, loansTitle, loanList, actions, status);
+
+    function render(focusId) {
+      dateText.textContent = 'Today: ' + fmt.format(today);
+      shelf.innerHTML = '';
+      loanList.innerHTML = '';
+      BOOKS.forEach(function (b) {
+        var li = el('li');
+        var title = el('span', null, b.title);
+        if (loans[b.id]) {
+          var due = loans[b.id];
+          var late = today > due;
+          if (late) li.classList.add('is-overdue');
+          var meta = el('span', { class: 'meta' }, late
+            ? 'Overdue by ' + Math.round((today - due) / DAY) + ' days, was due ' + fmt.format(due)
+            : 'Due ' + fmt.format(due));
+          var ret = el('button', { class: 'btn', type: 'button', 'data-return': b.id }, 'Return');
+          li.append(title, meta, ret);
+          loanList.append(li);
+        } else {
+          var borrow = el('button', { class: 'btn', type: 'button', 'data-borrow': b.id }, 'Borrow');
+          li.append(title, el('span', { class: 'meta' }, b.author + ', on the shelf'), borrow);
+          shelf.append(li);
+        }
+      });
+      if (!loanList.children.length) loanList.append(el('li', null, 'No books on loan.'));
+      if (!shelf.children.length) shelf.append(el('li', null, 'Every book is out on loan.'));
+      if (focusId) {
+        var target = host.querySelector('[data-return="' + focusId + '"], [data-borrow="' + focusId + '"]');
+        if (target) {
+          target.focus();
+          if (canAnimate()) gsap.from(target.closest('li'), { opacity: 0, x: -10, duration: 0.3, ease: 'power2.out' });
+        }
+      }
+    }
+
+    host.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-borrow]');
+      var r = e.target.closest('[data-return]');
+      if (b) {
+        var id = b.getAttribute('data-borrow');
+        loans[id] = today + LOAN_DAYS * DAY;
+        var book = BOOKS.filter(function (x) { return x.id === id; })[0];
+        status.textContent = book.title + ' borrowed. Due back ' + fmt.format(loans[id]) + '.';
+        render(id);
+      } else if (r) {
+        var rid = r.getAttribute('data-return');
+        var late = today > loans[rid];
+        delete loans[rid];
+        var rbook = BOOKS.filter(function (x) { return x.id === rid; })[0];
+        status.textContent = rbook.title + ' returned' + (late ? ' late' : '') + ' and back on the shelf.';
+        render(rid);
+      }
+    });
+
+    jump.addEventListener('click', function () {
+      today += 21 * DAY;
+      var late = Object.keys(loans).filter(function (id) { return today > loans[id]; }).length;
+      status.textContent = 'Three weeks later. ' + (late ? late + (late === 1 ? ' loan is' : ' loans are') + ' now overdue.' : 'Nothing is overdue.');
+      render();
+    });
+
+    function start() {
+      var d = new Date(); d.setHours(12, 0, 0, 0);
+      today = d.getTime();
+      loans = {};
+      status.textContent = 'Borrow a book to start a loan.';
+      render();
+    }
+    reset.addEventListener('click', start);
+    start();
+  }
+
   /* ---------- Start ---------- */
+  setupLibraryDemo();
   setupPasswordDemo();
   setupDjangoDemo();
   setupElaraDemo();
