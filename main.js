@@ -1910,10 +1910,10 @@
     start();
   }
 
-  /* ---------- Demo: survive the enemy (Tank Wars 3D) ----------
-     The simulation is shared. It is drawn in 3D with Three.js on
-     desktop, and in 2D on phones, with reduced motion, or if 3D
-     fails for any reason. */
+  /* ---------- Demo: Tank Wars 3D ----------
+     Desktop: a small playable 3D arena (Three.js) using the rules in
+     base.py. Phones, reduced motion, or any 3D failure: a watch-only
+     2D duel using the same difficulty values. */
   var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
 
   function setupTankDemo() {
@@ -1922,22 +1922,22 @@
 
     // Values copied from base.py
     var SETTINGS = {
-      easy: { cooldown: 4.0, miss: 0.4, damage: 2 },
-      medium: { cooldown: 3.0, miss: 0.3, damage: 4 },
-      hard: { cooldown: 2.0, miss: 0.2, damage: 2 }
+      easy: { cooldown: 4.0, miss: 0.4, damage: 2, rot: 1.2, move: 0.5 },
+      medium: { cooldown: 3.0, miss: 0.3, damage: 4, rot: 1.5, move: 0.5 },
+      hard: { cooldown: 2.0, miss: 0.2, damage: 2, rot: 1.0, move: 0.4 }
     };
-    var DURATION = 30;   // seconds of game time
-    var SPEED = 3;       // played back 3x faster than real time
-    var BULLET_TIME = 0.5;
+    var PLAYER_DAMAGE = 20;      // player shell damage in base.py
+    var WIN_KILLS = 2;           // base.py brings in the boss at 2
+    var LOSE_KILLS = 5;          // enemy wins at 5
 
-    // Arena positions (0..1), shared by both views
-    var PLAYER = [0.2, 0.75], ENEMY = [0.8, 0.25];
-    var OBSTACLES = [ // centre x, centre y, width, depth, height (0..1 of arena)
+    // Arena layout (0..1), shared by both views
+    var PLAYER0 = [0.2, 0.75], ENEMY0 = [0.8, 0.25];
+    var OBSTACLES = [ // centre x, centre y, width, depth, height
       [0.49, 0.48, 0.08, 0.12, 0.08],
       [0.65, 0.67, 0.06, 0.10, 0.06]
     ];
 
-    // ----- Build the widget -----
+    // ----- Widget -----
     host.innerHTML = '';
     var top = el('div', { class: 'demo__bar' });
     var sw = el('div', { class: 'demo-switch', role: 'group', 'aria-label': 'Difficulty' });
@@ -1957,33 +1957,50 @@
     var viewNote = el('p', { class: 'demo__file' }, '');
 
     var readout = el('dl', { class: 'demo-readout demo-readout--3' });
-    function box(label) { var d = el('div'); var v = el('dd', null, '0'); d.append(el('dt', null, label), v); readout.append(d); return v; }
-    var shotsVal = box('Shots fired');
-    var hitsVal = box('Hits taken');
-    var healthVal = box('Your health');
+    function box(label) {
+      var d = el('div'); var t = el('dt', null, label); var v = el('dd', null, '0');
+      d.append(t, v); readout.append(d); return { dt: t, dd: v };
+    }
+    var r1 = box('Shots fired'), r2 = box('Hits taken'), r3 = box('Your health');
 
     var status = el('p', { class: 'demo__status', 'aria-live': 'polite' }, 'Pick a difficulty and press Start.');
     host.append(top, wrap, viewNote, readout, status);
 
-    var ctx = canvas.getContext('2d');
-    var W = 0, H = 0;
     var level = 'easy';
-    var sim = null, running = false, visible = false, raf = null, last = 0;
-    var view3d = null;      // set once the 3D view is ready
-    var tried3d = false;
+    var mode = '2d';      // '2d' watch-only, or '3d' playable
+    var raf = null, last = 0, visible = false, tried3d = false;
+    var W = 0, H = 0;
+    var ctx = canvas.getContext('2d');
 
-    // ----- Simulation -----
-    function newSim() {
-      return { t: 0, nextShot: 1.0, shots: 0, hits: 0, health: 100, bullets: [], flashes: [], done: false };
+    levelBtns.forEach(function (b, i) {
+      b.addEventListener('click', function () {
+        if (mode === '2d' && duel && duel.running) return;
+        level = levels[i];
+        levelBtns.forEach(function (x, j) { x.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+        var cfg = SETTINGS[level];
+        status.textContent = b.textContent + ': the enemy fires every ' + cfg.cooldown + ' s, misses ' + Math.round(cfg.miss * 100) +
+          '% of shots and does ' + cfg.damage + ' damage per hit.' + (mode === '3d' ? ' Applies from the next game.' : '');
+        if (mode === '2d') start.textContent = 'Start 30 seconds';
+      });
+    });
+
+    /* =======================================================
+       2D watch-only duel (phones, reduced motion, fallback)
+       ======================================================= */
+    var DURATION = 30, SPEED = 3, BULLET_TIME = 0.5;
+    var duel = null;
+
+    function newDuel() {
+      return { t: 0, nextShot: 1.0, shots: 0, hits: 0, health: 100, bullets: [], flashes: [], done: false, running: false };
     }
 
-    function step(s, dt) {
+    function stepDuel(s, dt) {
       var cfg = SETTINGS[level];
       s.t += dt;
       while (s.t >= s.nextShot && s.nextShot <= DURATION) {
         var miss = Math.random() < cfg.miss;
         var off = miss ? [(Math.random() - 0.5) * 0.35, (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.1)] : [0, 0];
-        s.bullets.push({ born: s.nextShot, miss: miss, to: [PLAYER[0] + off[0], PLAYER[1] + off[1]] });
+        s.bullets.push({ born: s.nextShot, miss: miss, to: [PLAYER0[0] + off[0], PLAYER0[1] + off[1]] });
         s.shots++;
         s.nextShot += cfg.cooldown;
       }
@@ -1999,13 +2016,11 @@
       if (s.t >= DURATION + BULLET_TIME) s.done = true;
     }
 
-    // ----- 2D view -----
     function draw2D(s) {
       var ink = getComputedStyle(host).color;
       ctx.clearRect(0, 0, W, H);
       function X(v) { return v * W; }
       function Y(v) { return v * H; }
-
       ctx.strokeStyle = ink; ctx.globalAlpha = 0.08; ctx.lineWidth = 1;
       for (var g = 1; g < 10; g++) {
         ctx.beginPath(); ctx.moveTo(X(g / 10), 0); ctx.lineTo(X(g / 10), H); ctx.stroke();
@@ -2014,31 +2029,24 @@
       ctx.globalAlpha = 0.25; ctx.fillStyle = ink;
       OBSTACLES.forEach(function (o) { ctx.fillRect(X(o[0] - o[2] / 2), Y(o[1] - o[3] / 2), X(o[2]), Y(o[3])); });
       ctx.globalAlpha = 1;
-
       var size = Math.min(W, H) * 0.07;
       function tank(p, filled, angle) {
-        ctx.save();
-        ctx.translate(X(p[0]), Y(p[1]));
-        ctx.rotate(angle);
+        ctx.save(); ctx.translate(X(p[0]), Y(p[1])); ctx.rotate(angle);
         ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.fillStyle = ink;
         if (filled) ctx.fillRect(-size / 2, -size / 2, size, size); else ctx.strokeRect(-size / 2, -size / 2, size, size);
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(size * 0.95, 0); ctx.stroke();
         ctx.restore();
       }
-      var aim = Math.atan2(Y(PLAYER[1]) - Y(ENEMY[1]), X(PLAYER[0]) - X(ENEMY[0]));
-      tank(ENEMY, false, aim);
-      tank(PLAYER, true, aim + Math.PI);
-
+      var aim = Math.atan2(Y(PLAYER0[1]) - Y(ENEMY0[1]), X(PLAYER0[0]) - X(ENEMY0[0]));
+      tank(ENEMY0, false, aim);
+      tank(PLAYER0, true, aim + Math.PI);
       var hb = size * 1.6;
-      ctx.globalAlpha = 0.3; ctx.fillStyle = ink;
-      ctx.fillRect(X(PLAYER[0]) - hb / 2, Y(PLAYER[1]) - size * 1.2, hb, 4);
-      ctx.globalAlpha = 1;
-      ctx.fillRect(X(PLAYER[0]) - hb / 2, Y(PLAYER[1]) - size * 1.2, hb * (s ? s.health / 100 : 1), 4);
-
+      ctx.globalAlpha = 0.3; ctx.fillRect(X(PLAYER0[0]) - hb / 2, Y(PLAYER0[1]) - size * 1.2, hb, 4);
+      ctx.globalAlpha = 1; ctx.fillRect(X(PLAYER0[0]) - hb / 2, Y(PLAYER0[1]) - size * 1.2, hb * (s ? s.health / 100 : 1), 4);
       if (!s) return;
       s.bullets.forEach(function (b) {
         var k = Math.min(1, (s.t - b.born) / BULLET_TIME);
-        var x = ENEMY[0] + (b.to[0] - ENEMY[0]) * k, y = ENEMY[1] + (b.to[1] - ENEMY[1]) * k;
+        var x = ENEMY0[0] + (b.to[0] - ENEMY0[0]) * k, y = ENEMY0[1] + (b.to[1] - ENEMY0[1]) * k;
         ctx.beginPath(); ctx.arc(X(x), Y(y), Math.max(2.5, size * 0.12), 0, Math.PI * 2); ctx.fillStyle = ink; ctx.fill();
       });
       s.flashes.forEach(function (f) {
@@ -2050,23 +2058,222 @@
       });
     }
 
-    // ----- 3D view (Three.js) -----
-    function build3D() {
-      var T = window.THREE;
-      var ARENA = 50;                                  // world units across
-      function wx(u) { return (u - 0.5) * ARENA; }     // 0..1 -> world
+    function showDuel(s) {
+      r1.dd.textContent = String(s.shots);
+      r2.dd.textContent = String(s.hits);
+      r3.dd.textContent = s.health + ' / 100';
+    }
 
+    function finishDuel(s) {
+      var cfg = SETTINGS[level];
+      status.textContent = level[0].toUpperCase() + level.slice(1) + ': ' + s.shots + ' shots, ' + s.hits + ' hits at ' + cfg.damage +
+        ' damage each, so you lost ' + (100 - s.health) + ' health in 30 seconds.';
+      start.textContent = 'Run again';
+      start.disabled = false;
+    }
+
+    function runDuel() {
+      duel = newDuel();
+      start.disabled = true;
+      start.textContent = 'Running…';
+      status.textContent = 'Running ' + level + '…';
+      if (prefersReducedMotion()) {
+        while (!duel.done) stepDuel(duel, 0.05);
+        duel.bullets = []; duel.flashes = [];
+        showDuel(duel); draw2D(duel); finishDuel(duel);
+        return;
+      }
+      duel.running = true;
+      ensureLoop();
+    }
+
+    start.addEventListener('click', function () {
+      if (mode === '2d') runDuel();
+      else if (game) game.startNew();
+    });
+
+    /* =======================================================
+       3D playable arena
+       ======================================================= */
+    var game = null;
+    var view = null;
+
+    var ARENA = 50, HALF = 25;           // world units (base.py arena scaled by 0.5)
+    var SCALE = 0.5;                     // base.py units -> world units
+    var TANK_R = 1.9;                    // collision radius for our tank model
+    var SHELL_SPEED = 0.5 * 60 * SCALE;  // BULLET_SPEED per frame at 60 fps
+    var PLAYER_SPEED = 8, PLAYER_TURN = 1.9; // units/s, radians/s
+    var PLAYER_RELOAD = 0.3;             // light limit so holding Space can't flood the arena
+
+    function wx(u) { return (u - 0.5) * ARENA; }
+
+    function blocked(x, z, r) {
+      if (Math.abs(x) > HALF - r || Math.abs(z) > HALF - r) return true;
+      for (var i = 0; i < OBSTACLES.length; i++) {
+        var o = OBSTACLES[i];
+        var cx = wx(o[0]), cz = wx(o[1]), hw = o[2] * ARENA / 2 + r, hd = o[3] * ARENA / 2 + r;
+        if (Math.abs(x - cx) < hw && Math.abs(z - cz) < hd) return true;
+      }
+      return false;
+    }
+
+    function angleDiff(target, current) {
+      var d = (target - current) % (Math.PI * 2);
+      if (d > Math.PI) d -= Math.PI * 2;
+      if (d < -Math.PI) d += Math.PI * 2;
+      return d;
+    }
+
+    function makeGame() {
+      var g = {
+        phase: 'idle',             // idle | playing | paused | over
+        cfg: SETTINGS[level],
+        keys: {},
+        player: null, enemy: null, shells: [], booms: [], score: [0, 0], reload: 0, message: ''
+      };
+
+      function spawn(isPlayer) {
+        // Like respawn_tank: a random free spot on that tank's side
+        for (var tries = 0; tries < 50; tries++) {
+          var x = (isPlayer ? -1 : 1) * (HALF - 5) * (0.3 + 0.7 * Math.random());
+          var z = (isPlayer ? 1 : -1) * (HALF - 5) * (0.3 + 0.7 * Math.random());
+          var other = isPlayer ? g.enemy : g.player;
+          if (!blocked(x, z, TANK_R) && !(other && Math.hypot(x - other.x, z - other.z) < TANK_R * 3)) {
+            return { x: x, z: z };
+          }
+        }
+        return isPlayer ? { x: wx(PLAYER0[0]), z: wx(PLAYER0[1]) } : { x: wx(ENEMY0[0]), z: wx(ENEMY0[1]) };
+      }
+
+      g.reset = function () {
+        g.cfg = SETTINGS[level];
+        g.player = { x: wx(PLAYER0[0]), z: wx(PLAYER0[1]), rot: Math.PI * 0.75, health: 100 };
+        g.enemy = { x: wx(ENEMY0[0]), z: wx(ENEMY0[1]), rot: -Math.PI * 0.25, health: 100, mode: 'chasing', avoid: 0, dir: 1, cooldown: 1.5 };
+        g.shells = []; g.booms = []; g.score = [0, 0]; g.reload = 0;
+        g.keys = {};
+      };
+
+      g.fire = function (owner) {
+        var t = owner === 0 ? g.player : g.enemy;
+        var angle = t.rot;
+        if (owner === 1 && Math.random() < g.cfg.miss) angle += (Math.random() * 80 - 40) * Math.PI / 180;
+        g.shells.push({ x: t.x + Math.sin(angle) * 2.8, z: t.z + Math.cos(angle) * 2.8, dx: Math.sin(angle), dz: Math.cos(angle), owner: owner });
+      };
+
+      function boom(x, y, z, big) { g.booms.push({ x: x, y: y, z: z, age: 0, big: big }); }
+
+      function hit(victimIdx, ownerIdx) {
+        var v = victimIdx === 0 ? g.player : g.enemy;
+        v.health -= ownerIdx === 0 ? PLAYER_DAMAGE : g.cfg.damage;
+        if (v.health <= 0) {
+          g.score[ownerIdx]++;
+          boom(v.x, 1, v.z, true);
+          var p = spawn(victimIdx === 0);
+          v.x = p.x; v.z = p.z; v.health = 100;
+          if (g.score[0] >= WIN_KILLS) {
+            g.phase = 'over';
+            g.message = 'You win. You destroyed the enemy twice. In the full game, a boss tank with 500 health arrives at this point.';
+          } else if (g.score[1] >= LOSE_KILLS) {
+            g.phase = 'over';
+            g.message = 'The enemy wins with five kills. Press Play again to retry.';
+          } else {
+            g.message = ownerIdx === 0 ? 'Enemy destroyed. It respawns with full health.' : 'You were destroyed and respawn with full health.';
+          }
+          return true;
+        }
+        return false;
+      }
+
+      g.update = function (dt) {
+        g.booms.forEach(function (b) { b.age += dt; });
+        g.booms = g.booms.filter(function (b) { return b.age < 0.5; });
+        if (g.phase !== 'playing') return null;
+        var msg = null;
+        var P = g.player, E = g.enemy, k = g.keys;
+
+        // Player: W/S drive, A/D turn (arrows too)
+        var turn = (k.a || k.arrowleft ? 1 : 0) - (k.d || k.arrowright ? 1 : 0);
+        P.rot += turn * PLAYER_TURN * dt;
+        var drive = (k.w || k.arrowup ? 1 : 0) - (k.s || k.arrowdown ? 1 : 0);
+        if (drive) {
+          var nx = P.x + Math.sin(P.rot) * PLAYER_SPEED * drive * dt;
+          var nz = P.z + Math.cos(P.rot) * PLAYER_SPEED * drive * dt;
+          if (!blocked(nx, nz, TANK_R) && Math.hypot(nx - E.x, nz - E.z) > TANK_R * 2) { P.x = nx; P.z = nz; }
+        }
+        g.reload = Math.max(0, g.reload - dt);
+
+        // Enemy: update_enemy_ai, converted from per-frame to per-second
+        var dx = P.x - E.x, dz = P.z - E.z;
+        var dist = Math.hypot(dx, dz) / SCALE;              // in base.py units
+        var diff = angleDiff(Math.atan2(dx, dz), E.rot);
+        var diffDeg = Math.abs(diff) * 180 / Math.PI;
+        var rotStep = g.cfg.rot * 60 * Math.PI / 180 * dt;
+        var moveStep = 0.5 * g.cfg.move * 60 * SCALE * dt;  // TANK_SPEED x factor
+        E.cooldown -= dt;
+        if (E.mode === 'chasing') {
+          if (diffDeg > 5) E.rot += Math.sign(diff) * Math.min(rotStep, Math.abs(diff));
+          if (dist > 20 && diffDeg < 10) {
+            var ex = E.x + Math.sin(E.rot) * moveStep, ez = E.z + Math.cos(E.rot) * moveStep;
+            var bad = function (x, z) { return blocked(x, z, TANK_R) || Math.hypot(x - P.x, z - P.z) < TANK_R * 2; };
+            // Small additions to base.py so the enemy doesn't get stuck on blocks:
+            // slide along an obstacle when possible, otherwise turn toward the open side
+            if (!bad(ex, ez)) { E.x = ex; E.z = ez; }
+            else if (!bad(ex, E.z)) { E.x = ex; }
+            else if (!bad(E.x, ez)) { E.z = ez; }
+            else {
+              var left = E.rot + Math.PI / 2;
+              var leftFree = !bad(E.x + Math.sin(left) * 2, E.z + Math.cos(left) * 2);
+              E.mode = 'avoiding'; E.avoid = 0.6; E.dir = leftFree ? 1 : -1;
+            }
+          }
+          if (diffDeg < 5 && dist < 40 && E.cooldown <= 0) {
+            g.fire(1);
+            E.cooldown = g.cfg.cooldown;
+          }
+        } else {
+          E.avoid -= dt;
+          E.rot += E.dir * 2 * 60 * Math.PI / 180 * dt;
+          var ax = E.x + Math.sin(E.rot) * moveStep, az = E.z + Math.cos(E.rot) * moveStep;
+          if (!blocked(ax, az, TANK_R)) { E.x = ax; E.z = az; }
+          if (E.avoid <= 0) E.mode = 'chasing';
+        }
+
+        // Shells
+        var keep = [];
+        for (var i = 0; i < g.shells.length; i++) {
+          var s = g.shells[i];
+          s.x += s.dx * SHELL_SPEED * dt;
+          s.z += s.dz * SHELL_SPEED * dt;
+          if (blocked(s.x, s.z, 0)) { boom(s.x, 0.8, s.z, false); continue; }
+          var target = s.owner === 0 ? E : P;
+          if (Math.hypot(s.x - target.x, s.z - target.z) < TANK_R) {
+            boom(s.x, 1.2, s.z, false);
+            if (hit(s.owner === 0 ? 1 : 0, s.owner)) msg = g.message;
+            continue;
+          }
+          keep.push(s);
+        }
+        g.shells = keep;
+        return msg;
+      };
+
+      g.reset();
+      return g;
+    }
+
+    function build3D(g) {
+      var T = window.THREE;
       var renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setClearColor(0x000000, 0);
       var c3 = renderer.domElement;
-      c3.setAttribute('role', 'img');
-      c3.setAttribute('aria-label', '3D view of the arena: the enemy tank fires at the player tank. Drag to turn the camera.');
-      c3.style.touchAction = 'pan-y';
-      c3.style.cursor = 'grab';
+      c3.setAttribute('tabindex', '0');
+      c3.setAttribute('role', 'application');
+      c3.setAttribute('aria-label', 'Tank Wars arena. Press Play, then use W, A, S and D to drive and Space to fire.');
+      c3.className = 'tank-canvas__gl';
 
       var scene = new T.Scene();
-      var camera = new T.PerspectiveCamera(38, 16 / 10, 0.1, 500);
+      var camera = new T.PerspectiveCamera(50, 16 / 10, 0.1, 500);
       var paper = new T.Color(getComputedStyle(host).color);
 
       scene.add(new T.HemisphereLight(0xffffff, 0x1a1c14, 0.9));
@@ -2074,7 +2281,6 @@
       sun.position.set(20, 40, 15);
       scene.add(sun);
 
-      // Floor, grid and walls (like draw_arena)
       var floor = new T.Mesh(new T.PlaneGeometry(ARENA, ARENA), new T.MeshStandardMaterial({ color: 0x1c1f15, roughness: 1 }));
       floor.rotation.x = -Math.PI / 2;
       scene.add(floor);
@@ -2085,7 +2291,7 @@
       scene.add(grid);
 
       var wallMat = new T.MeshStandardMaterial({ color: paper, transparent: true, opacity: 0.28 });
-      [[ARENA, 0.6, 0, -ARENA / 2], [ARENA, 0.6, 0, ARENA / 2], [0.6, ARENA, -ARENA / 2, 0], [0.6, ARENA, ARENA / 2, 0]].forEach(function (w) {
+      [[ARENA, 0.6, 0, -HALF], [ARENA, 0.6, 0, HALF], [0.6, ARENA, -HALF, 0], [0.6, ARENA, HALF, 0]].forEach(function (w) {
         var m = new T.Mesh(new T.BoxGeometry(w[0], 2.5, w[1]), wallMat);
         m.position.set(w[2], 1.25, w[3]);
         scene.add(m);
@@ -2099,10 +2305,9 @@
         scene.add(m);
       });
 
-      // Tanks: body, turret and barrel (like draw_tank)
       var lineMat = new T.LineBasicMaterial({ color: paper });
       function makeTank(mat, outline) {
-        var g = new T.Group();
+        var grp = new T.Group();
         var bodyGeo = new T.BoxGeometry(3.2, 1.4, 4.2);
         var body = new T.Mesh(bodyGeo, mat);
         body.position.y = 0.9;
@@ -2114,96 +2319,84 @@
         barrel.rotation.x = Math.PI / 2;
         barrel.position.z = 1.9;
         turret.add(head, barrel);
-        g.add(body, turret);
-        scene.add(g);
-        return g;
+        grp.add(body, turret);
+        scene.add(grp);
+        return grp;
       }
-      var player = makeTank(new T.MeshStandardMaterial({ color: paper, roughness: 0.55 }), false);
-      var enemy = makeTank(new T.MeshStandardMaterial({ color: 0x2b2f22, roughness: 0.7 }), true);
-      player.position.set(wx(PLAYER[0]), 0, wx(PLAYER[1]));
-      enemy.position.set(wx(ENEMY[0]), 0, wx(ENEMY[1]));
-      var dx = player.position.x - enemy.position.x, dz = player.position.z - enemy.position.z;
-      enemy.rotation.y = Math.atan2(dx, dz);
-      player.rotation.y = Math.atan2(-dx, -dz);
+      var playerMesh = makeTank(new T.MeshStandardMaterial({ color: paper, roughness: 0.55 }), false);
+      var enemyMesh = makeTank(new T.MeshStandardMaterial({ color: 0x2b2f22, roughness: 0.7 }), true);
 
-      // Floating health bar over the player (always faces the camera)
-      var hb = new T.Group();
-      var hbBack = new T.Mesh(new T.PlaneGeometry(4, 0.35), new T.MeshBasicMaterial({ color: paper, transparent: true, opacity: 0.3 }));
-      var hbFront = new T.Mesh(new T.PlaneGeometry(4, 0.35), new T.MeshBasicMaterial({ color: paper }));
-      hbFront.position.z = 0.01;
-      hb.add(hbBack, hbFront);
-      hb.position.set(player.position.x, 4.4, player.position.z);
-      scene.add(hb);
+      function makeBar() {
+        var bar = new T.Group();
+        var back = new T.Mesh(new T.PlaneGeometry(4, 0.35), new T.MeshBasicMaterial({ color: paper, transparent: true, opacity: 0.3 }));
+        var front = new T.Mesh(new T.PlaneGeometry(4, 0.35), new T.MeshBasicMaterial({ color: paper }));
+        front.position.z = 0.01;
+        bar.add(back, front);
+        scene.add(bar);
+        return { group: bar, front: front };
+      }
+      var playerBar = makeBar(), enemyBar = makeBar();
 
-      // Pools for shells and impacts
       var shellGeo = new T.SphereGeometry(0.35, 12, 8);
       var shellMat = new T.MeshBasicMaterial({ color: paper });
-      var shells = [];
       var burstGeo = new T.SphereGeometry(1, 16, 12);
-      var ringGeo = new T.RingGeometry(0.7, 0.95, 32);
-      var impacts = [];
+      var shellPool = [], boomPool = [];
       function pooled(list, make, i) {
         if (!list[i]) { list[i] = make(); scene.add(list[i]); }
         list[i].visible = true;
         return list[i];
       }
 
-      var muzzle = new T.Vector3();
-      function draw(s) {
-        var h = s ? s.health / 100 : 1;
-        hbFront.scale.x = Math.max(h, 0.0001);
-        hbFront.position.x = -2 * (1 - h);
-        hb.quaternion.copy(camera.quaternion);
+      // Camera: slow orbit while idle, follows behind your tank while playing
+      var az = -0.9;
+      var camPos = new T.Vector3(0, 40, 50), camLook = new T.Vector3(0, 0, 0);
+      var wantPos = new T.Vector3(), wantLook = new T.Vector3();
 
-        shells.forEach(function (m) { m.visible = false; });
-        impacts.forEach(function (m) { m.visible = false; });
-        if (s) {
-          muzzle.set(enemy.position.x + Math.sin(enemy.rotation.y) * 3.6, 1.9, enemy.position.z + Math.cos(enemy.rotation.y) * 3.6);
-          s.bullets.forEach(function (b, i) {
-            var k = Math.min(1, (s.t - b.born) / BULLET_TIME);
-            var tx = wx(b.to[0]), tz = wx(b.to[1]);
-            var ty = b.miss ? 0.3 : 1.4;
-            var m = pooled(shells, function () { return new T.Mesh(shellGeo, shellMat); }, i);
-            m.position.set(muzzle.x + (tx - muzzle.x) * k, muzzle.y + (ty - muzzle.y) * k + Math.sin(k * Math.PI) * 1.2, muzzle.z + (tz - muzzle.z) * k);
-          });
-          s.flashes.forEach(function (f, i) {
-            var a = Math.max(0, 1 - (s.t - f.born) / 0.4);
-            var m = pooled(impacts, function () {
-              return new T.Mesh(burstGeo, new T.MeshBasicMaterial({ color: paper, transparent: true, side: T.DoubleSide }));
-            }, i);
-            m.geometry = f.hit ? burstGeo : ringGeo;
-            m.material.opacity = a;
-            if (f.hit) {
-              m.rotation.set(0, 0, 0);
-              m.position.set(wx(f.at[0]), 1.4, wx(f.at[1]));
-              m.scale.setScalar(0.6 + (1 - a) * 1.6);
-            } else {
-              m.rotation.set(-Math.PI / 2, 0, 0);
-              m.position.set(wx(f.at[0]), 0.05, wx(f.at[1]));
-              m.scale.setScalar(1 + (1 - a) * 2.2);
-            }
-          });
+      function setBar(bar, t) {
+        var h = Math.max(0, t.health) / 100;
+        bar.front.scale.x = Math.max(h, 0.0001);
+        bar.front.position.x = -2 * (1 - h);
+        bar.group.position.set(t.x, 4.4, t.z);
+        bar.group.quaternion.copy(camera.quaternion);
+      }
+
+      function draw(dt) {
+        var P = g.player, E = g.enemy;
+        playerMesh.position.set(P.x, 0, P.z); playerMesh.rotation.y = P.rot;
+        enemyMesh.position.set(E.x, 0, E.z); enemyMesh.rotation.y = E.rot;
+
+        if (g.phase === 'playing' || g.phase === 'paused') {
+          wantPos.set(P.x - Math.sin(P.rot) * 15, 11, P.z - Math.cos(P.rot) * 15);
+          wantLook.set(P.x + Math.sin(P.rot) * 6, 1, P.z + Math.cos(P.rot) * 6);
+        } else {
+          az += dt * 0.07;
+          wantPos.set(Math.sin(az) * 40, 30, Math.cos(az) * 40);
+          wantLook.set(0, 0, 0);
         }
+        var k = Math.min(1, dt * 4);
+        camPos.set(camPos.x + (wantPos.x - camPos.x) * k, camPos.y + (wantPos.y - camPos.y) * k, camPos.z + (wantPos.z - camPos.z) * k);
+        camLook.set(camLook.x + (wantLook.x - camLook.x) * k, camLook.y + (wantLook.y - camLook.y) * k, camLook.z + (wantLook.z - camLook.z) * k);
+        camera.position.set(camPos.x, camPos.y, camPos.z);
+        camera.lookAt(camLook.x, camLook.y, camLook.z);
+
+        setBar(playerBar, P);
+        setBar(enemyBar, E);
+
+        shellPool.forEach(function (m) { m.visible = false; });
+        boomPool.forEach(function (m) { m.visible = false; });
+        g.shells.forEach(function (s, i) {
+          var m = pooled(shellPool, function () { return new T.Mesh(shellGeo, shellMat); }, i);
+          m.position.set(s.x, 1.9, s.z);
+        });
+        g.booms.forEach(function (b, i) {
+          var m = pooled(boomPool, function () { return new T.Mesh(burstGeo, new T.MeshBasicMaterial({ color: paper, transparent: true })); }, i);
+          var a = 1 - b.age / 0.5;
+          m.material.opacity = Math.max(0, a);
+          m.position.set(b.x, b.y, b.z);
+          m.scale.setScalar((b.big ? 2.2 : 0.8) + (1 - a) * (b.big ? 3 : 1.4));
+        });
+
         renderer.render(scene, camera);
-      }
-
-      // Orbiting camera: turns slowly on its own, drag to turn it yourself
-      var az = -0.9, dragging = false, lastX = 0;
-      function placeCamera() {
-        camera.position.set(Math.sin(az) * 54, 34, Math.cos(az) * 54);
-        camera.lookAt(0, 0, 0);
-      }
-      function down(e) { dragging = true; lastX = e.clientX; c3.style.cursor = 'grabbing'; c3.setPointerCapture && c3.setPointerCapture(e.pointerId); }
-      function move(e) { if (!dragging) return; az -= (e.clientX - lastX) * 0.008; lastX = e.clientX; placeCamera(); if (!raf) draw(sim); }
-      function up() { dragging = false; c3.style.cursor = 'grab'; }
-      c3.addEventListener('pointerdown', down);
-      c3.addEventListener('pointermove', move);
-      c3.addEventListener('pointerup', up);
-      c3.addEventListener('pointercancel', up);
-
-      function tick(dt) {
-        if (!dragging) az += dt * 0.07;
-        placeCamera();
       }
 
       function resize(w, h) {
@@ -2212,8 +2405,80 @@
         camera.updateProjectionMatrix();
       }
 
-      placeCamera();
-      return { canvas: c3, draw: draw, tick: tick, resize: resize, dispose: function () { renderer.dispose(); } };
+      return { canvas: c3, draw: draw, resize: resize, dispose: function () { renderer.dispose(); } };
+    }
+
+    function showGame() {
+      r1.dt.textContent = 'Score';
+      r2.dt.textContent = 'Your health';
+      r3.dt.textContent = 'Enemy health';
+      r1.dd.textContent = 'You ' + game.score[0] + ', enemy ' + game.score[1];
+      r2.dd.textContent = Math.max(0, game.player.health) + ' / 100';
+      r3.dd.textContent = Math.max(0, game.enemy.health) + ' / 100';
+    }
+
+    function enter3D() {
+      game = makeGame();
+      view = build3D(game);
+      canvas.hidden = true;
+      wrap.append(view.canvas);
+      mode = '3d';
+      start.textContent = 'Play';
+      start.disabled = false;
+      viewNote.textContent = 'Press Play, then W, A, S, D to drive and Space or click to fire. Click outside the arena to pause.';
+      status.textContent = 'Destroy the enemy twice before it destroys you five times.';
+      showGame();
+
+      var c3 = view.canvas;
+      function keyName(e) { return (e.key || '').toLowerCase(); }
+      var GAME_KEYS = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '];
+
+      c3.addEventListener('keydown', function (e) {
+        var key = keyName(e);
+        if (GAME_KEYS.indexOf(key) === -1) return;
+        e.preventDefault(); // keep the page from scrolling while you drive
+        if (game.phase !== 'playing') return;
+        if (key === ' ') {
+          if (!e.repeat && game.reload <= 0) { game.fire(0); game.reload = PLAYER_RELOAD; }
+          return;
+        }
+        game.keys[key] = true;
+      });
+      c3.addEventListener('keyup', function (e) { game.keys[keyName(e)] = false; });
+      c3.addEventListener('keydown', function (e) { if (keyName(e) === 'escape') c3.blur(); });
+      c3.addEventListener('pointerdown', function () {
+        if (game.phase === 'idle' || game.phase === 'over') { game.startNew(); return; }
+        if (game.phase === 'paused') { game.resume(); return; }
+        if (game.reload <= 0) { game.fire(0); game.reload = PLAYER_RELOAD; }
+      });
+      c3.addEventListener('blur', function () {
+        game.keys = {};
+        if (game.phase === 'playing') {
+          game.phase = 'paused';
+          status.textContent = 'Paused. Click the arena to continue.';
+        }
+      });
+
+      game.startNew = function () {
+        game.reset();
+        game.phase = 'playing';
+        start.textContent = 'Restart';
+        status.textContent = 'Go. ' + level[0].toUpperCase() + level.slice(1) + ' enemy: fires every ' + game.cfg.cooldown + ' s.';
+        showGame();
+        if (lenis) lenis.stop();       // keep smooth scroll from fighting the arrow keys
+        c3.focus({ preventScroll: true });
+        ensureLoop();
+      };
+      game.resume = function () {
+        game.phase = 'playing';
+        status.textContent = 'Back in.';
+        c3.focus({ preventScroll: true });
+        ensureLoop();
+      };
+      c3.addEventListener('blur', function () { if (lenis) lenis.start(); });
+
+      resize();
+      ensureLoop();
     }
 
     function webglAvailable() {
@@ -2223,14 +2488,20 @@
       } catch (err) { return false; }
     }
 
-    function fallbackTo2D(reason) {
-      if (view3d) {
-        try { view3d.dispose(); } catch (err) { /* ignore */ }
-        if (view3d.canvas.parentNode) view3d.canvas.parentNode.removeChild(view3d.canvas);
+    function fallbackTo2D() {
+      if (view) {
+        try { view.dispose(); } catch (err) { /* ignore */ }
+        if (view.canvas.parentNode) view.canvas.parentNode.removeChild(view.canvas);
       }
-      view3d = null;
+      view = null; game = null; mode = '2d';
       canvas.hidden = false;
-      viewNote.textContent = reason ? 'Showing the 2D view.' : '';
+      r1.dt.textContent = 'Shots fired'; r2.dt.textContent = 'Hits taken'; r3.dt.textContent = 'Your health';
+      r1.dd.textContent = '0'; r2.dd.textContent = '0'; r3.dd.textContent = '100 / 100';
+      start.textContent = 'Start 30 seconds';
+      start.disabled = false;
+      viewNote.textContent = 'Showing the 2D view.';
+      status.textContent = 'Pick a difficulty and press Start.';
+      if (lenis) lenis.start();
       resize();
     }
 
@@ -2240,35 +2511,19 @@
       if (prefersReducedMotion() || !window.matchMedia('(min-width: 760px)').matches || !webglAvailable()) return;
 
       function ready() {
-        try {
-          view3d = build3D();
-          canvas.hidden = true;
-          wrap.append(view3d.canvas);
-          viewNote.textContent = '3D view. Drag to turn the camera.';
-          resize();
-          ensureLoop();
-        } catch (err) {
-          fallbackTo2D('error');
-        }
+        try { enter3D(); } catch (err) { fallbackTo2D(); }
       }
-
       if (window.THREE) { ready(); return; }
-      viewNote.textContent = 'Loading 3D view…';
+      viewNote.textContent = 'Loading 3D arena…';
       var script = document.createElement('script');
       script.src = THREE_URL;
       script.async = true;
-      script.onload = function () { if (window.THREE) ready(); else fallbackTo2D('load'); };
-      script.onerror = function () { fallbackTo2D('load'); };
+      script.onload = function () { if (window.THREE) ready(); else fallbackTo2D(); };
+      script.onerror = fallbackTo2D;
       document.head.appendChild(script);
     }
 
-    // ----- Render loop: runs while a duel is playing or the 3D view is on screen -----
-    function render() {
-      if (view3d) {
-        try { view3d.draw(sim); } catch (err) { fallbackTo2D('error'); draw2D(sim); }
-      } else draw2D(sim);
-    }
-
+    // ----- One loop for both views -----
     function ensureLoop() {
       if (raf) return;
       last = performance.now();
@@ -2276,88 +2531,63 @@
     }
 
     function frame(now) {
-      var dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+      var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
       last = now;
-      if (running) {
-        step(sim, dt * SPEED);
-        show(sim);
-        if (sim.done) { running = false; finish(sim); }
+      var keepGoing = false;
+
+      if (mode === '3d' && game && view) {
+        try {
+          var msg = game.update(dt);
+          if (msg) status.textContent = msg;
+          showGame();
+          if (game.phase === 'over') {
+            start.textContent = 'Play again';
+            if (lenis) lenis.start();
+          }
+          view.draw(dt);
+          keepGoing = visible;
+        } catch (err) {
+          fallbackTo2D();
+        }
+      } else if (duel && duel.running) {
+        stepDuel(duel, dt * SPEED);
+        showDuel(duel);
+        draw2D(duel);
+        if (duel.done) { duel.running = false; finishDuel(duel); }
+        else keepGoing = true;
       }
-      if (view3d && !prefersReducedMotion()) {
-        try { view3d.tick(dt); } catch (err) { fallbackTo2D('error'); }
-      }
-      render();
-      if (running || (view3d && visible && !prefersReducedMotion())) raf = requestAnimationFrame(frame);
-      else raf = null;
-    }
 
-    function show(s) {
-      shotsVal.textContent = String(s.shots);
-      hitsVal.textContent = String(s.hits);
-      healthVal.textContent = s.health + ' / 100';
+      raf = keepGoing ? requestAnimationFrame(frame) : null;
     }
-
-    function finish(s) {
-      var cfg = SETTINGS[level];
-      status.textContent = level[0].toUpperCase() + level.slice(1) + ': ' + s.shots + ' shots, ' + s.hits + ' hits at ' + cfg.damage +
-        ' damage each, so you lost ' + (100 - s.health) + ' health in 30 seconds.';
-      start.textContent = 'Run again';
-      start.disabled = false;
-    }
-
-    function run() {
-      sim = newSim();
-      start.disabled = true;
-      start.textContent = 'Running…';
-      status.textContent = 'Running ' + level + '…';
-      if (prefersReducedMotion()) {
-        // Reduced motion: compute the whole run at once
-        while (!sim.done) step(sim, 0.05);
-        sim.bullets = []; sim.flashes = [];
-        show(sim); render(); finish(sim);
-        return;
-      }
-      running = true;
-      ensureLoop();
-    }
-
-    levelBtns.forEach(function (b, i) {
-      b.addEventListener('click', function () {
-        if (running) return; // finish the current run first
-        level = levels[i];
-        levelBtns.forEach(function (x, j) { x.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
-        var cfg = SETTINGS[level];
-        status.textContent = b.textContent + ': fires every ' + cfg.cooldown + ' s, misses ' + Math.round(cfg.miss * 100) + '% of shots, ' + cfg.damage + ' damage per hit.';
-        start.textContent = 'Start 30 seconds';
-      });
-    });
-    start.addEventListener('click', run);
 
     function resize() {
       var rect = wrap.getBoundingClientRect();
       W = rect.width; H = rect.height;
       if (!W || !H) return;
-      if (view3d) {
-        view3d.resize(W, H);
-      } else {
-        var dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = Math.max(1, Math.round(W * dpr));
-        canvas.height = Math.max(1, Math.round(H * dpr));
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-      render();
+      if (view) { view.resize(W, H); view.draw(0); return; }
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, Math.round(W * dpr));
+      canvas.height = Math.max(1, Math.round(H * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw2D(duel);
     }
     if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
     else window.addEventListener('resize', resize);
     resize();
 
-    // Load the 3D view only when the demo comes near the screen,
-    // and only animate while it is visible
+    // Load the 3D arena only when the demo comes near the screen,
+    // and only animate while it is visible (a game in progress pauses offscreen)
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           visible = en.isIntersecting;
-          if (visible) { try3D(); if (view3d) ensureLoop(); }
+          if (visible) { try3D(); if (mode === '3d') ensureLoop(); }
+          else if (game && game.phase === 'playing') {
+            game.phase = 'paused';
+            game.keys = {};
+            status.textContent = 'Paused. Click the arena to continue.';
+            if (lenis) lenis.start();
+          }
         });
       }, { rootMargin: '300px 0px' }).observe(host);
     } else {
