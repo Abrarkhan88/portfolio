@@ -1080,6 +1080,23 @@ section[id] { scroll-margin-top: var(--header-h); }
 .pw-checks li.is-met::before { background: currentColor; }
 .pw-checks li:not(.is-met) { opacity: 0.6; }
 
+/* Light chapter: shorter cover for projects with less material */
+.chapter-cover--light { min-height: 80vh; min-height: 80svh; }
+
+/* Library demo */
+.lib-list { margin: 0; padding: 0; list-style: none; }
+.lib-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.lib-list .meta { grid-column: 1; opacity: 0.65; }
+.lib-list .btn { grid-row: 1 / span 2; grid-column: 2; }
+.lib-list li.is-overdue .meta { opacity: 1; font-weight: 600; }
+
 /* Vegetation demo */
 .veg-canvas {
   width: 100%;
