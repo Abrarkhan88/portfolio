@@ -879,13 +879,17 @@
     var CARDS = [
       { id: 'therap', org: 'Therap BD', short: 'Therap BD', role: 'Associate, Customer Experience Strategy & Analytics',
         period: 'Since September 2026', kind: 'Full-time role', color: '#2f7d77', x: 1.95, w: 0.92, h: 1.24, app: 'work',
+        initials: 'TB', logo: 'logos/therap.png',
         note: 'I turn manual monthly reporting into scripted tools, support the team’s Salesforce setup, and look for places where AI can save time.' },
       { id: 'robotics', org: 'BRAC University Robotics Club', short: 'Robotics Club', role: 'Director, Editorial & Publications',
-        period: '2022 to 2025', kind: 'Leadership', color: '#c4553f', x: 3.05, w: 0.8, h: 1.08 },
+        period: '2022 to 2025', kind: 'Leadership', color: '#c4553f', x: 3.05, w: 0.8, h: 1.08,
+        initials: 'RC', logo: 'logos/robotics-club.png' },
       { id: 'business', org: 'BRAC University Business Club', short: 'Business Club', role: 'Assistant Director, Research & Publications',
-        period: '2022 to 2025', kind: 'Leadership', color: '#5b4a7a', x: 4.0, w: 0.8, h: 1.08 },
+        period: '2022 to 2025', kind: 'Leadership', color: '#5b4a7a', x: 4.0, w: 0.8, h: 1.08,
+        initials: 'BC', logo: 'logos/business-club.png' },
       { id: 'edy', org: 'EDY (Enduring Developments by the Youths)', short: 'EDY', role: 'Lead, Media and Content Creation',
-        period: '2020 to 2021', kind: 'Leadership', color: '#3e6e8c', x: 4.95, w: 0.8, h: 1.08 },
+        period: '2020 to 2021', kind: 'Leadership', color: '#3e6e8c', x: 4.95, w: 0.8, h: 1.08,
+        initials: 'EDY', logo: 'logos/edy.png' },
       { id: 'dofe', org: 'The Duke of Edinburgh’s International Award', short: 'DofE Bronze', role: 'Bronze Award',
         period: '2023', kind: 'Award', medal: true, x: 5.62 }
     ];
@@ -918,32 +922,44 @@
       g.restore();
     }
     var CARD_FONT = '"Instrument Sans", "Helvetica Neue", Arial, sans-serif';
-    // Your photo goes on the card fronts once it loads; the drawn portrait stays as a fallback
+    // Your photo is used once, in the frame on the About shelf
     var portrait = new Image();
-    var portraitReady = false, frontTexes = [];
-    function paintPortrait(tex) {
+    var portraitReady = false;
+    portrait.addEventListener('load', function () { portraitReady = true; });
+    portrait.src = 'portrait.jpg';
+
+    /* Card fronts show the organisation's logo. Drop the files into a logos/ folder
+       (names below); until a file is there, the card shows the organisation's initials. */
+    var LOGO_BOX = { cy: 0.39, size: 0.46 };          // centre (fraction of height) and box size (fraction of width)
+    function paintLogo(tex, img) {
       var cv = tex.image;
       if (!cv || !cv.getContext) return;
       var g = cv.getContext('2d'), w = cv.width, h = cv.height;
-      var cx = w / 2, cy = h * 0.39, r = w * 0.2;
-      g.save();
-      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
-      g.drawImage(portrait, cx - r, cy - r, r * 2, r * 2);
-      g.restore();
-      g.strokeStyle = 'rgba(26,18,16,0.15)'; g.lineWidth = 3;
-      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+      var box = w * LOGO_BOX.size, cx = w / 2, cy = h * LOGO_BOX.cy;
+      // The tile takes the logo's own background colour (white if the logo is transparent)
+      var tile = '#ffffff';
+      try {
+        var probe = document.createElement('canvas'); probe.width = probe.height = 1;
+        var pg = probe.getContext('2d'); pg.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);   // top-left pixel
+        var px = pg.getImageData(0, 0, 1, 1).data;
+        if (px[3] > 200) tile = 'rgb(' + px[0] + ',' + px[1] + ',' + px[2] + ')';
+      } catch (err) { /* keep white */ }
+      g.fillStyle = tile;
+      g.beginPath();
+      if (g.roundRect) g.roundRect(cx - box / 2, cy - box / 2, box, box, 18); else g.rect(cx - box / 2, cy - box / 2, box, box);
+      g.fill();
+      var pad = box * 0.07, fit = Math.min((box - pad * 2) / img.width, (box - pad * 2) / img.height);
+      var iw = img.width * fit, ih = img.height * fit;
+      g.drawImage(img, cx - iw / 2, cy - ih / 2, iw, ih);
       tex.needsUpdate = true;
     }
-    portrait.addEventListener('load', function () {
-      portraitReady = true;
-      frontTexes.forEach(paintPortrait);
-    });
-    portrait.src = 'portrait.jpg';
-
     function cardFront(c) {
       var tex = cardFrontTex(c);
-      frontTexes.push(tex);
-      if (portraitReady) paintPortrait(tex);
+      if (c.logo) {
+        var img = new Image();
+        img.addEventListener('load', function () { paintLogo(tex, img); });
+        img.src = c.logo;                             // missing file: the initials stay
+      }
       return tex;
     }
     function cardFrontTex(c) {
@@ -953,7 +969,14 @@
         g.fillStyle = '#f3eee4'; g.beginPath(); g.ellipse(w / 2, h * 0.045, 46, 11, 0, 0, Math.PI * 2); g.fill();   // lanyard slot
         g.fillStyle = '#fff'; g.font = '700 38px ' + CARD_FONT; g.textAlign = 'center';
         wrapText(g, c.short, w / 2, h * 0.14, w - 60, 40);
-        drawAvatar(g, w / 2, h * 0.39, w * 0.2, '#e3dccf');
+        // Initials in the card colour, replaced by the logo once it loads
+        var box = w * LOGO_BOX.size, cy = h * LOGO_BOX.cy;
+        g.fillStyle = '#ffffff';
+        g.beginPath();
+        if (g.roundRect) g.roundRect(w / 2 - box / 2, cy - box / 2, box, box, 18); else g.rect(w / 2 - box / 2, cy - box / 2, box, box);
+        g.fill();
+        g.fillStyle = c.color; g.font = '700 ' + (c.initials.length > 2 ? 64 : 80) + 'px ' + CARD_FONT;
+        g.textBaseline = 'middle'; g.fillText(c.initials, w / 2, cy + 4); g.textBaseline = 'alphabetic';
         g.fillStyle = '#1a1210'; g.font = '700 40px ' + CARD_FONT;
         g.fillText('Abrar Sami Khan', w / 2, h * 0.64);
         g.fillStyle = '#4a3f38'; g.font = '500 27px ' + CARD_FONT;
@@ -1083,7 +1106,7 @@
     }
     var aboutBook = books[1];                      // the marigold one slides out when you open About
     var aboutBookHome = { z: aboutBook.position.z, rx: aboutBook.rotation.x };
-    // A framed photo of you on the lower shelf (same portrait as the ID cards)
+    // A framed photo of you on the lower shelf (the only place your photo appears)
     var photoFrame = new T.Group();
     photoFrame.position.set(-0.85, 3.46, 0.05);
     photoFrame.rotation.x = -0.12;                       // leaning back a little
