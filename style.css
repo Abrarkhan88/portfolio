@@ -2295,3 +2295,98 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
 }
 .room__hint.is-in { opacity: 1; transform: translate(-50%, 0); }
+
+/* =========================================================
+   12. The room on phones and small screens: objects stay in the
+   scene, and what you read slides up as a sheet above the menu
+   ========================================================= */
+@media (max-width: 899px), (max-height: 499px) {
+  .room { --sheet-gap: 12px; --menu-h: 3.4rem; overflow: hidden; }
+
+  .room__top { inset: 12px 12px auto 12px; align-items: center; }
+  .room__id strong { font-size: 1.05rem; }
+  .room__id span { display: none; }
+  .room__actions { gap: 6px; }
+  .room__sound, .room__flat, .room__back { padding: 6px 12px; font-size: 0.78rem; }
+  .room__back { top: 60px; left: 12px; }
+  .room__back kbd { display: none; }
+
+  .room__menu { bottom: 12px; max-width: calc(100% - 24px); }
+  .room__menu button { padding: 8px 12px; font-size: 0.82rem; }
+
+  /* touch has no hover, so the marker labels stay visible */
+  .room__marker span { opacity: 1; transform: none; font-size: 0.75rem; }
+
+  .room__hint {
+    bottom: calc(12px + var(--menu-h) + 8px);
+    width: max-content;
+    max-width: calc(100% - 24px);
+    white-space: normal;
+    text-align: center;
+    border-radius: 14px;
+  }
+
+  /* Sheets: projects desktop, work panel, about notebook */
+  .room-desk,
+  .room__panel,
+  .room-book {
+    position: absolute;
+    left: var(--sheet-gap);
+    right: var(--sheet-gap);
+    bottom: calc(12px + var(--menu-h) + var(--sheet-gap));
+    width: auto;
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .room-desk {
+    top: auto;
+    max-height: 58%;
+    font-size: 15px;
+    border-radius: 14px;
+  }
+  .room-desk__groups { padding: 0.8em 1em; align-content: start; }
+  .room-desk__group ul { grid-template-columns: repeat(auto-fill, minmax(5.4em, 1fr)); gap: 0.6em 0.4em; }
+  .room-desk__glyph { width: 3.2em; height: 3.2em; }
+  .room-desk__icon { font-size: 0.74em; }
+  .room-desk__hint { padding: 0 1.2em 1em; }
+
+  .room__panel { max-height: 52%; padding: var(--space-4); border-radius: 14px; }
+
+  .room-book {
+    top: 104px;
+    display: block;               /* pages stack and the sheet scrolls */
+    border-radius: 12px;
+  }
+  .room-book::before { display: none; }
+  .room-book__page { overflow: visible; padding: var(--space-5) var(--space-4); }
+  .room-book__page--left { border-right: 0; border-bottom: 1px solid rgba(42, 31, 26, 0.12); }
+
+  /* A project opens full screen */
+  .room-app {
+    z-index: 3;
+    inset: 0;
+    width: auto;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+  .room-app__bar { padding: 10px 12px; }
+  .room-app .chapter-cover { padding: var(--space-5) var(--space-4); }
+  .room-app .chapter-cover__title { font-size: var(--step-3); }
+}
+
+/* Phones turned sideways: very little height, so the back button joins the top bar */
+@media (max-height: 499px) {
+  .room__back { top: 12px; left: 190px; }
+  .room-desk { max-height: calc(100% - 56px - 3.4rem - 24px); }
+  .room__panel { max-height: calc(100% - 56px - 3.4rem - 24px); }
+  .room-book { top: 56px; }
+  .room__hint { display: none; }
+}
+@media (max-height: 499px) and (min-width: 700px) {
+  /* sideways: the work panel sits beside the board instead of over it */
+  .room__panel { left: auto; top: 56px; width: 46%; max-height: none; }
+}
