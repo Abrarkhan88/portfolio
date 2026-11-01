@@ -2011,3 +2011,57 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 }
 .room-desk[hidden],
 .room-app[hidden] { display: none; }
+
+/* ---------- Room: work panel beside the ID cards ---------- */
+.room-card { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); }
+.room-card__kind {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+.room-card__org { font-size: var(--step-1); line-height: 1.15; }
+.room-card__role { color: var(--paper); }
+.room-card__period { font-size: var(--step--1); color: var(--paper-muted); }
+.room-card__note { margin-top: var(--space-2); font-size: var(--step--1); color: var(--paper-muted); }
+.room-card__open {
+  justify-self: start;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: 999px;
+  background: var(--signal);
+  color: var(--signal-ink);
+  font: inherit;
+  font-size: var(--step--1);
+  font-weight: 600;
+  cursor: pointer;
+}
+.room-card__open:hover,
+.room-card__open:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+.room-card__hint { margin-bottom: var(--space-4); color: var(--paper-muted); }
+
+.room-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+}
+.room-cards button {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--paper-muted);
+  font: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.room-cards button:hover,
+.room-cards button:focus-visible { color: var(--paper); border-color: var(--paper); }
+.room-cards button[aria-pressed="true"] { color: var(--signal-ink); background: var(--signal); border-color: var(--signal); }
