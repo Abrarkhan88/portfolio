@@ -1621,8 +1621,12 @@ html.room-mode,
 html.room-mode body { overflow: hidden; }
 
 .room {
-  --room-ink: #1a1210;
-  --room-glass: rgba(26, 18, 16, 0.72);
+  --room-ink: #141219;
+  --room-glass: rgba(22, 18, 30, 0.72);
+  --room-neon: #ff6ad5;
+  --room-edge: rgba(255, 106, 213, 0.38);
+  --signal: #ff6ad5;          /* the room's accent is pink neon; the flat site keeps marigold */
+  --signal-ink: #1a0f1c;
   position: fixed;
   inset: 0;
   z-index: 200;            /* above the site, below the custom cursor */
@@ -1638,14 +1642,22 @@ html.room-mode body { overflow: hidden; }
   position: absolute;
   inset: var(--space-5) var(--margin) auto var(--margin);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-start;
   gap: var(--space-4);
   pointer-events: none;
 }
 .room__top > * { pointer-events: auto; }
 
-.room__id { display: grid; gap: 2px; }
+.room__id {
+  position: absolute;
+  left: var(--margin);
+  bottom: var(--space-5);
+  display: grid;
+  gap: 2px;
+  pointer-events: none;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+}
 .room__id strong {
   font-family: var(--font-display);
   font-size: var(--step-1);
@@ -1660,7 +1672,7 @@ html.room-mode body { overflow: hidden; }
 .room__flat,
 .room__back {
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--room-edge);
   border-radius: 999px;
   background: var(--room-glass);
   color: var(--paper);
@@ -1672,12 +1684,12 @@ html.room-mode body { overflow: hidden; }
   transition: border-color var(--dur-fast) var(--ease-out);
 }
 .room__flat:hover, .room__back:hover, .room__sound:hover,
-.room__flat:focus-visible, .room__back:focus-visible, .room__sound:focus-visible { border-color: var(--paper); }
+.room__flat:focus-visible, .room__back:focus-visible, .room__sound:focus-visible { border-color: var(--room-neon); box-shadow: 0 0 14px rgba(255, 106, 213, 0.35); }
 .room__sound[aria-pressed="true"] { border-color: var(--signal); color: var(--signal); }
 
 .room__back {
   position: absolute;
-  top: calc(var(--space-5) + 5rem);
+  top: var(--space-5);
   left: var(--margin);
 }
 .room__back kbd {
@@ -1698,9 +1710,10 @@ html.room-mode body { overflow: hidden; }
   display: flex;
   gap: var(--space-1);
   padding: var(--space-1);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--room-edge);
   border-radius: 999px;
   background: var(--room-glass);
+  box-shadow: 0 0 24px rgba(255, 106, 213, 0.12);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   transform: translate(-50%, 140%);
@@ -1716,12 +1729,19 @@ html.room-mode body { overflow: hidden; }
   color: var(--paper-muted);
   font: inherit;
   font-size: var(--step--1);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 .room__menu button:hover,
 .room__menu button:focus-visible { color: var(--paper); }
-.room__menu button[aria-current="true"] { background: var(--signal); color: var(--signal-ink); }
+.room__num { color: var(--room-neon); margin-right: 0.35em; font-variant-numeric: tabular-nums; }
+.room__menu button[aria-current="true"] {
+  background: rgba(255, 106, 213, 0.16);
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--room-neon), 0 0 16px rgba(255, 106, 213, 0.35);
+}
 
 /* Floating markers over clickable objects */
 .room__hotspots { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.4s var(--ease-out); }
@@ -1734,23 +1754,29 @@ html.room-mode body { overflow: hidden; }
   left: 0;
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
   padding: 0;
-  border: 2px solid var(--signal);
-  border-radius: 50%;
-  background: rgba(233, 193, 74, 0.25);
+  border: 0;
+  background: transparent;
   cursor: pointer;
   pointer-events: auto;
   will-change: transform;
 }
-.room__marker::after {
+/* a small glowing diamond that bobs gently */
+.room__marker::before {
   content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--signal);
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #ffd2f2, var(--room-neon));
+  box-shadow: 0 0 10px var(--room-neon), 0 0 22px rgba(255, 106, 213, 0.6);
+  transform: rotate(45deg);
+  animation: room-bob 2.4s ease-in-out infinite;
+}
+@keyframes room-bob {
+  0%, 100% { transform: translateY(0) rotate(45deg); }
+  50% { transform: translateY(-5px) rotate(45deg); }
 }
 .room__marker span {
   position: absolute;
@@ -1817,7 +1843,12 @@ html.room-mode body { overflow: hidden; }
 }
 .room__ready { margin-top: var(--space-3); color: var(--paper); }
 
-/* Header link back into the room from the flat site (desktop only) */
+/* Mid-size screens: the menu would reach the name, so the name sits just above it */
+@media (min-width: 900px) and (max-width: 1240px) {
+  .room__id { bottom: calc(var(--space-5) + 4.2rem); }
+}
+
+/* Header link back into the room from the flat site */
 .site-nav__room a { color: var(--signal); }
 
 /* In the room, use the normal cursors (hand to drag, pointer on buttons)
@@ -2304,7 +2335,10 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   .room { --sheet-gap: 12px; --menu-h: 3.4rem; overflow: hidden; }
 
   .room__top { inset: 12px 12px auto 12px; align-items: center; }
+  .room__id { top: 18px; bottom: auto; left: 12px; }
   .room__id strong { font-size: 1.05rem; }
+  .room__num { display: none; }
+  .room__menu button { letter-spacing: 0.04em; }
   .room__id span { display: none; }
   .room__actions { gap: 6px; }
   .room__sound, .room__flat, .room__back { padding: 6px 12px; font-size: 0.78rem; }
