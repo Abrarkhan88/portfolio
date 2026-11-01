@@ -865,9 +865,85 @@
       </article>
     </section>
 
-    <section class="chapter" id="game" data-field="4" aria-labelledby="game-title">
-      <h2 class="chapter__title" id="game-title" data-reveal="lines">Game</h2>
-      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    <!-- ===================== GAME ===================== -->
+    <section class="group" id="game" aria-labelledby="game-title">
+      <div class="group__head">
+        <h2 class="group__title" id="game-title" data-reveal="lines">Game</h2>
+        <p class="group__note" data-reveal="fade">Real-time 3D graphics in Python, from a computer graphics course.</p>
+      </div>
+
+      <!-- Project: Tank Wars 3D -->
+      <article class="chapter-block" id="tank-wars" data-field="4" aria-labelledby="tank-title">
+
+        <div class="chapter-cover">
+          <div class="chapter-cover__bar">
+            <p>Game</p>
+            <p>Course project</p>
+          </div>
+
+          <h3 class="chapter-cover__title" id="tank-title" data-reveal="lines">Tank Wars 3D</h3>
+
+          <dl class="chapter-cover__meta" data-reveal="fade">
+            <div><dt>Course</dt><dd>CSE423, BRAC University</dd></div>
+            <div><dt>Stack</dt><dd>Python, PyOpenGL, GLUT</dd></div>
+            <div><dt>Modes</dt><dd>Normal with a boss fight, and capture the flag</dd></div>
+          </dl>
+
+          <div class="chapter-cover__body">
+            <p class="chapter-cover__lede" data-reveal="lines">A 3D tank battle built in Python and OpenGL: you against an AI tank at three difficulty levels, with a boss fight, capture the flag and teleport portals.</p>
+            <ul class="chapter-cover__links" data-reveal="fade">
+              <li><a href="https://github.com/Abrarkhan88/Tank-Wars-3D-game" target="_blank" rel="noopener" data-magnetic>View the repository</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="story" data-story aria-label="Tank Wars 3D, step by step">
+          <nav class="story__index" aria-label="Game features">
+            <ol>
+              <li><a href="#tank-arena">The arena</a></li>
+              <li><a href="#tank-enemy">The enemy</a></li>
+              <li><a href="#tank-modes">Modes and extras</a></li>
+            </ol>
+            <span class="story__progress" aria-hidden="true"><span class="story__progress-bar"></span></span>
+          </nav>
+
+          <div class="story__stage">
+            <section class="story__item" id="tank-arena" aria-labelledby="tank-arena-t">
+              <h4 class="story__title" id="tank-arena-t">The arena</h4>
+              <p class="story__text">A walled 3D arena with two tanks, floating health bars, projectiles, explosions and collision against walls and obstacles. A minimap, a pause menu, and an adjustable camera keep it playable.</p>
+              <p class="story__tools"><span>Controls</span> W and S to drive, A and D to turn, click to fire, F1 to switch camera</p>
+            </section>
+
+            <section class="story__item" id="tank-enemy" aria-labelledby="tank-enemy-t">
+              <h4 class="story__title" id="tank-enemy-t">The enemy</h4>
+              <p class="story__text">The AI tank chases you or backs off around obstacles. Difficulty changes how often it fires, how often it misses and how hard it hits.</p>
+              <ol class="flow" aria-label="Difficulty">
+                <li>Easy: every 4 s, misses 40%</li>
+                <li>Medium: every 3 s, misses 30%</li>
+                <li>Hard: every 2 s, misses 20%</li>
+              </ol>
+            </section>
+
+            <section class="story__item" id="tank-modes" aria-labelledby="tank-modes-t">
+              <h4 class="story__title" id="tank-modes-t">Modes and extras</h4>
+              <p class="story__text">In normal mode, scoring twice brings in a boss tank with 500 health. In capture the flag, you win by holding the flag for ten seconds. Portals teleport you across the map, power-ups restore health or boost speed, and some obstacles appear and disappear.</p>
+            </section>
+          </div>
+        </div>
+
+        <!-- Interactive demo (simulation using the game's real settings) -->
+        <div class="demo" aria-labelledby="demo-tank-title">
+          <div class="demo__intro">
+            <h4 class="demo__title" id="demo-tank-title" data-reveal="lines">Try it: survive the enemy</h4>
+            <p class="demo__text" data-reveal="fade">Pick a difficulty and watch the enemy tank fire at you for 30 seconds of game time. Fire rate, miss chance and damage come straight from the game's code.</p>
+            <p class="demo__caption" data-reveal="fade">Illustrative demo. A simplified recreation in the browser, in 3D on larger screens and top-down on phones, not the original Python game. Shots land at random, so each run differs.</p>
+          </div>
+
+          <div class="demo__widget" data-demo="tank">
+            <noscript><p class="demo__fallback">This demo needs JavaScript.</p></noscript>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="chapter" id="about" aria-labelledby="about-title">
