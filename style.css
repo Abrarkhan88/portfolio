@@ -1104,7 +1104,9 @@ section[id] { scroll-margin-top: var(--header-h); }
   border: 1px solid var(--rule);
   background: rgba(0, 0, 0, 0.25);
 }
-.tank-canvas canvas { width: 100%; height: 100%; }
+.tank-canvas canvas { display: block; width: 100%; height: 100%; }
+.tank-canvas__gl { cursor: crosshair; outline: none; }
+.tank-canvas__gl:focus-visible { outline: 2px solid var(--paper); outline-offset: -2px; }
 
 /* doubled class so it wins over .demo-readout below */
 .demo-readout.demo-readout--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
