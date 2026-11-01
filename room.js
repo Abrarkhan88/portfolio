@@ -193,8 +193,9 @@
         hideLoader();
         world.intro();
       })
-      .catch(function () {
-        // Anything goes wrong: fall back to the flat site quietly
+      .catch(function (err) {
+        // Anything goes wrong: fall back to the flat site, leaving a note in the console
+        if (window.console) console.warn('Room fell back to the flat site:', err);
         leaveRoom();
       });
   }
@@ -735,6 +736,202 @@
     scene.add(board);
     box(4.6, 0.04, 0.12, new T.MeshBasicMaterial({ color: C.marigold }), 3.6, 2.97, -5.78);
 
+    /* ---------- Work: ID cards on lanyards, hanging from the board ---------- */
+    var workItems = Array.prototype.slice.call(document.querySelectorAll('#work .story__title')).map(function (el) { return el.textContent.trim(); });
+    var CARDS = [
+      { id: 'therap', org: 'Therap BD', short: 'Therap BD', role: 'Associate, Customer Experience Strategy & Analytics',
+        period: 'Since September 2026', kind: 'Full-time role', color: '#2f7d77', x: 1.95, w: 0.92, h: 1.24, app: 'work',
+        note: 'I turn manual monthly reporting into scripted tools, support the team’s Salesforce setup, and look for places where AI can save time.' },
+      { id: 'robotics', org: 'BRAC University Robotics Club', short: 'Robotics Club', role: 'Director, Editorial & Publications',
+        period: '2022 to 2025', kind: 'Leadership', color: '#c4553f', x: 3.05, w: 0.8, h: 1.08 },
+      { id: 'business', org: 'BRAC University Business Club', short: 'Business Club', role: 'Assistant Director, Research & Publications',
+        period: '2022 to 2025', kind: 'Leadership', color: '#5b4a7a', x: 4.0, w: 0.8, h: 1.08 },
+      { id: 'edy', org: 'EDY (Enduring Developments by the Youths)', short: 'EDY', role: 'Lead, Media and Content Creation',
+        period: '2020 to 2021', kind: 'Leadership', color: '#3e6e8c', x: 4.95, w: 0.8, h: 1.08 },
+      { id: 'dofe', org: 'The Duke of Edinburgh’s International Award', short: 'DofE Bronze', role: 'Bronze Award',
+        period: '2023', kind: 'Award', medal: true, x: 5.62 }
+    ];
+
+    function wrapText(g, text, x, y, maxW, lineH) {
+      var words = text.split(' '), line = '';
+      words.forEach(function (wd) {
+        var test = line ? line + ' ' + wd : wd;
+        if (g.measureText(test).width > maxW && line) { g.fillText(line, x, y); y += lineH; line = wd; }
+        else line = test;
+      });
+      if (line) { g.fillText(line, x, y); y += lineH; }
+      return y;
+    }
+    // A small portrait of the character, matching the 3D one
+    function drawAvatar(g, cx, cy, r, bg) {
+      g.save();
+      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
+      g.fillStyle = bg; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+      g.fillStyle = '#a8aca9'; g.beginPath(); g.ellipse(cx, cy + r * 1.02, r * 0.85, r * 0.55, 0, 0, Math.PI * 2); g.fill();   // T-shirt
+      g.fillStyle = '#7a4c31'; g.fillRect(cx - r * 0.14, cy + r * 0.2, r * 0.28, r * 0.3);                                     // neck
+      g.fillStyle = '#8d5a3b'; g.beginPath(); g.ellipse(cx, cy - r * 0.05, r * 0.36, r * 0.44, 0, 0, Math.PI * 2); g.fill();   // face
+      g.fillStyle = 'rgba(60,38,28,0.55)'; g.beginPath(); g.ellipse(cx, cy + r * 0.16, r * 0.31, r * 0.22, 0, 0, Math.PI); g.fill();   // stubble
+      g.fillStyle = '#161214';                                                                                                   // wavy hair, swept up
+      [[-0.22, -0.42, 0.2], [0, -0.5, 0.24], [0.22, -0.42, 0.2], [-0.32, -0.25, 0.12], [0.32, -0.25, 0.12], [0.1, -0.6, 0.15]].forEach(function (b) {
+        g.beginPath(); g.ellipse(cx + b[0] * r, cy + b[1] * r, b[2] * r * 1.25, b[2] * r * 0.85, 0, 0, Math.PI * 2); g.fill();
+      });
+      g.fillStyle = '#1a1210';
+      g.beginPath(); g.arc(cx - r * 0.13, cy - r * 0.07, r * 0.035, 0, Math.PI * 2); g.arc(cx + r * 0.13, cy - r * 0.07, r * 0.035, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+    var CARD_FONT = '"Instrument Sans", "Helvetica Neue", Arial, sans-serif';
+    // Your photo goes on the card fronts once it loads; the drawn portrait stays as a fallback
+    var portrait = new Image();
+    var portraitReady = false, frontTexes = [];
+    function paintPortrait(tex) {
+      var cv = tex.image;
+      if (!cv || !cv.getContext) return;
+      var g = cv.getContext('2d'), w = cv.width, h = cv.height;
+      var cx = w / 2, cy = h * 0.39, r = w * 0.2;
+      g.save();
+      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
+      g.drawImage(portrait, cx - r, cy - r, r * 2, r * 2);
+      g.restore();
+      g.strokeStyle = 'rgba(26,18,16,0.15)'; g.lineWidth = 3;
+      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+      tex.needsUpdate = true;
+    }
+    portrait.addEventListener('load', function () {
+      portraitReady = true;
+      frontTexes.forEach(paintPortrait);
+    });
+    portrait.src = 'portrait.jpg';
+
+    function cardFront(c) {
+      var tex = cardFrontTex(c);
+      frontTexes.push(tex);
+      if (portraitReady) paintPortrait(tex);
+      return tex;
+    }
+    function cardFrontTex(c) {
+      return canvasTex(512, Math.round(512 * c.h / c.w), function (g, w, h) {
+        g.fillStyle = '#f3eee4'; g.fillRect(0, 0, w, h);
+        g.fillStyle = c.color; g.fillRect(0, 0, w, h * 0.2);
+        g.fillStyle = '#f3eee4'; g.beginPath(); g.ellipse(w / 2, h * 0.045, 46, 11, 0, 0, Math.PI * 2); g.fill();   // lanyard slot
+        g.fillStyle = '#fff'; g.font = '700 38px ' + CARD_FONT; g.textAlign = 'center';
+        wrapText(g, c.short, w / 2, h * 0.14, w - 60, 40);
+        drawAvatar(g, w / 2, h * 0.39, w * 0.2, '#e3dccf');
+        g.fillStyle = '#1a1210'; g.font = '700 40px ' + CARD_FONT;
+        g.fillText('Abrar Sami Khan', w / 2, h * 0.64);
+        g.fillStyle = '#4a3f38'; g.font = '500 27px ' + CARD_FONT;
+        var y = wrapText(g, c.role, w / 2, h * 0.64 + 46, w - 70, 32);
+        g.fillStyle = c.color; g.font = '600 25px ' + CARD_FONT;
+        g.fillText(c.period, w / 2, y + 10);
+        // decorative barcode
+        g.fillStyle = '#1a1210';
+        var bx = w * 0.22;
+        while (bx < w * 0.78) { var bw = 2 + Math.floor(rnd() * 4); g.fillRect(bx, h - 62, bw, 34); bx += bw + 2 + Math.floor(rnd() * 4); }
+      });
+    }
+    function cardBack(c) {
+      return canvasTex(512, Math.round(512 * c.h / c.w), function (g, w, h) {
+        g.fillStyle = '#ebe5d9'; g.fillRect(0, 0, w, h);
+        g.fillStyle = c.color; g.fillRect(0, 0, w, 14); g.fillRect(0, h - 14, w, 14);
+        g.textAlign = 'left';
+        g.fillStyle = c.color; g.font = '700 22px ' + CARD_FONT;
+        g.fillText(c.kind.toUpperCase(), 40, 66);
+        g.fillStyle = '#1a1210'; g.font = '700 34px ' + CARD_FONT;
+        var y = wrapText(g, c.org, 40, 112, w - 80, 38) + 8;
+        g.fillStyle = '#4a3f38'; g.font = '500 25px ' + CARD_FONT;
+        y = wrapText(g, c.role, 40, y, w - 80, 31);
+        g.fillStyle = c.color; g.font = '600 24px ' + CARD_FONT;
+        g.fillText(c.period, 40, y + 6);
+        y += 50;
+        g.fillStyle = 'rgba(26,18,16,0.18)'; g.fillRect(40, y, w - 80, 2);
+        y += 44;
+        if (c.id === 'therap' && workItems.length) {
+          g.fillStyle = c.color; g.font = '700 22px ' + CARD_FONT; g.fillText('WHAT I WORK ON', 40, y); y += 40;
+          g.font = '500 25px ' + CARD_FONT;
+          workItems.forEach(function (it) {
+            g.fillStyle = c.color; g.fillRect(40, y - 12, 10, 10);
+            g.fillStyle = '#1a1210'; g.fillText(it, 64, y); y += 38;
+          });
+        } else {
+          g.fillStyle = '#4a3f38'; g.font = 'italic 500 24px ' + CARD_FONT;
+          wrapText(g, 'Holder: Abrar Sami Khan', 40, y, w - 80, 30);
+        }
+      });
+    }
+
+    var cardEntries = [];
+    var cardMeshes = [];
+    var HOOK_Y = 5.24, CARD_Z = -5.68, STRAP = 0.62;
+    CARDS.forEach(function (c, i) {
+      var pivot = new T.Group();
+      pivot.position.set(c.x, HOOK_Y, CARD_Z);
+      scene.add(pivot);
+      box(0.05, 0.05, 0.16, mat(C.metal, { metalness: 0.6, roughness: 0.4 }), 0, 0, -0.06, pivot);   // peg hook
+      var entry = { c: c, pivot: pivot, kick: { z: 0 }, flipped: false };
+      if (c.medal) {
+        // A bronze medal on a short ribbon
+        [-1, 1].forEach(function (side) {
+          var r = box(0.07, 0.42, 0.012, mat(side < 0 ? 0x2f6f8f : 0xe9c14a), side * 0.04, -0.2, 0.01, pivot);
+          r.rotation.z = side * 0.12;
+        });
+        var disc = cyl(0.17, 0.17, 0.04, mat(0xb07a45, { metalness: 0.7, roughness: 0.35 }), 0, -0.56, 0.03, pivot, 32);
+        disc.rotation.x = Math.PI / 2;
+        cyl(0.11, 0.11, 0.045, mat(0x8f5f34, { metalness: 0.7, roughness: 0.45 }), 0, -0.56, 0.035, pivot, 32).rotation.x = Math.PI / 2;
+        disc.userData.card = i;
+        cardMeshes.push(disc);
+        entry.hold = disc;
+      } else {
+        // Lanyard: two straps in a V down to the card clip
+        [-1, 1].forEach(function (side) {
+          var dx = side * 0.07, len = Math.hypot(dx, STRAP);
+          var strap = box(0.05, len, 0.006, mat(c.color, { roughness: 0.95 }), dx / 2, -STRAP / 2, 0.01, pivot);
+          strap.rotation.z = Math.atan2(dx, STRAP);
+        });
+        var hold = new T.Group();
+        hold.position.set(0, -STRAP - c.h / 2 - 0.04, 0.02);
+        pivot.add(hold);
+        var front = new T.Mesh(new T.PlaneGeometry(c.w, c.h), new T.MeshBasicMaterial({ map: cardFront(c), color: 0xe9e3d8 }));
+        front.position.z = 0.007;
+        var back = new T.Mesh(new T.PlaneGeometry(c.w, c.h), new T.MeshBasicMaterial({ map: cardBack(c), color: 0xe9e3d8 }));
+        back.rotation.y = Math.PI;
+        back.position.z = -0.007;
+        hold.add(front, back);
+        var edge = box(c.w + 0.02, c.h + 0.02, 0.01, mat(0xd8d1c4, { roughness: 0.5 }), 0, 0, 0, hold);
+        box(0.16, 0.07, 0.03, mat(C.metal, { metalness: 0.6, roughness: 0.4 }), 0, c.h / 2 + 0.03, 0, hold);   // clip
+        [front, back, edge].forEach(function (m) { m.userData.card = i; cardMeshes.push(m); });
+        entry.hold = hold;
+      }
+      cardEntries.push(entry);
+    });
+
+    var selectedCard = -1;
+    function tweenTo(target, props, opts) {
+      if (window.gsap) gsap.to(target, Object.assign({ duration: 0.9, ease: 'power3.inOut', overwrite: true }, opts || {}, props));
+      else Object.assign(target, props);
+    }
+    function setCard(i, open) {
+      var e = cardEntries[i];
+      if (!e) return;
+      e.flipped = open;
+      if (e.c.medal) {
+        if (open && window.gsap) gsap.fromTo(e.kick, { z: 0.35 }, { z: 0, duration: 1.6, ease: 'elastic.out(1, 0.3)', overwrite: true });
+        return;
+      }
+      tweenTo(e.hold.rotation, { y: open ? Math.PI : 0 });
+      tweenTo(e.hold.scale, { x: open ? 1.3 : 1, y: open ? 1.3 : 1, z: open ? 1.3 : 1 });
+      tweenTo(e.pivot.position, { z: open ? CARD_Z + 0.9 : CARD_Z });
+    }
+    function selectCard(i) {
+      if (selectedCard === i) { setCard(i, false); selectedCard = -1; renderWorkPanel(); return; }
+      if (selectedCard >= 0) setCard(selectedCard, false);
+      selectedCard = i;
+      setCard(i, true);
+      renderWorkPanel();
+    }
+    function resetCards() {
+      if (selectedCard >= 0) setCard(selectedCard, false);
+      selectedCard = -1;
+    }
+
     var shelf = new T.Group();
     shelf.position.set(-4.4, 0, -5.55);
     scene.add(shelf);
@@ -947,7 +1144,7 @@
     var VIEWS = {
       home:     { pos: [9.8, 5.5, 9.8],  look: [-1.0, 2.6, -2.4] },
       projects: { pos: [-0.3, 3.05, 0.2], look: [-0.3, 3.03, -2.65] },
-      work:     { pos: [3.6, 4.2, -1.6],  look: [3.6, 4.2, -5.8] },
+      work:     { pos: [4.6, 3.95, -0.3], look: [4.6, 3.95, -5.8] },   // off-centre so the panel sits beside the board
       about:    { pos: [-4.4, 4.4, -2.6], look: [-4.4, 4.1, -5.55] },
       contact:  { pos: [1.4, 3.1, -1.5],  look: [1.55, 1.65, -1.85] }
     };
@@ -1003,10 +1200,42 @@
 
     /* ---------- Section panels (filled in by later stages) ---------- */
     var SECTION_TEXT = {
-      work: { title: 'Work', body: 'ID cards for Therap BD and your leadership roles will hang here. Coming in a later stage.' },
       about: { title: 'About', body: 'Your story will live here. Coming in a later stage.' },
       contact: { title: 'Contact', body: 'Your phone will show how to reach you. Coming in a later stage.' }
     };
+
+    // Work panel: the readable (and keyboard) side of the ID cards
+    function esc(t) { return String(t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); }
+    function renderWorkPanel() {
+      if (current !== 'work') return;
+      panelTitle.textContent = 'Work';
+      var c = selectedCard >= 0 ? CARDS[selectedCard] : null;
+      var html = c
+        ? '<div class="room-card"><p class="room-card__kind">' + esc(c.kind) + '</p>' +
+          '<h3 class="room-card__org">' + esc(c.org) + '</h3>' +
+          '<p class="room-card__role">' + esc(c.role) + '</p>' +
+          '<p class="room-card__period">' + esc(c.period) + '</p>' +
+          (c.note ? '<p class="room-card__note">' + esc(c.note) + '</p>' : '') +
+          (c.app ? '<button type="button" class="room-card__open" data-app="' + c.app + '">Read the full story and try the demo</button>' : '') +
+          '</div>'
+        : '<p class="room-card__hint">Click a card on the board to turn it over.</p>';
+      html += '<ul class="room-cards" aria-label="Cards on the board">' + CARDS.map(function (cd, i) {
+        return '<li><button type="button" data-card="' + i + '" aria-pressed="' + (i === selectedCard) + '">' + esc(cd.short) + '</button></li>';
+      }).join('') + '</ul>';
+      panelBody.innerHTML = html;
+    }
+    panelBody.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      if (b.hasAttribute('data-card')) {
+        var i = +b.getAttribute('data-card');
+        selectCard(i);
+        var again = panelBody.querySelector('[data-card="' + i + '"]');
+        if (again) again.focus({ preventScroll: true });
+      } else if (b.hasAttribute('data-app')) {
+        openApp(b.getAttribute('data-app'), b);
+      }
+    });
 
     function syncUi(name) {
       menu.querySelectorAll('button').forEach(function (b) {
@@ -1017,8 +1246,13 @@
       backBtn.hidden = !inSection;
       hotspotsEl.classList.toggle('is-hidden', inSection);
       showDesk(name === 'projects');
+      if (name !== 'work') resetCards();
       if (name === 'projects') {
         panel.hidden = true;
+      } else if (name === 'work') {
+        renderWorkPanel();
+        panel.hidden = false;
+        if (window.gsap) gsap.fromTo(panel, { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, duration: 0.5, delay: 0.9, ease: 'power2.out' });
       } else if (inSection) {
         panelTitle.textContent = SECTION_TEXT[name].title;
         panelBody.textContent = SECTION_TEXT[name].body;
@@ -1039,6 +1273,7 @@
     function onKey(e) {
       if (e.key !== 'Escape') return;
       if (appOpen) closeApp(true);               // first Esc closes the project, the next one steps back
+      else if (current === 'work' && selectedCard >= 0) selectCard(selectedCard);   // turn the card back
       else if (current !== 'home') flyTo('home');
     }
     document.addEventListener('keydown', onKey);
@@ -1226,6 +1461,14 @@
       }
       return null;
     }
+    function pickCard(clientX, clientY) {
+      var r = canvas.getBoundingClientRect();
+      pointer.x = ((clientX - r.left) / r.width) * 2 - 1;
+      pointer.y = -((clientY - r.top) / r.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      var hits = raycaster.intersectObjects ? raycaster.intersectObjects(cardMeshes, false) : [];
+      return hits.length ? hits[0].object.userData.card : -1;
+    }
 
     function onDown(e) { dragging = true; moved = 0; dragX = e.clientX; dragY = e.clientY; canvas.style.cursor = 'grabbing'; }
     function onMove(e) {
@@ -1235,7 +1478,8 @@
         pitchTarget = Math.max(-0.08, Math.min(0.08, pitchTarget + (e.clientY - dragY) * 0.0015));
         dragX = e.clientX; dragY = e.clientY;
       } else if (!dragging) {
-        canvas.style.cursor = current === 'home' && pickAt(e.clientX, e.clientY) ? 'pointer' : 'grab';
+        var over = current === 'home' ? !!pickAt(e.clientX, e.clientY) : current === 'work' && pickCard(e.clientX, e.clientY) >= 0;
+        canvas.style.cursor = over ? 'pointer' : 'grab';
       }
     }
     function onUp(e) {
@@ -1244,6 +1488,9 @@
       if (moved < 6 && current === 'home') {
         var hit = pickAt(e.clientX, e.clientY);
         if (hit) flyTo(hit);
+      } else if (moved < 6 && current === 'work' && e.target === canvas) {
+        var ci = pickCard(e.clientX, e.clientY);
+        if (ci >= 0) selectCard(ci);
       }
     }
     canvas.addEventListener('pointerdown', onDown);
@@ -1276,6 +1523,9 @@
       lamp.intensity = 1.3 + Math.sin(t * 2.1) * 0.03;   // the faintest lamp flicker
       blades.rotation.y += dt * 2.4;                       // ceiling fan
       moveTraffic(dt);                                     // cars on the expressway
+      cardEntries.forEach(function (ce, i) {               // ID cards sway a little in the fan's breeze
+        ce.pivot.rotation.z = (ce.flipped && !ce.c.medal ? 0 : Math.sin(t * 0.9 + i * 1.7) * 0.03) + ce.kick.z;
+      });
 
       // You: breathing, short typing bursts, and the head turning toward its target
       chest.scale.y = 1 + Math.sin(t * 1.5) * 0.015;
