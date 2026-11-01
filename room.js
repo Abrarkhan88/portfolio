@@ -4,13 +4,13 @@
    Phones, reduced motion, no-WebGL browsers, and anyone who picks
    "Flat version" get the regular site in index.html instead.
 
-   While the room is being built it only opens with ?room in the URL.
+   Add ?flat to the URL to skip the room, or ?room to force it.
    ========================================================= */
 (function () {
   'use strict';
 
   var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js';
-  var ROOM_ENABLED_BY_DEFAULT = false;   // switched on once every room stage is finished
+  var ROOM_ENABLED_BY_DEFAULT = true;    // desktop visitors land in the room
 
   var root = document.documentElement;
   var params = new URLSearchParams(location.search);
@@ -36,9 +36,8 @@
   var wanted = params.has('room') || (ROOM_ENABLED_BY_DEFAULT && !prefersFlat() && !params.has('flat'));
 
   if (!capable) return;            // flat site only
-  // "Enter the room" link in the flat site's header (hidden from visitors until the room is finished)
+  // "Enter the room" link in the flat site's header, for anyone who chose the flat version
   if (ROOM_ENABLED_BY_DEFAULT || params.has('room')) addEnterLink();
-  if (!wanted) return;
 
   /* =========================================================
      DOM: loader, canvas, interface
@@ -56,7 +55,10 @@
 
       '<div class="room__top">' +
         '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation and machine learning, Dhaka</span></p>' +
-        '<button class="room__flat" type="button">Flat version</button>' +
+        '<div class="room__actions">' +
+          '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
+          '<button class="room__flat" type="button">Flat version</button>' +
+        '</div>' +
       '</div>' +
 
       '<button class="room__back" type="button" hidden>Step back <kbd>Esc</kbd></button>' +
@@ -77,6 +79,8 @@
         '</div>' +
         '<div class="room-app__body" data-lenis-prevent tabindex="-1"></div>' +
       '</div>' +
+
+      '<p class="room__hint" hidden>Drag to look around. Click a glowing ring, or use the menu below.</p>' +
 
       '<nav class="room__menu" aria-label="Room">' +
         '<button type="button" data-view="projects">Projects</button>' +
@@ -108,6 +112,13 @@
     // Keep wheel and touch scrolling inside the room from moving the page behind it
     ['wheel', 'touchmove'].forEach(function (type) {
       layer.addEventListener(type, function (e) { e.stopPropagation(); }, { passive: true });
+    });
+
+    var soundBtn = layer.querySelector('.room__sound');
+    soundBtn.addEventListener('click', function () {
+      var on = toggleSound();
+      soundBtn.setAttribute('aria-pressed', String(on));
+      soundBtn.textContent = on ? 'Sound on' : 'Sound off';
     });
 
     layer.querySelector('.room__flat').addEventListener('click', function () {
@@ -152,6 +163,7 @@
   function loadThree() {
     if (window.THREE) return Promise.resolve();
     return new Promise(function (resolve, reject) {
+      setTimeout(function () { reject(new Error('three.js took too long')); }, 15000);   // slow network: use the flat site
       var existing = document.querySelector('script[src="' + THREE_URL + '"]');
       var s = existing || document.createElement('script');
       s.addEventListener('load', function () { window.THREE ? resolve() : reject(new Error('three missing')); });
@@ -170,6 +182,7 @@
     var pre = document.querySelector('.preloader');
     if (pre) pre.remove();   // the room has its own loader
     buildDom();
+    setFlatInert(true);
 
     var started = Date.now();
     var logging = runLog(1, 260);           // "fetching three.js" straight away
@@ -210,11 +223,22 @@
     }
   }
 
+  // While the room is open, keyboard and screen readers stay in the room, not the page behind it
+  function setFlatInert(on) {
+    Array.prototype.forEach.call(document.body.children, function (el) {
+      if (el === layer || el.tagName === 'SCRIPT') return;
+      if (on) el.setAttribute('inert', '');
+      else el.removeAttribute('inert');
+    });
+  }
+
   function leaveRoom() {
+    stopSound();
     if (world) world.dispose();
     world = null;
     if (layer) layer.remove();
     layer = null;
+    setFlatInert(false);
     root.classList.remove('room-mode');
     if (window.ScrollTrigger) ScrollTrigger.refresh();
     var link = document.querySelector('.site-nav__room');
@@ -242,6 +266,103 @@
     li.appendChild(a);
     list.appendChild(li);
     if (wanted) li.hidden = true;
+  }
+
+  /* =========================================================
+     Sound (off by default): a quiet Dhaka evening, made in the browser
+     ========================================================= */
+  var audio = null;   // { ctx, master, timers }
+
+  function noiseBuffer(ctx, seconds) {
+    var len = Math.floor(ctx.sampleRate * seconds), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0), last = 0;
+    for (var i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }   // brown-ish noise
+    return buf;
+  }
+  function loopNoise(ctx, buf, filterType, freq, q, level, dest) {
+    var src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    var f = ctx.createBiquadFilter(); f.type = filterType; f.frequency.value = freq; f.Q.value = q;
+    var g = ctx.createGain(); g.gain.value = level;
+    src.connect(f); f.connect(g); g.connect(dest); src.start();
+    return g;
+  }
+  function wobble(ctx, param, rate, depth) {
+    var lfo = ctx.createOscillator(), amt = ctx.createGain();
+    lfo.frequency.value = rate; amt.gain.value = depth;
+    lfo.connect(amt); amt.connect(param); lfo.start();
+  }
+  function ting(at, pan) {          // a rickshaw bell: two quick bright rings
+    if (!audio) return;
+    var ctx = audio.ctx, p = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+    if (p.pan) p.pan.value = pan;
+    p.connect(audio.master);
+    [0, 0.16].forEach(function (off) {
+      [2093, 2637, 3520].forEach(function (f, k) {
+        var o = ctx.createOscillator(), g = ctx.createGain(), t0 = at + off;
+        o.frequency.value = f; o.type = 'sine';
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.035 / (k + 1), t0 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+        o.connect(g); g.connect(p); o.start(t0); o.stop(t0 + 0.75);
+      });
+    });
+  }
+  function horn(at) {               // a far-off horn, softened by distance
+    if (!audio) return;
+    var ctx = audio.ctx, o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = 380 + Math.random() * 120;
+    f.type = 'lowpass'; f.frequency.value = 900;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(0.012, at + 0.05);
+    g.gain.setValueAtTime(0.012, at + 0.22);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.35);
+    o.connect(f); f.connect(g); g.connect(audio.master); o.start(at); o.stop(at + 0.4);
+  }
+  function scheduleCity() {
+    if (!audio) return;
+    var now = audio.ctx.currentTime;
+    if (Math.random() < 0.6) ting(now + 0.1, -0.6 + Math.random() * 0.4);   // from the window side
+    else horn(now + 0.1);
+    audio.timers.push(setTimeout(scheduleCity, 9000 + Math.random() * 18000));
+  }
+  function startSound() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    var ctx = new AC(), master = ctx.createGain();
+    master.gain.value = 0.0001;
+    master.connect(ctx.destination);
+    audio = { ctx: ctx, master: master, timers: [] };
+    var buf = noiseBuffer(ctx, 3);
+    var city = loopNoise(ctx, buf, 'lowpass', 420, 0.5, 0.5, master);       // traffic rumble outside
+    wobble(ctx, city.gain, 0.06, 0.18);                                       // it swells and fades
+    var fan = loopNoise(ctx, buf, 'bandpass', 210, 0.9, 0.22, master);       // the ceiling fan
+    wobble(ctx, fan.gain, 1.15, 0.06);                                        // three blades going round
+    master.gain.exponentialRampToValueAtTime(0.6, ctx.currentTime + 1.5);
+    audio.timers.push(setTimeout(scheduleCity, 2500));
+    return true;
+  }
+  function stopSound() {
+    if (!audio) return;
+    var a = audio; audio = null;
+    a.timers.forEach(clearTimeout);
+    try {
+      a.master.gain.cancelScheduledValues(a.ctx.currentTime);
+      a.master.gain.setValueAtTime(a.master.gain.value, a.ctx.currentTime);
+      a.master.gain.exponentialRampToValueAtTime(0.0001, a.ctx.currentTime + 0.4);
+      setTimeout(function () { a.ctx.close(); }, 500);
+    } catch (err) { /* already closed */ }
+  }
+  function toggleSound() {
+    if (audio) { stopSound(); return false; }
+    return startSound();
+  }
+  function whoosh() {               // the camera moving between spots
+    if (!audio) return;
+    var ctx = audio.ctx, t0 = ctx.currentTime, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = noiseBuffer(ctx, 1.2);
+    f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(300, t0); f.frequency.exponentialRampToValueAtTime(1400, t0 + 0.6); f.frequency.exponentialRampToValueAtTime(400, t0 + 1.1);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.15);
+    src.connect(f); f.connect(g); g.connect(audio.master); src.start(t0); src.stop(t0 + 1.2);
   }
 
   /* =========================================================
@@ -1225,6 +1346,7 @@
     function flyTo(name) {
       var v = VIEWS[name];
       if (!v) return;
+      if (name !== current) whoosh();
       current = name === 'home' ? 'home' : name;
       yawTarget = 0; pitchTarget = 0;
       if (name === 'home' || name === 'projects') lookAt(-0.3, 3.03, -2.6);   // back to the screen
@@ -1688,6 +1810,29 @@
       }
     }
     canvas.addEventListener('pointerdown', onDown);
+
+    // A one-time hint on how to get around; it leaves as soon as you do anything
+    var hint = layer.querySelector('.room__hint'), hintTimer = null;
+    function hideHint() {
+      if (!hint || hint.hidden) return;
+      clearTimeout(hintTimer);
+      hint.classList.remove('is-in');
+      setTimeout(function () { if (hint) hint.hidden = true; }, 500);
+    }
+    function showHint() {
+      if (!hint) return;
+      hint.hidden = false;
+      requestAnimationFrame(function () { hint.classList.add('is-in'); });
+      hintTimer = setTimeout(hideHint, 9000);
+    }
+    canvas.addEventListener('pointerdown', hideHint);
+    menu.addEventListener('click', hideHint);
+
+    // If the graphics card gives up, or the window gets phone-narrow, fall back to the flat site
+    canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); leaveRoom(); });
+    var narrow = window.matchMedia('(max-width: 899px)');
+    function onNarrow(e) { if (e.matches) leaveRoom(); }
+    if (narrow.addEventListener) narrow.addEventListener('change', onNarrow); else if (narrow.addListener) narrow.addListener(onNarrow);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
 
@@ -1756,9 +1901,12 @@
       intro: function () {
         flyTo('home');
         menu.classList.add('is-in');
+        showHint();
       },
       dispose: function () {
         cancelAnimationFrame(raf);
+        clearTimeout(hintTimer);
+        if (narrow.removeEventListener) narrow.removeEventListener('change', onNarrow); else if (narrow.removeListener) narrow.removeListener(onNarrow);
         closeApp(false);                      // put any open demo back on the flat page
         clearInterval(clockTimer);
         clearInterval(phoneTimer);
@@ -1771,5 +1919,6 @@
     };
   }
 
-  enterRoom();
+  // Open the room straight away only when wanted; otherwise it waits for the header link
+  if (wanted) enterRoom();
 })();
