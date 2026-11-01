@@ -2195,3 +2195,79 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   pointer-events: none;
 }
 .room-phone__toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- Room: About as an open notebook ---------- */
+.room-book {
+  --book-paper: #efe7d8;
+  --book-ink: #2a1f1a;
+  --book-muted: #6a5c50;
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--space-5) + 4.5rem);
+  bottom: calc(var(--space-5) + 4rem);
+  right: var(--margin);
+  width: min(760px, 54vw);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 6px 10px 10px 6px;
+  background: var(--book-paper);
+  color: var(--book-ink);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(42, 31, 26, 0.08);
+  overflow: hidden;
+}
+.room-book[hidden] { display: none; }
+/* the spine: a soft crease down the middle */
+.room-book::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 46px;
+  margin-left: -23px;
+  background: linear-gradient(90deg, transparent, rgba(42, 31, 26, 0.14) 48%, rgba(42, 31, 26, 0.22) 50%, rgba(42, 31, 26, 0.14) 52%, transparent);
+  pointer-events: none;
+}
+.room-book__page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* faint ruled lines, like a notebook */
+  background-image: repeating-linear-gradient(180deg, transparent 0 1.85rem, rgba(47, 125, 119, 0.12) 1.85rem calc(1.85rem + 1px));
+  background-position: 0 4.6rem;
+}
+.room-book__page--left { border-right: 1px solid rgba(42, 31, 26, 0.08); }
+.room-book__kicker {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2f7d77;
+}
+.room-book__title { font-size: var(--step-2); line-height: 1.05; }
+.room-book__story { display: grid; gap: var(--space-3); font-size: var(--step--1); line-height: 1.6; }
+.room-book__story .about__story { display: grid; gap: var(--space-3); }
+.room-book__story .about__lede { font-size: var(--step-0); font-weight: 600; line-height: 1.4; }
+.room-book__story .btn {
+  display: inline-block;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--book-ink);
+  border-radius: 999px;
+  color: var(--book-ink);
+  text-decoration: none;
+  font-size: var(--step--1);
+}
+.room-book__story .btn:hover,
+.room-book__story .btn:focus-visible { background: var(--book-ink); color: var(--book-paper); }
+
+.room-book__facts dl { display: grid; gap: var(--space-3); margin: 0; }
+.room-book__facts div { display: grid; gap: 2px; padding-bottom: var(--space-2); border-bottom: 1px dashed rgba(42, 31, 26, 0.18); }
+.room-book__facts dt { font-size: 0.72rem; color: var(--book-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.room-book__facts dd { margin: 0; font-size: var(--step--1); }
+.room-book__more { margin-top: auto; font-size: var(--step--1); color: var(--book-muted); font-style: italic; }
+.room-book a:focus-visible { outline: 2px solid #2f7d77; outline-offset: 2px; }
