@@ -1815,3 +1815,11 @@ html.room-mode body { overflow: hidden; }
 
 /* Header link back into the room from the flat site (desktop only) */
 .site-nav__room a { color: var(--signal); }
+
+/* In the room, use the normal cursors (hand to drag, pointer on buttons)
+   instead of the site's custom dot, so only one cursor shows */
+html.room-mode .cursor { display: none; }
+html.room-mode.has-cursor,
+html.room-mode.has-cursor .room { cursor: auto; }
+html.room-mode.has-cursor .room button,
+html.room-mode.has-cursor .room a { cursor: pointer; }
