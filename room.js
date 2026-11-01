@@ -262,11 +262,10 @@
     stage.appendChild(canvas);
 
     var scene = new T.Scene();
-    scene.fog = new T.Fog(0x1a1210, 26, 60);
     var camera = new T.PerspectiveCamera(40, 16 / 9, 0.1, 200);
 
     /* ---------- Lights ---------- */
-    scene.add(new T.HemisphereLight(0xffd9b8, 0x2a1a14, 0.55));
+    scene.add(new T.HemisphereLight(0xffd9b8, 0x2a1a14, 0.8));   // soft fill now that the room is closed
 
     var sunset = new T.DirectionalLight(0xffa86b, 1.1);     // low dusk sun through the window
     sunset.position.set(-14, 9, 4);
@@ -297,9 +296,14 @@
       return mesh;
     }
 
-    /* ---------- Room: floor, back wall, left wall with a window ---------- */
-    var floor = new T.Mesh(new T.PlaneGeometry(16, 14), mat(C.floor, { roughness: 0.7 }));
+    /* ---------- Room: a closed box, so the only view outside is the window ----------
+       Inside spans x -8..13, z -6..14, height 7.5 */
+    var RX0 = -8, RX1 = 13, RZ0 = -6, RZ1 = 14, RH = 7.5;
+    var RW = RX1 - RX0, RD = RZ1 - RZ0, CX = (RX0 + RX1) / 2, CZ = (RZ0 + RZ1) / 2;
+
+    var floor = new T.Mesh(new T.PlaneGeometry(RW, RD), mat(C.floor, { roughness: 0.7 }));
     floor.rotation.x = -Math.PI / 2;
+    floor.position.set(CX, 0, CZ);
     floor.receiveShadow = true;
     scene.add(floor);
 
@@ -310,21 +314,26 @@
     scene.add(rug);
 
     var wallM = mat(C.wall), wallDarkM = mat(C.wallDark);
-    box(16, 7.5, 0.3, wallM, 0, 3.75, -6);                    // back wall
-    // Left wall built around a window opening (x = -8)
-    box(0.3, 7.5, 3.0, wallDarkM, -8, 3.75, -4.5);            // behind the window
-    box(0.3, 7.5, 5.0, wallDarkM, -8, 3.75, 4.5);             // in front of the window
-    box(0.3, 1.6, 6.0, wallDarkM, -8, 0.8, 0);                // below the window
-    box(0.3, 1.9, 6.0, wallDarkM, -8, 6.55, 0);               // above the window
+    box(RW + 0.6, RH, 0.3, wallM, CX, RH / 2, RZ0);                  // back wall
+    box(0.3, RH, RD, wallM, RX1, RH / 2, CZ);                         // right wall
+    box(RW + 0.6, RH, 0.3, wallM, CX, RH / 2, RZ1);                   // front wall (behind the camera)
+    box(RW + 0.6, 0.3, RD + 0.6, mat(0x2a1d19, { roughness: 1 }), CX, RH + 0.15, CZ);  // ceiling
+
+    // Left wall (x = -8), built around a window opening from z -3 to 3, y 1.6 to 5.6
+    box(0.3, RH, 3.0, wallDarkM, RX0, RH / 2, -4.5);                  // behind the window
+    box(0.3, RH, RZ1 - 3, wallDarkM, RX0, RH / 2, (3 + RZ1) / 2);     // in front of the window
+    box(0.3, 1.6, 6.0, wallDarkM, RX0, 0.8, 0);                       // below the window
+    box(0.3, RH - 5.6, 6.0, wallDarkM, RX0, (5.6 + RH) / 2, 0);       // above the window
     // Window frame
     var frameM = mat(C.metal, { roughness: 0.6 });
-    box(0.36, 0.12, 6.0, frameM, -8, 1.62, 0);
-    box(0.36, 0.12, 6.0, frameM, -8, 5.58, 0);
-    box(0.36, 4.0, 0.12, frameM, -8, 3.6, 0);
-    box(0.36, 4.0, 0.12, frameM, -8, 3.6, -2.95);
-    box(0.36, 4.0, 0.12, frameM, -8, 3.6, 2.95);
+    box(0.36, 0.12, 6.0, frameM, RX0, 1.62, 0);
+    box(0.36, 0.12, 6.0, frameM, RX0, 5.58, 0);
+    box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 0);
+    box(0.36, 4.0, 0.12, frameM, RX0, 3.6, -2.95);
+    box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 2.95);
 
-    // City beyond the window: a dusk sky placeholder (the skyline arrives in stage 2)
+    // City beyond the window: a dusk sky placeholder sitting just outside the glass
+    // (the Dhaka skyline arrives in stage 2)
     var skyCanvas = document.createElement('canvas');
     skyCanvas.width = 512; skyCanvas.height = 256;
     var g = skyCanvas.getContext('2d');
@@ -334,8 +343,8 @@
     grad.addColorStop(1, '#f6c27a');
     g.fillStyle = grad;
     g.fillRect(0, 0, 512, 256);
-    var sky = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: new T.CanvasTexture(skyCanvas) }));
-    sky.position.set(-14, 4.5, 0);
+    var sky = new T.Mesh(new T.PlaneGeometry(14, 9), new T.MeshBasicMaterial({ map: new T.CanvasTexture(skyCanvas) }));
+    sky.position.set(RX0 - 1.2, 3.6, 0);
     sky.rotation.y = Math.PI / 2;
     scene.add(sky);
 
@@ -527,8 +536,8 @@
     function onMove(e) {
       if (dragging && current === 'home') {
         moved += Math.abs(e.clientX - dragX) + Math.abs(e.clientY - dragY);
-        yawTarget = Math.max(-0.35, Math.min(0.35, yawTarget - (e.clientX - dragX) * 0.003));
-        pitchTarget = Math.max(-0.12, Math.min(0.12, pitchTarget + (e.clientY - dragY) * 0.0015));
+        yawTarget = Math.max(-0.25, Math.min(0.25, yawTarget - (e.clientX - dragX) * 0.003));
+        pitchTarget = Math.max(-0.08, Math.min(0.08, pitchTarget + (e.clientY - dragY) * 0.0015));
         dragX = e.clientX; dragY = e.clientY;
       } else if (!dragging) {
         canvas.style.cursor = current === 'home' && pickAt(e.clientX, e.clientY) ? 'pointer' : 'grab';
@@ -576,8 +585,8 @@
       raf = requestAnimationFrame(frame);
     }
 
-    // Start outside the window-side corner, then glide to the home view
-    setCam({ pos: [16, 9, 16], look: [-0.6, 2.2, -2.2] });
+    // Start in the far corner, then glide to the home view
+    setCam({ pos: [12.2, 7.1, 13.2], look: [-0.6, 2.2, -2.2] });   // inside the room, near the far corner
     applyCamera();
     raf = requestAnimationFrame(frame);
 
