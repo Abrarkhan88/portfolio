@@ -79,7 +79,9 @@
         '<div class="room-app__body" data-lenis-prevent tabindex="-1"></div>' +
       '</div>' +
 
-      '<p class="room__hint" hidden>Drag to look around. Click a glowing ring, or use the menu below.</p>' +
+      '<p class="room__hint" hidden>' + (window.matchMedia('(pointer: coarse)').matches
+        ? 'Pinch to zoom, drag to look around. Tap a glowing ring, or use the menu below.'
+        : 'Drag to look around, scroll to zoom. Click a glowing ring, or use the menu below.') + '</p>' +
 
       '<nav class="room__menu" aria-label="Room">' +
         '<button type="button" data-view="projects">Projects</button>' +
@@ -1332,7 +1334,15 @@
 
     function applyCamera() {
       var x = cam.x, y = cam.y, z = cam.z;
-      if (current === 'home') {
+      var lx = cam.lx, ly = cam.ly, lz = cam.lz;
+      if (current === 'home' && tallScreen()) {
+        // Phones stand in the corner, so turn the head instead of walking around
+        var tx = lx - x, tz = lz - z;
+        var tr = Math.hypot(tx, tz), ta = Math.atan2(tx, tz) + yaw;
+        lx = x + Math.sin(ta) * tr;
+        lz = z + Math.cos(ta) * tr;
+        ly = ly - pitch * 6;
+      } else if (current === 'home') {
         // Swing the camera around the look point by the drag amount
         var dx = x - cam.lx, dz = z - cam.lz;
         var r = Math.hypot(dx, dz), a = Math.atan2(dx, dz) + yaw;
@@ -1340,8 +1350,9 @@
         z = cam.lz + Math.cos(a) * r;
         y = y + pitch * 6;
       }
+      if (lens.fov !== camera.fov) { camera.fov = lens.fov; camera.updateProjectionMatrix(); }
       camera.position.set(x, y, z);
-      camera.lookAt(cam.lx, cam.ly, cam.lz);
+      camera.lookAt(lx, ly, lz);
     }
 
     /* On small screens each view is re-framed so its object fits the screen,
@@ -1353,11 +1364,33 @@
       contact:  { w: 0.34, h: 0.66, shift: 0.03, margin: 1.28 }
     };
     function isCompact() { return window.innerWidth < 900 || window.innerHeight < 500; }
+    function tallScreen() { return camera.aspect < 1; }
+    // Lens: tall screens use a wide lens at home so the whole room fits; pinch or scroll zooms in
+    var lens = { fov: 40 }, zoom = 1, ZOOM_MAX = 2.4;
+    function deg(r) { return r * 180 / Math.PI; }
+    function rad(d) { return d * Math.PI / 180; }
+    function homeFov() {
+      if (!tallScreen()) return 40;
+      return Math.min(84, Math.max(40, deg(2 * Math.atan(Math.tan(rad(24.5)) / camera.aspect))));   // about 49 degrees across
+    }
+    function sectionFov() { return tallScreen() ? 55 : 40; }
+    function fovFor(name) {
+      if (name !== 'home') return sectionFov();
+      return deg(2 * Math.atan(Math.tan(rad(homeFov() / 2)) / zoom));
+    }
+    function setZoom(z) {
+      zoom = Math.max(1, Math.min(ZOOM_MAX, z));
+      if (current !== 'home') return;
+      if (window.gsap && gsap.killTweensOf) gsap.killTweensOf(lens);
+      lens.fov = fovFor('home');
+      if (zoom === 1) { yawTarget = 0; pitchTarget = 0; }   // zoomed all the way out: back to the full view
+    }
     function framed(name) {
       var v = VIEWS[name];
       if (!isCompact()) return v;
-      if (name === 'home') {                           // a little closer, so the desk and you fill a tall screen
-        return { pos: v.look.map(function (l, i) { return l + (v.pos[i] - l) * 0.74; }), look: v.look };
+      if (name === 'home') {
+        // Tall screens: stand back in the far corner, where a wide lens takes in the window, shelf, desk and board
+        return tallScreen() ? { pos: [12.3, 6.3, 13.3], look: [-1.0, 2.7, -2.4] } : v;
       }
       var f = FIT[name];
       if (!f) return v;
@@ -1368,7 +1401,7 @@
       }
       var dir = [v.pos[0] - v.look[0], v.pos[1] - v.look[1], v.pos[2] - v.look[2]];
       var len = Math.hypot(dir[0], dir[1], dir[2]);
-      var t = Math.tan(camera.fov * Math.PI / 360);
+      var t = Math.tan(sectionFov() * Math.PI / 360);
       var d = Math.max(f.h / 2 / t, f.w / 2 / (t * camera.aspect)) * (f.margin || 1.12);
       var drop = 2 * d * t * f.shift;                  // move the object up the screen
       return {
@@ -1389,8 +1422,10 @@
       var to = { x: v.pos[0], y: v.pos[1], z: v.pos[2], lx: v.look[0], ly: v.look[1], lz: v.look[2] };
       if (window.gsap) {
         gsap.to(cam, Object.assign({ duration: 1.4, ease: 'power3.inOut', overwrite: true }, to));
+        gsap.to(lens, { fov: fovFor(name), duration: 1.4, ease: 'power3.inOut', overwrite: true });
       } else {
         Object.assign(cam, to);
+        lens.fov = fovFor(name);
       }
       syncUi(name);
     }
@@ -1825,13 +1860,35 @@
       return hits.length ? hits[0].object.userData.card : -1;
     }
 
-    function onDown(e) { dragging = true; moved = 0; dragX = e.clientX; dragY = e.clientY; canvas.style.cursor = 'grabbing'; }
+    // Two fingers on the canvas pinch to zoom (home view only)
+    var touches = {}, pinchStart = 0, pinchZoom = 1;
+    function pinchDist() {
+      var p = Object.keys(touches).map(function (k) { return touches[k]; });
+      return p.length < 2 ? 0 : Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+    }
+    function onDown(e) {
+      touches[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (Object.keys(touches).length === 2) { pinchStart = pinchDist(); pinchZoom = zoom; moved = 99; return; }
+      dragging = true; moved = 0; dragX = e.clientX; dragY = e.clientY; canvas.style.cursor = 'grabbing';
+    }
     function onMove(e) {
+      if (touches[e.pointerId]) touches[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (pinchStart && Object.keys(touches).length >= 2) {
+        if (current === 'home') setZoom(pinchZoom * pinchDist() / pinchStart);
+        return;
+      }
       if (dragging && current === 'home') {
         moved += Math.abs(e.clientX - dragX) + Math.abs(e.clientY - dragY);
-        var range = isCompact() ? 0.5 : 0.25;          // a tall screen sees less, so let it look further
-        yawTarget = Math.max(-range, Math.min(range, yawTarget - (e.clientX - dragX) * (isCompact() ? 0.005 : 0.003)));
-        pitchTarget = Math.max(-0.08, Math.min(0.08, pitchTarget + (e.clientY - dragY) * 0.0015));
+        if (tallScreen()) {
+          // Looking around from the corner: the more you zoom in, the further you can turn
+          var turn = 0.06 + (zoom - 1) * 0.28;
+          yawTarget = Math.max(-turn, Math.min(turn, yawTarget + (e.clientX - dragX) * 0.004 / zoom));
+          pitchTarget = Math.max(-0.05 * zoom, Math.min(0.05 * zoom, pitchTarget - (e.clientY - dragY) * 0.002 / zoom));
+        } else {
+          var range = isCompact() ? 0.4 : 0.25;
+          yawTarget = Math.max(-range, Math.min(range, yawTarget - (e.clientX - dragX) * (isCompact() ? 0.005 : 0.003)));
+          pitchTarget = Math.max(-0.08, Math.min(0.08, pitchTarget + (e.clientY - dragY) * 0.0015));
+        }
         dragX = e.clientX; dragY = e.clientY;
       } else if (!dragging) {
         var over = current === 'home' ? !!pickAt(e.clientX, e.clientY) : current === 'work' && pickCard(e.clientX, e.clientY) >= 0;
@@ -1839,6 +1896,8 @@
       }
     }
     function onUp(e) {
+      delete touches[e.pointerId];
+      if (Object.keys(touches).length < 2) pinchStart = 0;
       dragging = false;
       canvas.style.cursor = 'grab';
       if (moved < 6 && current === 'home') {
@@ -1850,6 +1909,14 @@
       }
     }
     canvas.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointercancel', onUp);
+    // Scroll wheel or trackpad pinch zooms the home view
+    function onWheel(e) {
+      if (current !== 'home') return;
+      e.preventDefault();
+      setZoom(zoom * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)));
+    }
+    canvas.addEventListener('wheel', onWheel, { passive: false });
 
     // A one-time hint on how to get around; it leaves as soon as you do anything
     var hint = layer.querySelector('.room__hint'), hintTimer = null;
@@ -1880,8 +1947,8 @@
       if (!W || !H) return;
       renderer.setSize(W, H, false);
       camera.aspect = W / H;
-      camera.fov = W / H < 1 ? 55 : 40;              // a taller screen needs a wider lens
       camera.updateProjectionMatrix();
+      if (!(window.gsap && gsap.isTweening && gsap.isTweening(lens))) lens.fov = fovFor(current);
       if (VIEWS[current] && cam.x !== 0 && !(window.gsap && gsap.isTweening && gsap.isTweening(cam))) {
         var fv = framed(current);                     // phone turned: re-frame where you are
         cam.x = fv.pos[0]; cam.y = fv.pos[1]; cam.z = fv.pos[2];
@@ -1897,7 +1964,7 @@
       last = now; t += dt;
       yaw += (yawTarget - yaw) * Math.min(1, dt * 5);
       pitch += (pitchTarget - pitch) * Math.min(1, dt * 5);
-      if (current === 'home' && !dragging) {
+      if (current === 'home' && !dragging && !(tallScreen() && zoom > 1)) {
         // Drift gently back to centre once you let go
         yawTarget += (0 - yawTarget) * Math.min(1, dt * 0.6);
         pitchTarget += (0 - pitchTarget) * Math.min(1, dt * 0.6);
@@ -1955,6 +2022,7 @@
         document.removeEventListener('keydown', onKey);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
         window.removeEventListener('resize', resize);
         renderer.dispose();
       }
