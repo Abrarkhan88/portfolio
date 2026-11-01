@@ -52,7 +52,7 @@
       '<div class="room__stage"></div>' +
       '<div class="room__hotspots" aria-hidden="true"></div>' +
 
-      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation &amp; ML, Dhaka</span></p>' +
+      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation &amp; ML</span><span>Dhaka</span></p>' +
       '<div class="room__top">' +
         '<div class="room__actions">' +
           '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
@@ -541,14 +541,47 @@
     box(0.3, RH, RZ1 - 3, panelMat(4.4, 3), RX0, RH / 2, (3 + RZ1) / 2);
     box(0.3, 1.6, 6.0, panelMat(2.4, 0.65), RX0, 0.8, 0);
     box(0.3, RH - 5.6, 6.0, panelMat(2.4, 0.75), RX0, (5.6 + RH) / 2, 0);
-    var frameM = mat(C.metal, { roughness: 0.6 });
-    box(0.36, 0.12, 6.0, frameM, RX0, 1.62, 0);
-    box(0.36, 0.12, 6.0, frameM, RX0, 5.58, 0);
-    box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 0);
-    box(0.36, 4.0, 0.12, frameM, RX0, 3.6, -2.95);
-    box(0.36, 4.0, 0.12, frameM, RX0, 3.6, 2.95);
-    box(0.7, 0.1, 6.3, mat(0x2b2932), RX0 + 0.3, 1.58, 0);            // window sill
-    box(0.3, 0.08, 6.0, frameM, RX0 - 0.05, 3.9, 0);                    // transom bar
+    /* Window: a deep dark casing, a fixed fanlight across the top,
+       a closed left pane and the right pane swung open into the room */
+    var frameM = mat(0x2a2830, { roughness: 0.55, metalness: 0.2 });
+    var glassM = new T.MeshStandardMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0.12, roughness: 0.05, metalness: 0.3, depthWrite: false, side: T.DoubleSide });
+    function glass(wz, hy, x, y, z, parent) {
+      var g = new T.Mesh(new T.PlaneGeometry(wz, hy), glassM);
+      g.rotation.y = Math.PI / 2;
+      g.position.set(x, y, z);
+      g.renderOrder = 4;                                                 // after the city layers, so they show through
+      (parent || scene).add(g);
+      return g;
+    }
+    // casing on the room side, standing proud of the wall
+    box(0.34, 0.24, 6.5, frameM, RX0 + 0.2, 5.72, 0);
+    box(0.34, 4.36, 0.24, frameM, RX0 + 0.2, 3.62, -3.13);
+    box(0.34, 4.36, 0.24, frameM, RX0 + 0.2, 3.62, 3.13);
+    box(0.95, 0.12, 6.7, mat(0x2f2c36, { roughness: 0.5 }), RX0 + 0.4, 1.56, 0);   // deep sill
+    // the fixed frame in the opening
+    box(0.14, 0.12, 6.0, frameM, RX0, 5.54, 0);                         // head
+    box(0.14, 0.12, 6.0, frameM, RX0, 1.66, 0);                         // bottom rail
+    box(0.14, 0.1, 6.0, frameM, RX0, 4.78, 0);                          // transom under the fanlight
+    box(0.14, 3.9, 0.12, frameM, RX0, 3.6, -2.94);
+    box(0.14, 3.9, 0.12, frameM, RX0, 3.6, 2.94);
+    box(0.14, 3.1, 0.1, frameM, RX0, 3.22, 0);                          // centre mullion
+    box(0.14, 0.7, 0.08, frameM, RX0, 5.16, 0);
+    glass(5.8, 0.66, RX0 - 0.02, 5.16, 0);                              // fanlight glass
+    // left pane, closed
+    box(0.08, 0.07, 2.8, frameM, RX0 + 0.04, 4.69, -1.47);
+    box(0.08, 0.07, 2.8, frameM, RX0 + 0.04, 1.75, -1.47);
+    box(0.08, 2.94, 0.07, frameM, RX0 + 0.04, 3.22, -0.1);
+    glass(2.74, 2.88, RX0 + 0.02, 3.22, -1.47);
+    // right pane, swung open on its hinge by the right jamb
+    var sash = new T.Group();
+    sash.position.set(RX0 + 0.04, 3.22, 2.86);
+    sash.rotation.y = -0.85;                                            // opened into the room
+    scene.add(sash);
+    box(0.06, 0.07, 2.78, frameM, 0, 1.47, -1.39, sash);
+    box(0.06, 0.07, 2.78, frameM, 0, -1.47, -1.39, sash);
+    box(0.06, 2.94, 0.07, frameM, 0, 0, -0.02, sash);
+    box(0.06, 2.94, 0.07, frameM, 0, 0, -2.76, sash);
+    glass(2.7, 2.88, 0, 0, -1.39, sash);
     var windowGlow = new T.PointLight(0xc58cff, 0.8, 9, 2);              // the city's glow spilling in
     windowGlow.position.set(RX0 + 1.2, 3.6, 0);
     scene.add(windowGlow);
