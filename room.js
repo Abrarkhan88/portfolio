@@ -922,11 +922,6 @@
       g.restore();
     }
     var CARD_FONT = '"Instrument Sans", "Helvetica Neue", Arial, sans-serif';
-    // Your photo is used once, in the frame on the About shelf
-    var portrait = new Image();
-    var portraitReady = false;
-    portrait.addEventListener('load', function () { portraitReady = true; });
-    portrait.src = 'portrait.jpg';
 
     /* Card fronts show the organisation's logo. Drop the files into a logos/ folder
        (names below); until a file is there, the card shows the organisation's initials. */
@@ -1112,22 +1107,26 @@
     photoFrame.rotation.x = -0.12;                       // leaning back a little
     photoFrame.rotation.y = 0.18;
     shelf.add(photoFrame);
-    box(0.62, 0.74, 0.05, mat(0x6b4a2f, { roughness: 0.6 }), 0, 0.37, 0, photoFrame);
-    var frameTex = canvasTex(256, 300, function (g, w, h) {
+    // Portrait-shaped (3:4) frame holding your full photo
+    box(0.64, 0.84, 0.05, mat(0x6b4a2f, { roughness: 0.6 }), 0, 0.42, 0, photoFrame);
+    var frameTex = canvasTex(384, 512, function (g, w, h) {
       g.fillStyle = '#e3dccf'; g.fillRect(0, 0, w, h);
-      drawAvatar(g, w / 2, h / 2, w * 0.42, '#e3dccf');
+      drawAvatar(g, w / 2, h * 0.42, w * 0.38, '#e3dccf');     // stand-in until the photo loads
     });
-    var framePhoto = new T.Mesh(new T.PlaneGeometry(0.5, 0.6), new T.MeshBasicMaterial({ map: frameTex, color: 0xe6dfd2 }));
-    framePhoto.position.set(0, 0.37, 0.027);
+    var framePhoto = new T.Mesh(new T.PlaneGeometry(0.54, 0.72), new T.MeshBasicMaterial({ map: frameTex, color: 0xe6dfd2 }));
+    framePhoto.position.set(0, 0.42, 0.027);
     photoFrame.add(framePhoto);
-    function paintFrame() {
+    var fullPhoto = new Image();
+    fullPhoto.addEventListener('load', function () {
       var cv = frameTex.image;
       if (!cv || !cv.getContext) return;
-      var g = cv.getContext('2d'), side = Math.max(cv.width, cv.height);
-      g.drawImage(portrait, (cv.width - side) / 2, (cv.height - side) / 2, side, side);
+      var g = cv.getContext('2d');
+      var fit = Math.max(cv.width / fullPhoto.width, cv.height / fullPhoto.height);   // fill the frame
+      var iw = fullPhoto.width * fit, ih = fullPhoto.height * fit;
+      g.drawImage(fullPhoto, (cv.width - iw) / 2, (cv.height - ih) / 2, iw, ih);
       frameTex.needsUpdate = true;
-    }
-    if (portraitReady) paintFrame(); else portrait.addEventListener('load', paintFrame);
+    });
+    fullPhoto.src = 'photo-full.jpg';
 
     box(0.5, 0.35, 0.4, mat(0x8a5c3c), 0.9, 3.64, 0, shelf);                        // a small box
     cyl(0.16, 0.12, 0.35, mat(C.teal), 1.3, 3.64, 0, shelf);                        // small pot
