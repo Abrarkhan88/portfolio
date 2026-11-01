@@ -946,24 +946,105 @@
       </article>
     </section>
 
-    <section class="chapter" id="about" aria-labelledby="about-title">
-      <h2 class="chapter__title" id="about-title" data-reveal="lines">About</h2>
-      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    <!-- ===================== ABOUT ===================== -->
+    <section class="about" id="about" aria-labelledby="about-title">
+      <div class="about__head">
+        <h2 class="group__title" id="about-title" data-reveal="lines">About</h2>
+      </div>
+
+      <div class="about__body">
+        <div class="about__story">
+          <p class="about__lede" data-reveal="lines">I'm Abrar Sami Khan, a Computer Science graduate from BRAC University, based in Dhaka.</p>
+          <p data-reveal="fade">I like the space where technology meets how a team actually works. At Therap BD I turn manual reporting into scripted tools and look after parts of the team's Salesforce setup. At university that same curiosity went into machine learning research, a product case study, and websites built end to end.</p>
+          <p data-reveal="fade">Outside coursework I spent three years running editorial teams in two university clubs, which taught me as much about planning and people as any course did.</p>
+          <p class="about__resume" data-resume hidden>
+            <a class="btn" href="Abrar-Sami-Khan-Resume.pdf" download data-magnetic>Download my resume (PDF)</a>
+          </p>
+        </div>
+
+        <dl class="about__facts" data-reveal="fade">
+          <div><dt>Now</dt><dd>Associate, Customer Experience Strategy &amp; Analytics, Therap BD</dd></div>
+          <div><dt>Education</dt><dd>B.Sc. in Computer Science, BRAC University</dd></div>
+          <div><dt>Thesis</dt><dd>Multimodal gene regulatory network discovery</dd></div>
+          <div><dt>Languages</dt><dd>Bengali (native), English (advanced), French (beginner)</dd></div>
+          <div><dt>Based</dt><dd>Dhaka, Bangladesh</dd></div>
+        </dl>
+      </div>
+
+      <!-- Capabilities: oversized, each opens to the tools behind it -->
+      <div class="capabilities" aria-labelledby="cap-title">
+        <h3 class="capabilities__label" id="cap-title">What I work with</h3>
+        <details class="cap">
+          <summary>Analytics and automation</summary>
+          <p>Python, SQL, pandas, Google Apps Script, Google Sheets, Looker Studio</p>
+        </details>
+        <details class="cap">
+          <summary>Machine learning</summary>
+          <p>PyTorch, TensorFlow, transfer learning, EfficientNet, ResNet, GENIE3</p>
+        </details>
+        <details class="cap">
+          <summary>Web development</summary>
+          <p>React, Vite, Django, PostgreSQL, Supabase, Stripe, HTML, CSS, JavaScript</p>
+        </details>
+        <details class="cap">
+          <summary>Salesforce</summary>
+          <p>Apex, Screen Flows, Named Credentials, Knowledge, sandboxes, Gemini API integration</p>
+        </details>
+        <details class="cap">
+          <summary>Product and projects</summary>
+          <p>User research, journey mapping, RICE, MoSCoW, Kano, Jira, prototyping in Figma Make and Lovable</p>
+        </details>
+      </div>
+
+      <div class="about__lists">
+        <div>
+          <h3 class="about__label">Leadership</h3>
+          <ul class="about__list" data-reveal="fade">
+            <li><span>Director, Editorial &amp; Publications, BRAC University Robotics Club</span><span>2022 to 2025</span></li>
+            <li><span>Assistant Director, Research &amp; Publications, BRAC University Business Club</span><span>2022 to 2025</span></li>
+            <li><span>Lead, Media and Content Creation, EDY (Enduring Developments by the Youths)</span><span>2020 to 2021</span></li>
+            <li><span>The Duke of Edinburgh's International Award, Bronze</span><span>2023</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="about__label">Certifications</h3>
+          <ul class="about__list" data-reveal="fade">
+            <li><span>DeepLearning.AI TensorFlow</span><span>Coursera</span></li>
+            <li><span>Django for Everybody</span><span>Coursera</span></li>
+            <li><span>Data Manipulation with pandas</span><span>DataCamp</span></li>
+            <li><span>Understanding Prompt Engineering</span><span>DataCamp</span></li>
+            <li><span>AI+ Prompt Engineer Level 1</span><span>AICERTS</span></li>
+          </ul>
+        </div>
+      </div>
     </section>
 
-    <section class="chapter chapter--contact" id="contact" aria-labelledby="contact-title">
-      <h2 class="chapter__title" id="contact-title" data-reveal="lines">Contact</h2>
-      <p class="chapter__note" data-reveal="fade">Chapter in progress.</p>
+    <!-- ===================== CONTACT ===================== -->
+    <section class="contact" id="contact" aria-labelledby="contact-title">
+      <h2 class="contact__title" id="contact-title" data-reveal="lines">Get in touch</h2>
+      <p class="contact__text" data-reveal="fade">Happy to talk about analytics, automation, product work and machine learning. Email is the fastest way to reach me.</p>
+      <a class="contact__email" href="mailto:abrark.3957@gmail.com" data-magnetic>abrark.3957@gmail.com</a>
+      <ul class="contact__links">
+        <li><a href="https://www.linkedin.com/in/abrar-sami-khan/" target="_blank" rel="noopener" data-magnetic>LinkedIn</a></li>
+        <li><a href="https://github.com/Abrarkhan88" target="_blank" rel="noopener" data-magnetic>GitHub</a></li>
+        <li><a href="https://linktr.ee/abrark8" target="_blank" rel="noopener" data-magnetic>Linktree</a></li>
+      </ul>
     </section>
 
   </main>
 
   <footer class="site-footer">
     <p>&copy; 2026 Abrar Sami Khan, Dhaka</p>
-    <ul class="site-footer__links">
-      <li><a href="https://github.com/Abrarkhan88" target="_blank" rel="noopener" data-magnetic>GitHub</a></li>
-      <li><a href="https://linktr.ee/abrark8" target="_blank" rel="noopener" data-magnetic>Linktree</a></li>
-    </ul>
+    <nav aria-label="Footer">
+      <ul class="site-footer__links">
+        <li><a href="#work">Work</a></li>
+        <li><a href="#research">Research</a></li>
+        <li><a href="#websites">Websites</a></li>
+        <li><a href="#game">Game</a></li>
+        <li><a href="#top">Back to top</a></li>
+      </ul>
+    </nav>
+    <p class="site-footer__note">Built by hand in HTML, CSS and JavaScript, with GSAP, Lenis and Three.js.</p>
   </footer>
 
   <!-- Libraries (no build step): GSAP + ScrollTrigger + SplitText, then Lenis -->
