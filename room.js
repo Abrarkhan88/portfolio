@@ -66,6 +66,16 @@
         '<div class="room__panel-body"></div>' +
       '</section>' +
 
+      '<div class="room-desk" hidden></div>' +
+      '<div class="room-app" role="dialog" aria-modal="true" aria-labelledby="room-app-title" hidden>' +
+        '<div class="room-app__bar">' +
+          '<button class="room-app__home" type="button"><span aria-hidden="true">&larr;</span> Desktop</button>' +
+          '<p class="room-app__title" id="room-app-title"></p>' +
+          '<button class="room-app__close" type="button" aria-label="Close project">&times;</button>' +
+        '</div>' +
+        '<div class="room-app__body" data-lenis-prevent tabindex="-1"></div>' +
+      '</div>' +
+
       '<nav class="room__menu" aria-label="Room">' +
         '<button type="button" data-view="projects">Projects</button>' +
         '<button type="button" data-view="work">Work</button>' +
@@ -669,22 +679,24 @@
     box(0.5, 0.06, 0.4, mat(C.metal), 0, 0.03, 0, monitor);
     box(0.12, 0.7, 0.08, mat(C.metal), 0, 0.4, -0.05, monitor);
     box(2.5, 1.5, 0.12, mat(C.metal, { roughness: 0.4 }), 0, 1.4, 0, monitor);
-    // Glowing screen: a simple desktop (projects arrive in a later stage)
+    // Glowing screen: the projects desktop (the HTML desktop sits exactly over it up close)
     var screenTex = canvasTex(1024, 590, function (g, w, h) {
       var bg = g.createLinearGradient(0, 0, w, h);
-      bg.addColorStop(0, '#13232a'); bg.addColorStop(1, '#1e1a2c');
+      bg.addColorStop(0, '#16262b'); bg.addColorStop(1, '#221b2e');
       g.fillStyle = bg; g.fillRect(0, 0, w, h);
       g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, 0, w, 34);
-      g.fillStyle = '#ece6da'; g.font = '600 18px sans-serif'; g.fillText('abrar@desk', 16, 23);
-      g.fillStyle = '#a7a194'; g.fillText('Dhaka, dusk', w - 130, 23);
-      var tiles = ['#2f7d77', '#e9c14a', '#c4553f', '#5b4a7a', '#3e6e8c', '#8a5c3c'];
-      for (var i = 0; i < 6; i++) {
-        var tx = 40 + (i % 3) * 320, ty = 70 + Math.floor(i / 3) * 250;
-        g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(tx, ty, 290, 220);
-        g.fillStyle = tiles[i]; g.fillRect(tx, ty, 290, 8);
-        g.fillStyle = 'rgba(236,230,218,0.25)';
-        for (var r = 0; r < 4; r++) g.fillRect(tx + 18, ty + 40 + r * 34, 180 - r * 30, 12);
-      }
+      g.fillStyle = '#ece6da'; g.font = '600 17px sans-serif'; g.fillText('abrar@desk', 22, 23);
+      var rows = [['#2e2f45', '#34391f', '#3b2b36', '#3d2f28'], ['#29323b', '#263530', '#2e2f45', '#34391f', '#3d2f28'], ['#34391f']];
+      rows.forEach(function (row, r) {
+        var y = 64 + r * 172;
+        g.fillStyle = 'rgba(236,230,218,0.55)'; g.fillRect(40, y, 90, 8);
+        row.forEach(function (c, i) {
+          var x = 40 + i * 132;
+          g.fillStyle = c; g.fillRect(x, y + 26, 88, 88);
+          g.strokeStyle = 'rgba(233,193,74,0.7)'; g.lineWidth = 3; g.strokeRect(x + 26, y + 52, 36, 36);
+          g.fillStyle = 'rgba(236,230,218,0.4)'; g.fillRect(x + 6, y + 126, 76, 7);
+        });
+      });
     });
     var screen = new T.Mesh(new T.PlaneGeometry(2.36, 1.36), new T.MeshBasicMaterial({ map: screenTex }));
     screen.position.set(0, 1.4, 0.065);
@@ -991,7 +1003,6 @@
 
     /* ---------- Section panels (filled in by later stages) ---------- */
     var SECTION_TEXT = {
-      projects: { title: 'Projects', body: 'The computer will hold your projects here. Coming in a later stage.' },
       work: { title: 'Work', body: 'ID cards for Therap BD and your leadership roles will hang here. Coming in a later stage.' },
       about: { title: 'About', body: 'Your story will live here. Coming in a later stage.' },
       contact: { title: 'Contact', body: 'Your phone will show how to reach you. Coming in a later stage.' }
@@ -1005,7 +1016,10 @@
       var inSection = name !== 'home';
       backBtn.hidden = !inSection;
       hotspotsEl.classList.toggle('is-hidden', inSection);
-      if (inSection) {
+      showDesk(name === 'projects');
+      if (name === 'projects') {
+        panel.hidden = true;
+      } else if (inSection) {
         panelTitle.textContent = SECTION_TEXT[name].title;
         panelBody.textContent = SECTION_TEXT[name].body;
         panel.hidden = false;
@@ -1022,8 +1036,158 @@
       flyTo(current === name ? 'home' : name);
     });
     backBtn.addEventListener('click', function () { flyTo('home'); });
-    function onKey(e) { if (e.key === 'Escape' && current !== 'home') flyTo('home'); }
+    function onKey(e) {
+      if (e.key !== 'Escape') return;
+      if (appOpen) closeApp(true);               // first Esc closes the project, the next one steps back
+      else if (current !== 'home') flyTo('home');
+    }
     document.addEventListener('keydown', onKey);
+
+    /* ---------- Projects: a desktop on the monitor, each project opens as an app ---------- */
+    var ICONS = {
+      bridge: '<circle cx="7" cy="9" r="3"/><circle cx="17" cy="15" r="3"/><path d="M10 10l4 4M4 19h16"/>',
+      leaf: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l8-8"/>',
+      scan: '<path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3"/><circle cx="12" cy="12" r="3.5"/>',
+      sprout: '<path d="M12 20v-8"/><path d="M12 12c0-4-3-6-7-6 0 4 3 6 7 6zM12 11c0-3 2-5 6-5 0 3-2 5-6 5z"/>',
+      film: '<rect x="4" y="5" width="16" height="14" rx="1"/><path d="M8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4"/>',
+      drop: '<path d="M12 4c3 4 6 7 6 10a6 6 0 0 1-12 0c0-3 3-6 6-10z"/>',
+      cart: '<path d="M4 5h2l2 10h10l2-7H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/>',
+      lock: '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+      book: '<path d="M5 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H5zM19 5h-4a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h4z"/>',
+      tank: '<rect x="4" y="13" width="16" height="5" rx="2.5"/><path d="M7 13v-3h7v3M14 11h6"/>'
+    };
+    var PROJECTS = [
+      { group: 'Research', items: [['bridge', 'Bridge', 'bridge'], ['vegetation', 'Vegetation detection', 'leaf'], ['skin', 'Skin disease detection', 'scan'], ['onboarding', 'Farmer onboarding', 'sprout']] },
+      { group: 'Websites', items: [['cinema', 'Wonderland Cinemas', 'film'], ['elara', 'Elara Botanics', 'drop'], ['django-store', 'Django e\u2011commerce', 'cart'], ['password', 'Password checker', 'lock'], ['library', 'Online Library', 'book']] },
+      { group: 'Game', items: [['tank-wars', 'Tank Wars 3D', 'tank']] }
+    ];
+    var deskUi = layer.querySelector('.room-desk');
+    var app = layer.querySelector('.room-app');
+    var appBody = app.querySelector('.room-app__body');
+    var appTitle = app.querySelector('.room-app__title');
+    var appOpen = null;           // { id, demo, placeholder, opener }
+
+    deskUi.innerHTML =
+      '<div class="room-desk__bar"><span>abrar@desk</span><span class="room-desk__clock"></span></div>' +
+      '<div class="room-desk__groups">' + PROJECTS.map(function (grp) {
+        return '<section class="room-desk__group"><h2>' + grp.group + '</h2><ul>' + grp.items.map(function (it) {
+          var src = document.getElementById(it[0]);
+          if (!src) return '';
+          return '<li><button type="button" class="room-desk__icon" data-project="' + it[0] + '" data-field="' + (src.getAttribute('data-field') || '1') + '">' +
+            '<span class="room-desk__glyph"><svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[it[2]] + '</svg></span>' +
+            '<span class="room-desk__name">' + it[1] + '</span></button></li>';
+        }).join('') + '</ul></section>';
+      }).join('') + '</div>' +
+      '<p class="room-desk__hint">Click a project to open it.</p>';
+
+    var clockEl = deskUi.querySelector('.room-desk__clock');
+    function tickClock() {
+      try {
+        clockEl.textContent = 'Dhaka ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' });
+      } catch (err) { clockEl.textContent = 'Dhaka'; }
+    }
+    tickClock();
+    var clockTimer = setInterval(tickClock, 30000);
+
+    deskUi.addEventListener('click', function (e) {
+      var b = e.target.closest('.room-desk__icon');
+      if (b) openApp(b.getAttribute('data-project'), b);
+    });
+
+    // A copy of the project's write-up, without ids or the scroll-animation leftovers
+    function cleanCopy(node) {
+      var c = node.cloneNode(true);
+      [c].concat(Array.prototype.slice.call(c.querySelectorAll('*'))).forEach(function (el) {
+        el.removeAttribute('id');
+        el.removeAttribute('style');
+        el.removeAttribute('aria-labelledby');
+        el.removeAttribute('data-reveal');
+        if (el.classList) el.classList.remove('is-pinned', 'is-active');
+      });
+      return c;
+    }
+
+    function openApp(id, opener) {
+      var src = document.getElementById(id);
+      if (!src) return;
+      if (appOpen) closeApp(false);
+      appBody.innerHTML = '';
+      appBody.setAttribute('data-field', src.getAttribute('data-field') || '1');
+      var cover = src.querySelector('.chapter-cover');
+      var story = src.querySelector('.story');
+      if (cover) appBody.appendChild(cleanCopy(cover));
+      if (story) appBody.appendChild(cleanCopy(story));
+      // The demo itself is moved, not copied, so its controls keep working; it goes back on close
+      var demo = src.querySelector('.demo');
+      var placeholder = null;
+      if (demo) {
+        placeholder = document.createComment('demo-home');
+        demo.parentNode.insertBefore(placeholder, demo);
+        appBody.appendChild(demo);
+      }
+      var title = src.querySelector('.chapter-cover__title');
+      appTitle.textContent = title ? title.textContent.trim() : id;
+      appOpen = { id: id, demo: demo, placeholder: placeholder, opener: opener };
+      app.hidden = false;
+      backBtn.hidden = true;
+      appBody.scrollTop = 0;
+      if (window.gsap) {
+        var r = opener ? opener.getBoundingClientRect() : null;
+        var a = app.getBoundingClientRect();
+        var ox = r ? (r.left + r.width / 2 - a.left) + 'px' : '50%';
+        var oy = r ? (r.top + r.height / 2 - a.top) + 'px' : '50%';
+        gsap.fromTo(app, { autoAlpha: 0, scale: 0.6, transformOrigin: ox + ' ' + oy },
+          { autoAlpha: 1, scale: 1, duration: 0.55, ease: 'power3.out', clearProps: 'transform' });
+      }
+      window.dispatchEvent(new Event('resize'));    // demos size their canvases to the new spot
+      app.querySelector('.room-app__close').focus({ preventScroll: true });
+    }
+
+    function closeApp(returnFocus) {
+      if (!appOpen) return;
+      var o = appOpen;
+      appOpen = null;
+      if (o.demo && o.placeholder && o.placeholder.parentNode) {
+        o.placeholder.parentNode.insertBefore(o.demo, o.placeholder);
+        o.placeholder.remove();
+      }
+      app.hidden = true;
+      appBody.innerHTML = '';
+      backBtn.hidden = current === 'home';
+      if (returnFocus && o.opener && current === 'projects') o.opener.focus({ preventScroll: true });
+    }
+
+    app.querySelector('.room-app__close').addEventListener('click', function () { closeApp(true); });
+    app.querySelector('.room-app__home').addEventListener('click', function () { closeApp(true); });
+
+    function showDesk(on) {
+      if (on) {
+        deskUi.hidden = false;
+        if (window.gsap) gsap.fromTo(deskUi, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.45, delay: 1.05, ease: 'power2.out' });
+      } else {
+        if (window.gsap && gsap.killTweensOf) gsap.killTweensOf(deskUi);
+        deskUi.hidden = true;
+        closeApp(false);
+      }
+    }
+
+    // Keep the HTML desktop glued to the monitor's glass
+    var SCREEN_CORNERS = [[-1.48, 3.71, -2.585], [0.88, 3.71, -2.585], [-1.48, 2.35, -2.585], [0.88, 2.35, -2.585]];
+    function placeDesk(w, h) {
+      if (deskUi.hidden) return;
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      SCREEN_CORNERS.forEach(function (c) {
+        tmp.set(c[0], c[1], c[2]).project(camera);
+        var px = (tmp.x * 0.5 + 0.5) * w, py = (-tmp.y * 0.5 + 0.5) * h;
+        x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+      });
+      if (!isFinite(x0)) return;
+      deskUi.style.left = x0 + 'px';
+      deskUi.style.top = y0 + 'px';
+      deskUi.style.width = (x1 - x0) + 'px';
+      deskUi.style.height = (y1 - y0) + 'px';
+      deskUi.style.fontSize = ((x1 - x0) / 46) + 'px';
+    }
 
     /* ---------- Floating markers over clickable objects ---------- */
     var markers = HOTSPOTS.map(function (h) {
@@ -1134,6 +1298,7 @@
       applyCamera();
       renderer.render(scene, camera);
       placeMarkers(W, H);
+      placeDesk(W, H);
       raf = requestAnimationFrame(frame);
     }
 
@@ -1149,6 +1314,8 @@
       },
       dispose: function () {
         cancelAnimationFrame(raf);
+        closeApp(false);                      // put any open demo back on the flat page
+        clearInterval(clockTimer);
         document.removeEventListener('keydown', onKey);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
