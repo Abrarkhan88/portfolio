@@ -521,6 +521,10 @@
     scene.add(far);
 
     // Layer 2: closer residential blocks with balconies and AC units
+    // The expressway's height across the near layer, as a fraction of its texture (0 = top)
+    function deckV(u) { return 0.6 - 0.035 * u - Math.sin(u * Math.PI) * 0.012; }
+    var frontC = document.createElement('canvas');   // blocks that stand in front of the road
+    frontC.width = SKY_W; frontC.height = SKY_H;
     var nearTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
       // The blocks go on their own canvas first, so some can be stamped back in front of the expressway
       var blocks = document.createElement('canvas'); blocks.width = w; blocks.height = h;
@@ -531,7 +535,7 @@
       g.drawImage(blocks, 0, 0);
 
       // Elevated expressway weaving through the blocks: concrete deck on pillars, traffic streaking along
-      var deckY = function (x) { return h * (0.6 - 0.035 * (x / w)) - Math.sin(x / w * Math.PI) * h * 0.012; };
+      var deckY = function (x) { return h * deckV(x / w); };
       var line = function (off) { g.beginPath(); for (var dx = -10; dx <= w + 10; dx += 20) { if (dx < 0) g.moveTo(dx, deckY(dx) + off); else g.lineTo(dx, deckY(dx) + off); } g.stroke(); };
       g.fillStyle = '#4e3846';
       for (var px = 70; px < w; px += 240) {                       // pillars with pier caps
@@ -543,7 +547,7 @@
       g.strokeStyle = '#5f4654'; g.lineWidth = 24; line(0);          // deck
       g.strokeStyle = '#3e2c38'; g.lineWidth = 6; line(12);          // shadowed underside edge
       g.strokeStyle = '#a07b80'; g.lineWidth = 4; line(-13);         // parapet catching the sunset
-      for (var cl = 0; cl < 40; cl++) {                               // headlights one way, tail lights the other
+      for (var cl = 0; cl < 16; cl++) {                               // a few far-off lights; real cars drive past below
         var cx = between(0, w), head = rnd() < 0.5;
         g.fillStyle = head ? 'rgba(255,244,210,0.95)' : 'rgba(255,80,64,0.9)';
         g.fillRect(cx, deckY(cx) + (head ? -6 : 2), between(10, 22), 3);
@@ -552,16 +556,76 @@
         g.fillStyle = '#3e2c38'; g.fillRect(lp, deckY(lp) - 48, 3, 36); g.fillRect(lp, deckY(lp) - 48, 10, 3);
         g.fillStyle = 'rgba(255,214,140,0.95)'; g.beginPath(); g.arc(lp + 10, deckY(lp) - 45, 4, 0, Math.PI * 2); g.fill();
       }
-      // Every other block stands in front of the road, so it weaves through rather than sitting on top
+      // Every other block stands in front of the road (on its own layer, so passing cars slip behind them)
+      var fg = frontC.getContext('2d');
       rects.forEach(function (r, i) {
         if (i % 2) return;
-        g.drawImage(blocks, r[0], r[1], r[2], h - r[1], r[0], r[1], r[2], h - r[1]);
+        fg.drawImage(blocks, r[0], r[1], r[2], h - r[1], r[0], r[1], r[2], h - r[1]);
       });
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
     near.position.set(RX0 - 3.6, 3.0, -1.5);
     near.rotation.y = Math.PI / 2;
+    near.renderOrder = 1;
     scene.add(near);
+
+    var front = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: new T.CanvasTexture(frontC), transparent: true, alphaTest: 0.5 }));
+    front.position.set(RX0 - 3.5, 3.0, -1.5);
+    front.rotation.y = Math.PI / 2;
+    front.renderOrder = 3;
+    scene.add(front);
+
+    /* Traffic on the expressway: cars and Dhaka buses drive past now and then.
+       They sit between the road layer and the front blocks, so they weave behind buildings. */
+    function vehicleTex(kind) {
+      var long = kind === 'bus';
+      return canvasTex(long ? 192 : 112, 48, function (g, w, h) {
+        var body = { car: '#2b2230', cng: '#2f7d4a', bus: ['#b8332b', '#2f6f8f', '#c8862a'][Math.floor(rnd() * 3)] }[kind];
+        g.fillStyle = body;
+        if (long) {                                         // bus: tall box with a row of lit windows
+          g.fillRect(4, 6, w - 8, 32); g.fillRect(6, 38, w - 12, 4);
+          g.fillStyle = 'rgba(255,226,160,0.9)';
+          for (var i = 0; i < 7; i++) g.fillRect(16 + i * 23, 11, 16, 10);
+        } else if (kind === 'cng') {                        // CNG auto-rickshaw: rounded green cabin
+          g.beginPath(); g.moveTo(10, 40); g.lineTo(10, 18); g.quadraticCurveTo(14, 6, 50, 6); g.quadraticCurveTo(w - 12, 8, w - 12, 30); g.lineTo(w - 10, 40); g.fill();
+          g.fillStyle = 'rgba(255,230,180,0.55)'; g.fillRect(34, 14, 34, 12);
+        } else {                                            // car: low body with a cabin
+          g.beginPath(); g.moveTo(6, 40); g.lineTo(6, 28); g.lineTo(28, 24); g.lineTo(40, 12); g.lineTo(76, 12); g.lineTo(90, 24); g.lineTo(w - 6, 28); g.lineTo(w - 6, 40); g.fill();
+          g.fillStyle = 'rgba(255,220,170,0.45)'; g.fillRect(44, 16, 30, 9);
+        }
+        g.fillStyle = '#141014';                            // wheels
+        [long ? 26 : 22, w - (long ? 30 : 24)].forEach(function (x) { g.beginPath(); g.arc(x, 41, 6, 0, Math.PI * 2); g.fill(); });
+        // headlight at the front (right), tail light at the back (left), each with a little glow
+        [[w - 6, 'rgba(255,248,215,', 30], [6, 'rgba(255,70,55,', 18]].forEach(function (l) {
+          var gl = g.createRadialGradient(l[0], 32, 1, l[0], 32, l[2] * 0.5);
+          gl.addColorStop(0, l[1] + '1)'); gl.addColorStop(1, l[1] + '0)');
+          g.fillStyle = gl; g.fillRect(l[0] - l[2], 32 - l[2], l[2] * 2, l[2] * 2);
+        });
+      });
+    }
+    var traffic = [];
+    ['car', 'bus', 'car', 'cng', 'car', 'bus', 'car'].forEach(function (kind, i) {
+      var long = kind === 'bus', lenU = long ? 0.6 : 0.36;
+      var m = new T.Mesh(new T.PlaneGeometry(lenU, 0.15), new T.MeshBasicMaterial({ map: vehicleTex(kind), transparent: true, alphaTest: 0.1 }));
+      m.rotation.y = Math.PI / 2;
+      m.renderOrder = 2;
+      m.visible = false;
+      scene.add(m);
+      var dir = i % 2 ? 1 : -1;                             // two directions, two lanes
+      if (dir < 0) m.scale.x = -1;                          // face the other way
+      traffic.push({ mesh: m, dir: dir, len: lenU / 26, speed: between(0.06, 0.1) * (long ? 0.75 : 1),
+        u: 0, wait: between(0.5, 9) + i * 1.3 });
+    });
+    function moveTraffic(dt) {
+      traffic.forEach(function (v) {
+        if (v.wait > 0) { v.wait -= dt; v.mesh.visible = false; if (v.wait <= 0) v.u = v.dir > 0 ? -v.len : 1 + v.len; return; }
+        v.u += v.dir * v.speed * dt;
+        if (v.u < -v.len - 0.02 || v.u > 1 + v.len + 0.02) { v.wait = between(3, 12); v.mesh.visible = false; return; }
+        var lane = v.dir > 0 ? 0.004 : -0.002;              // the far lane sits a touch higher
+        v.mesh.position.set(RX0 - 3.55, 9.5 - (deckV(v.u) + lane) * 13 + 0.02, 11.5 - v.u * 26);
+        v.mesh.visible = true;
+      });
+    }
 
     // Layer 3: overhead electric wires, sagging across the view, with a few crows
     var wireTex = canvasTex(SKY_W, 512, function (g, w, h) {
@@ -1047,6 +1111,7 @@
       }
       lamp.intensity = 1.3 + Math.sin(t * 2.1) * 0.03;   // the faintest lamp flicker
       blades.rotation.y += dt * 2.4;                       // ceiling fan
+      moveTraffic(dt);                                     // cars on the expressway
 
       // You: breathing, short typing bursts, and the head turning toward its target
       chest.scale.y = 1 + Math.sin(t * 1.5) * 0.015;
