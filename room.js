@@ -67,6 +67,7 @@
       '</section>' +
 
       '<div class="room-desk" hidden></div>' +
+      '<div class="room-phone" hidden></div>' +
       '<div class="room-app" role="dialog" aria-modal="true" aria-labelledby="room-app-title" hidden>' +
         '<div class="room-app__bar">' +
           '<button class="room-app__home" type="button"><span aria-hidden="true">&larr;</span> Desktop</button>' +
@@ -719,6 +720,12 @@
 
     var phone = box(0.34, 0.04, 0.66, mat(0x111214, { roughness: 0.3 }), 1.55, 1.65, 0.35, desk);
     phone.rotation.y = -0.35;
+    var phoneGlass = new T.Mesh(new T.PlaneGeometry(0.3, 0.6), new T.MeshBasicMaterial({ color: 0x0c0e11 }));
+    phoneGlass.rotation.x = -Math.PI / 2;
+    phoneGlass.position.y = 0.021;
+    phone.add(phoneGlass);
+    var PHONE_REST = { x: 1.55, y: 1.65, z: 0.35, rx: 0, ry: -0.35 };
+    var PHONE_UP = { x: 1.55, y: 2.55, z: 0.75, rx: Math.PI / 2, ry: 0 };   // lifted, facing you (desk sits at z -2.2)
 
     /* ---------- Back wall: ID card board, shelf and a rickshaw-art poster ---------- */
     var boardTex = canvasTex(920, 480, function (g, w, h) {
@@ -1146,7 +1153,7 @@
       projects: { pos: [-0.3, 3.05, 0.2], look: [-0.3, 3.03, -2.65] },
       work:     { pos: [4.6, 3.95, -0.3], look: [4.6, 3.95, -5.8] },   // off-centre so the panel sits beside the board
       about:    { pos: [-4.4, 4.4, -2.6], look: [-4.4, 4.1, -5.55] },
-      contact:  { pos: [1.4, 3.1, -1.5],  look: [1.55, 1.65, -1.85] }
+      contact:  { pos: [1.55, 2.57, -0.3], look: [1.55, 2.55, -1.45] }
     };
 
     // Objects you can click, and where their floating markers sit
@@ -1200,8 +1207,7 @@
 
     /* ---------- Section panels (filled in by later stages) ---------- */
     var SECTION_TEXT = {
-      about: { title: 'About', body: 'Your story will live here. Coming in a later stage.' },
-      contact: { title: 'Contact', body: 'Your phone will show how to reach you. Coming in a later stage.' }
+      about: { title: 'About', body: 'Your story will live here. Coming in a later stage.' }
     };
 
     // Work panel: the readable (and keyboard) side of the ID cards
@@ -1247,7 +1253,8 @@
       hotspotsEl.classList.toggle('is-hidden', inSection);
       showDesk(name === 'projects');
       if (name !== 'work') resetCards();
-      if (name === 'projects') {
+      showPhone(name === 'contact');
+      if (name === 'projects' || name === 'contact') {
         panel.hidden = true;
       } else if (name === 'work') {
         renderWorkPanel();
@@ -1424,6 +1431,114 @@
       deskUi.style.fontSize = ((x1 - x0) / 46) + 'px';
     }
 
+    /* ---------- Contact: the phone lifts off the desk and shows how to reach you ---------- */
+    var EMAIL = 'abrark.3957@gmail.com';
+    var RESUME = 'Abrar-Sami-Khan-Resume.pdf';
+    var phoneUi = layer.querySelector('.room-phone');
+    var contactLine = document.querySelector('.contact__text');
+    var LINK_ICONS = {
+      mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 7 8.5-7"/>',
+      in: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 10v7M8 7v.01M12 17v-4a2 2 0 0 1 4 0v4M12 10v7"/>',
+      gh: '<path d="M9 19c-4 1.5-4-2-6-2.5M15 21v-3.5a3 3 0 0 0-.9-2.4c3-.3 6-1.5 6-6.6a5 5 0 0 0-1.4-3.5 4.6 4.6 0 0 0-.1-3.5s-1.1-.3-3.6 1.4a12.5 12.5 0 0 0-6.5 0C6 1.2 4.9 1.5 4.9 1.5a4.6 4.6 0 0 0-.1 3.5A5 5 0 0 0 3.4 8.5c0 5 3 6.3 6 6.6a3 3 0 0 0-.9 2.4V21"/>',
+      cv: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'
+    };
+    function phoneRow(href, icon, label, sub, attrs) {
+      return '<a class="room-phone__row" href="' + href + '"' + (attrs || '') + '>' +
+        '<span class="room-phone__icon"><svg viewBox="0 0 24 24" aria-hidden="true">' + LINK_ICONS[icon] + '</svg></span>' +
+        '<span class="room-phone__label">' + label + '<small>' + sub + '</small></span></a>';
+    }
+    phoneUi.innerHTML =
+      '<div class="room-phone__status"><span>Dhaka</span><span class="room-phone__battery" aria-hidden="true"></span></div>' +
+      '<p class="room-phone__time" aria-hidden="true"></p>' +
+      '<p class="room-phone__date"></p>' +
+      '<div class="room-phone__card">' +
+        '<h2 class="room-phone__name">Abrar Sami Khan</h2>' +
+        '<p class="room-phone__text">' + (contactLine ? esc(contactLine.textContent.trim()) : 'Email is the fastest way to reach me.') + '</p>' +
+      '</div>' +
+      '<div class="room-phone__list">' +
+        '<div class="room-phone__mail">' +
+          phoneRow('mailto:' + EMAIL, 'mail', 'Email', EMAIL) +
+          '<button type="button" class="room-phone__copy">Copy</button>' +
+        '</div>' +
+        phoneRow('https://www.linkedin.com/in/abrar-sami-khan/', 'in', 'LinkedIn', 'abrar-sami-khan', ' target="_blank" rel="noopener"') +
+        phoneRow('https://github.com/Abrarkhan88', 'gh', 'GitHub', 'Abrarkhan88', ' target="_blank" rel="noopener"') +
+        '<div class="room-phone__resume" hidden>' + phoneRow(RESUME, 'cv', 'Resume', 'PDF download', ' download') + '</div>' +
+      '</div>' +
+      '<p class="room-phone__toast" role="status" aria-live="polite"></p>';
+
+    // The resume row appears only if the PDF is really there
+    if (window.fetch && location.protocol !== 'file:') {
+      fetch(RESUME, { method: 'HEAD' })
+        .then(function (res) { if (res.ok) phoneUi.querySelector('.room-phone__resume').hidden = false; })
+        .catch(function () {});
+    }
+
+    var toast = phoneUi.querySelector('.room-phone__toast');
+    var toastTimer = null;
+    phoneUi.querySelector('.room-phone__copy').addEventListener('click', function () {
+      function done(msg) {
+        toast.textContent = msg;
+        toast.classList.add('is-on');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 1800);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(EMAIL).then(function () { done('Email copied'); }, function () { done(EMAIL); });
+      } else done(EMAIL);
+    });
+
+    var phoneTime = phoneUi.querySelector('.room-phone__time'), phoneDate = phoneUi.querySelector('.room-phone__date');
+    function tickPhone() {
+      var now = new Date();
+      try {
+        phoneTime.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' });
+        phoneDate.textContent = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Dhaka' });
+      } catch (err) { phoneTime.textContent = ''; }
+    }
+    tickPhone();
+    var phoneTimer = setInterval(tickPhone, 30000);
+
+    function posePhone(p, animate) {
+      var props = [[phone.position, { x: p.x, y: p.y, z: p.z }], [phone.rotation, { x: p.rx, y: p.ry }]];
+      props.forEach(function (pr) {
+        if (animate && window.gsap) gsap.to(pr[0], Object.assign({ duration: 1.2, ease: 'power3.inOut', overwrite: true }, pr[1]));
+        else Object.assign(pr[0], pr[1]);
+      });
+    }
+    var phoneUp = false;
+    function showPhone(on) {
+      if (on === phoneUp) return;
+      phoneUp = on;
+      posePhone(on ? PHONE_UP : PHONE_REST, true);
+      var glass = phoneGlass.material.color;
+      if (glass && glass.set) glass.set(on ? 0x1d2a33 : 0x0c0e11);   // the screen wakes up
+      if (on) {
+        tickPhone();
+        phoneUi.hidden = false;
+        if (window.gsap) gsap.fromTo(phoneUi, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4, delay: 1.15, ease: 'power2.out' });
+      } else {
+        if (window.gsap && gsap.killTweensOf) gsap.killTweensOf(phoneUi);
+        phoneUi.hidden = true;
+      }
+    }
+    // The HTML screen sits on the lifted phone's glass
+    var PHONE_CORNERS = [[1.4, 2.85, -1.428], [1.7, 2.85, -1.428], [1.4, 2.25, -1.428], [1.7, 2.25, -1.428]];
+    function placePhone(w, h) {
+      if (phoneUi.hidden) return;
+      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      PHONE_CORNERS.forEach(function (c) {
+        tmp.set(c[0], c[1], c[2]).project(camera);
+        var px = (tmp.x * 0.5 + 0.5) * w, py = (-tmp.y * 0.5 + 0.5) * h;
+        x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+      });
+      if (!isFinite(x0)) return;
+      phoneUi.style.left = x0 + 'px';
+      phoneUi.style.top = y0 + 'px';
+      phoneUi.style.width = (x1 - x0) + 'px';
+      phoneUi.style.height = (y1 - y0) + 'px';
+      phoneUi.style.fontSize = ((x1 - x0) / 19) + 'px';
+    }
+
     /* ---------- Floating markers over clickable objects ---------- */
     var markers = HOTSPOTS.map(function (h) {
       var b = document.createElement('button');
@@ -1549,6 +1664,7 @@
       renderer.render(scene, camera);
       placeMarkers(W, H);
       placeDesk(W, H);
+      placePhone(W, H);
       raf = requestAnimationFrame(frame);
     }
 
@@ -1566,6 +1682,7 @@
         cancelAnimationFrame(raf);
         closeApp(false);                      // put any open demo back on the flat page
         clearInterval(clockTimer);
+        clearInterval(phoneTimer);
         document.removeEventListener('keydown', onKey);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
