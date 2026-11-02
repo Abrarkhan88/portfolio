@@ -1783,20 +1783,21 @@
 
     /* ---------- Acoustic guitar leaning on the back wall, between the desk and the cabinet ---------- */
     var guitar = new T.Group();
-    guitar.position.set(4.85, 0.0, -5.25);
+    guitar.position.set(4.85, 0.0, -5.12);
     guitar.rotation.set(-0.2, -0.22, 0.03, 'YXZ');                 // leaning back against the wall
-    guitar.scale.set(1.05, 1.05, 1.05);
+    guitar.scale.set(1.4, 1.4, 1.4);                                // full size: the headstock reaches just under the board
     scene.add(guitar);
-    // Sunburst top: honey in the middle, darkening to deep brown at the edge
+    // Natural wood top: light honey spruce, only a touch warmer towards the edge
     var burstTex = canvasTex(256, 256, function (g, w, h) {
       var rg = g.createRadialGradient(w / 2, h * 0.6, 8, w / 2, h * 0.6, w * 0.62);   // canvas is flipped onto the top, so 0.6 down = 0.4 up the body
-      rg.addColorStop(0, '#d8a35c'); rg.addColorStop(0.45, '#b9762f'); rg.addColorStop(0.8, '#6a3518'); rg.addColorStop(1, '#3a1c0e');
+      rg.addColorStop(0, '#ecc995'); rg.addColorStop(0.6, '#e2b47a'); rg.addColorStop(0.9, '#cf9a5e'); rg.addColorStop(1, '#a8703c');
       g.fillStyle = rg; g.fillRect(0, 0, w, h);
-      g.strokeStyle = 'rgba(80,40,15,0.12)'; g.lineWidth = 1;          // fine spruce grain
+      g.strokeStyle = 'rgba(120,70,30,0.1)'; g.lineWidth = 1;          // fine spruce grain
       for (var gx = 0; gx < w; gx += 5) { g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + 2, h); g.stroke(); }
     });
-    var gSideM = mat(0x4a2614, { roughness: 0.4 }), gDarkM = mat(0x1e130d, { roughness: 0.5 });
+    var gSideM = mat(0xb07a45, { roughness: 0.4 }), gDarkM = mat(0x2a1a12, { roughness: 0.5 });
     var gTopM = new T.MeshStandardMaterial({ map: burstTex, roughness: 0.42 });
+    var bindM = mat(0x2a1a12, { roughness: 0.5 });
     var BW = 0.42, BH = 1.0, BD = 0.13;                              // half width, body length, depth
     if (T.Shape && T.ExtrudeGeometry) {
       // the body outline: wide lower bout, narrow waist, rounded shoulders
@@ -1813,7 +1814,11 @@
       gs.bezierCurveTo(-BW, 0.12, -0.3, 0, 0, 0);
       var bodyGeo = new T.ExtrudeGeometry(gs, { depth: BD, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 28 });
       if (burstTex.repeat) { burstTex.repeat.set(1 / (BW * 2), 1 / BH); burstTex.offset.set(0.5, 0); }   // map the top's shape coords onto the texture
-      var gBody = new T.Mesh(bodyGeo, [gTopM, gSideM]);              // caps get the sunburst, the sides stay dark
+      var gBody = new T.Mesh(bodyGeo, [gTopM, gSideM]);              // caps get the wood top, the sides a darker brown
+      var bindGeo = new T.ShapeGeometry(gs, 28);                     // dark binding: a hairline around the top's edge
+      var binding = new T.Mesh(bindGeo, bindM);
+      binding.scale.set(1.05, 1.035, 1); binding.position.set(0, -0.017, BD / 2 + 0.006);
+      guitar.add(binding);
       gBody.position.z = -BD / 2;
       gBody.castShadow = true; gBody.receiveShadow = true;
       guitar.add(gBody);
@@ -1830,7 +1835,7 @@
     box(0.15, 0.006, 0.006, mat(0xece6da), 0, 0.255, FZ + 0.016, guitar);   // saddle
     // neck, fretboard, frets
     var NECK0 = BH - 0.02, NECKL = 0.86;
-    box(0.085, NECKL, 0.06, mat(0x5a3820, { roughness: 0.5 }), 0, NECK0 + NECKL / 2, 0.03, guitar);
+    box(0.085, NECKL, 0.06, mat(0xa8763f, { roughness: 0.5 }), 0, NECK0 + NECKL / 2, 0.03, guitar);
     box(0.08, NECKL + 0.12, 0.014, gDarkM, 0, NECK0 + NECKL / 2 - 0.06, 0.067, guitar);
     for (var fr = 1; fr <= 14; fr++) {
       var fy = NECK0 + NECKL - NECKL * (1 - Math.pow(2, -fr / 12)) * 1.6;   // frets bunch up towards the body
