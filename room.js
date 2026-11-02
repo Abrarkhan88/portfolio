@@ -983,16 +983,16 @@
     var workItems = Array.prototype.slice.call(document.querySelectorAll('#work .story__title')).map(function (el) { return el.textContent.trim(); });
     var CARDS = [
       { id: 'therap', org: 'Therap BD', short: 'Therap BD', role: 'Associate, Customer Experience Strategy & Analytics',
-        period: 'Since September 2026', kind: 'Full-time role', color: '#2f7d77', x: 1.95, w: 0.92, h: 1.24, app: 'work',
+        period: 'Since September 2026', kind: 'Full-time role', color: '#d9741c', x: 1.95, w: 0.92, h: 1.24, app: 'work',
         initials: 'TB', logo: 'logos/therap.png',
         note: 'I turn manual monthly reporting into scripted tools, support the team’s Salesforce setup, and look for places where AI can save time.' },
-      { id: 'robotics', org: 'BRAC University Robotics Club', short: 'Robotics Club', role: 'Director, Editorial & Publications',
-        period: '2022 to 2025', kind: 'Leadership', color: '#c4553f', x: 3.05, w: 0.8, h: 1.08,
+      { id: 'robotics', org: 'Robotics Club of BRAC University', short: 'Robotics Club of BRAC University', role: 'Director, Editorial & Publications',
+        period: '2022 to 2025', kind: 'Leadership', color: '#2c4ea3', x: 3.05, w: 0.8, h: 1.08,
         initials: 'RC', logo: 'logos/robotics-club.png' },
-      { id: 'business', org: 'BRAC University Business Club', short: 'Business Club', role: 'Assistant Director, Research & Publications',
+      { id: 'business', org: 'BRAC University Business Club - BIZBEE', short: 'BRAC University Business Club - BIZBEE', role: 'Assistant Director, Research & Publications',
         period: '2022 to 2025', kind: 'Leadership', color: '#5b4a7a', x: 4.0, w: 0.8, h: 1.08,
         initials: 'BC', logo: 'logos/business-club.png' },
-      { id: 'edy', org: 'EDY (Enduring Developments by the Youths)', short: 'EDY', role: 'Lead, Media and Content Creation',
+      { id: 'edy', org: 'Enduring Developments by the Youths - EDY', short: 'Enduring Developments by the Youths - EDY', role: 'Lead, Media and Content Creation',
         period: '2020 to 2021', kind: 'Leadership', color: '#3e6e8c', x: 4.95, w: 0.8, h: 1.08,
         initials: 'EDY', logo: 'logos/edy.png' },
       { id: 'dofe', org: 'The Duke of Edinburgh’s International Award', short: 'DofE Bronze', role: 'Bronze Award',
@@ -1027,6 +1027,25 @@
       g.restore();
     }
     var CARD_FONT = '"Instrument Sans", "Helvetica Neue", Arial, sans-serif';
+    // The organisation name in the coloured band: largest size that fits on up to two lines
+    function fitHeader(g, text, w, band) {
+      var maxW = w - 56, top = band * 0.34, room = band - top - 8;
+      for (var size = 38; size >= 18; size -= 2) {
+        g.font = '700 ' + size + 'px ' + CARD_FONT;
+        var lines = [], line = '';
+        text.split(' ').forEach(function (wd) {
+          var t = line ? line + ' ' + wd : wd;
+          if (g.measureText(t).width > maxW && line) { lines.push(line); line = wd; } else line = t;
+        });
+        if (line) lines.push(line);
+        var lh = size * 1.12, fits = lines.length <= 2 && lines.every(function (l) { return g.measureText(l).width <= maxW; });
+        if (fits && lines.length * lh <= room || size === 18) {
+          var y = top + (room - lines.length * lh) / 2 + size * 0.85;
+          lines.forEach(function (l, i) { g.fillText(l, w / 2, y + i * lh); });
+          return;
+        }
+      }
+    }
 
     /* Card fronts show the organisation's logo. Drop the files into a logos/ folder
        (names below); until a file is there, the card shows the organisation's initials. */
@@ -1067,8 +1086,8 @@
         g.fillStyle = '#f3eee4'; g.fillRect(0, 0, w, h);
         g.fillStyle = c.color; g.fillRect(0, 0, w, h * 0.2);
         g.fillStyle = '#f3eee4'; g.beginPath(); g.ellipse(w / 2, h * 0.045, 46, 11, 0, 0, Math.PI * 2); g.fill();   // lanyard slot
-        g.fillStyle = '#fff'; g.font = '700 38px ' + CARD_FONT; g.textAlign = 'center';
-        wrapText(g, c.short, w / 2, h * 0.14, w - 60, 40);
+        g.fillStyle = '#fff'; g.textAlign = 'center';
+        fitHeader(g, c.short, w, h * 0.2);
         // Initials in the card colour, replaced by the logo once it loads
         var box = w * LOGO_BOX.size, cy = h * LOGO_BOX.cy;
         g.fillStyle = '#ffffff';
@@ -1137,6 +1156,11 @@
         var disc = cyl(0.17, 0.17, 0.04, mat(0xb07a45, { metalness: 0.7, roughness: 0.35 }), 0, -0.56, 0.03, pivot, 32);
         disc.rotation.x = Math.PI / 2;
         cyl(0.11, 0.11, 0.045, mat(0x8f5f34, { metalness: 0.7, roughness: 0.45 }), 0, -0.56, 0.035, pivot, 32).rotation.x = Math.PI / 2;
+        // A bright gold rim and a soft halo so the medal reads against the dark board
+        var rim = new T.Mesh(new T.RingGeometry(0.165, 0.2, 48), new T.MeshBasicMaterial({ color: 0xffd98a, side: T.DoubleSide }));
+        rim.position.set(0, -0.56, 0.058); pivot.add(rim);
+        var halo = new T.Mesh(new T.RingGeometry(0.2, 0.27, 48), new T.MeshBasicMaterial({ color: 0xffb36b, transparent: true, opacity: 0.3, depthWrite: false, side: T.DoubleSide }));
+        halo.position.set(0, -0.56, 0.05); pivot.add(halo);
         disc.userData.card = i;
         cardMeshes.push(disc);
         entry.hold = disc;
