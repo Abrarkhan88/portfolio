@@ -2406,14 +2406,14 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 .room-music {
   position: absolute;
   right: var(--margin);
-  top: 96px;
+  top: 84px;
   z-index: 6;
   display: grid;
   grid-template-columns: 200px 1fr;
   grid-template-rows: auto 200px minmax(0, 1fr);
   gap: 12px;
   width: min(440px, calc(100% - 2 * var(--margin)));
-  max-height: calc(100% - 96px - var(--space-5) - 4rem);
+  max-height: calc(100% - 84px - var(--space-5) - 3.8rem);
   padding: 14px;
   border: 1px solid var(--room-edge);
   border-radius: 18px;
@@ -2426,7 +2426,7 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 }
 .room-music[hidden] { display: none; }
 .room-music button { font: inherit; color: inherit; cursor: pointer; }
-.room-music__head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
+.room-music__head { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-bottom: -2px; }
 .room-music__now { flex: 1; min-width: 0; }
 .room-music__kicker { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--room-neon); }
 .room-music__track { overflow: hidden; font-size: 0.92rem; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
@@ -2480,8 +2480,8 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 .room-music__status:empty { display: none; }
 .room-music__status { font-size: 0.8rem; color: var(--paper-muted); }
 .room-music__results {
-  display: grid; align-content: start; gap: 4px;
-  flex: 1 1 auto; min-height: 150px; max-height: 340px;
+  display: grid; align-content: start; gap: 2px;
+  flex: 1 1 auto; min-height: 140px; max-height: 360px;
   margin: 0; padding: 0 4px 0 0;
   overflow-y: auto; list-style: none; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: rgba(255, 106, 213, 0.5) transparent;
@@ -2491,18 +2491,21 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 .room-music__results::-webkit-scrollbar-track { background: transparent; }
 .room-music__results:empty { display: none; }
 .room-music__hit {
-  display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 10px;
-  width: 100%; padding: 5px 6px;
+  display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 10px;
+  width: 100%; padding: 4px 6px;
   border: 0; border-radius: 10px;
   background: transparent; text-align: left;
 }
 .room-music__hit:hover { background: rgba(255, 255, 255, 0.07); }
-.room-music__hit img { width: 64px; height: 36px; border-radius: 6px; object-fit: cover; }
+.room-music__hit img { width: 56px; height: 32px; border-radius: 5px; object-fit: cover; }
 .room-music__hit span { display: grid; min-width: 0; }
 .room-music__hit strong, .room-music__hit small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.room-music__hit strong { font-size: 0.85rem; font-weight: 600; }
-.room-music__hit small { font-size: 0.75rem; color: var(--paper-muted); }
-.room-music__note { font-size: 0.7rem; color: var(--paper-muted); }
+.room-music__hit strong { font-size: 0.82rem; font-weight: 600; line-height: 1.25; }
+.room-music__hit small { font-size: 0.72rem; line-height: 1.25; color: var(--paper-muted); }
+.room-music__note { display: none; }
+/* the "plays through YouTube" note sits under the buttons, so the results get the space */
+.room-music__side::after { content: "Plays through YouTube"; font-size: 0.7rem; color: var(--paper-muted); }
+.room-music.is-mini .room-music__side::after { content: none; }
 
 /* Mini player: docked in the corner so music keeps going while you look around */
 .room-music.is-mini {
