@@ -1781,6 +1781,43 @@
     speakerGlow.position.set(9.6, 1.9, -4.5);
     scene.add(speakerGlow);
 
+    /* ---------- Acoustic guitar leaning on the back wall, between the desk and the cabinet ---------- */
+    var guitar = new T.Group();
+    guitar.position.set(4.85, 0.02, -5.22);
+    guitar.rotation.set(-0.21, -0.25, 0.04, 'YXZ');                // leaning back against the wall
+    scene.add(guitar);
+    var gTopM = mat(0xd9a15c, { roughness: 0.45 }), gSideM = mat(0x9a5a2a, { roughness: 0.4 }), gDarkM = mat(0x2a1a12, { roughness: 0.5 });
+    function bout(r, y) {                                            // one round half of the body: sides, then the top
+      cyl(r, r, 0.15, gSideM, 0, y, 0, guitar, 36).rotation.x = Math.PI / 2;
+      cyl(r - 0.012, r - 0.012, 0.02, gTopM, 0, y, 0.07, guitar, 36).rotation.x = Math.PI / 2;
+    }
+    bout(0.43, 0.46);                                                // lower bout
+    bout(0.33, 1.02);                                                // upper bout
+    box(0.5, 0.26, 0.15, gSideM, 0, 0.76, 0, guitar);               // waist
+    box(0.48, 0.26, 0.02, gTopM, 0, 0.76, 0.07, guitar);
+    cyl(0.105, 0.105, 0.025, mat(0x120c0a), 0, 0.82, 0.075, guitar, 28).rotation.x = Math.PI / 2;   // sound hole
+    var rosette = new T.Mesh(new T.RingGeometry(0.11, 0.135, 32), new T.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.6 }));
+    rosette.position.set(0, 0.82, 0.087); guitar.add(rosette);
+    box(0.3, 0.06, 0.03, gDarkM, 0, 0.36, 0.085, guitar);           // bridge
+    var guard = new T.Mesh(new T.CylinderGeometry(0.09, 0.09, 0.006, 20, 1, false, 0, Math.PI), mat(0x3a2418, { roughness: 0.4 }));
+    guard.rotation.x = Math.PI / 2; guard.position.set(0.1, 0.66, 0.084); guitar.add(guard);        // pickguard
+    box(0.11, 1.15, 0.07, mat(0x6b4426, { roughness: 0.5 }), 0, 1.92, 0.02, guitar);   // neck
+    box(0.1, 1.15, 0.016, gDarkM, 0, 1.92, 0.062, guitar);                             // fretboard
+    for (var fr = 0; fr < 12; fr++) box(0.1, 0.006, 0.006, mat(0xc9c2b4, { metalness: 0.7, roughness: 0.3 }), 0, 2.46 - fr * 0.085 + fr * fr * 0.002, 0.071, guitar);   // frets
+    var gHead = box(0.15, 0.32, 0.04, gDarkM, 0, 2.66, 0.0, guitar); gHead.rotation.x = 0.18;   // headstock, tilted back
+    [-1, 1].forEach(function (sd) {
+      for (var pg = 0; pg < 3; pg++) {
+        var peg = cyl(0.016, 0.016, 0.07, mat(0xc9c2b4, { metalness: 0.8, roughness: 0.25 }), sd * 0.1, 2.57 + pg * 0.09, -0.01, guitar, 8);
+        peg.rotation.z = Math.PI / 2;
+      }
+    });
+    box(0.1, 0.012, 0.02, mat(0xece6da), 0, 2.495, 0.07, guitar);   // nut
+    var stringM = mat(0xdcd6cc, { metalness: 0.6, roughness: 0.3 });
+    for (var st = 0; st < 6; st++) {                                 // strings, nut to bridge
+      var sx = -0.035 + st * 0.014;
+      box(0.0035, 2.13, 0.0035, stringM, sx * 1.15, 1.43, 0.083, guitar);
+    }
+
     /* ---------- Two neon art prints on the back wall ---------- */
     function poster(x, y, w, h, edge, draw) {
       var tex = canvasTex(320, Math.round(320 * h / w), draw);
