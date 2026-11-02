@@ -52,7 +52,8 @@
       '<div class="room__stage"></div>' +
       '<div class="room__hotspots" aria-hidden="true"></div>' +
 
-      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, Automation &amp; ML</span><span>Dhaka</span></p>' +
+      '<p class="room__id"><strong>Abrar Sami Khan</strong><span class="room__role">Analytics, Automation &amp; ML</span>' +
+      '<span class="room__place"><svg viewBox="0 0 12 16" aria-hidden="true"><path d="M6 0a6 6 0 0 0-6 6c0 4.5 6 10 6 10s6-5.5 6-10a6 6 0 0 0-6-6zm0 8.2A2.2 2.2 0 1 1 6 3.8a2.2 2.2 0 0 1 0 4.4z"/></svg>Dhaka</span></p>' +
       '<div class="room__top">' +
         '<div class="room__actions">' +
           '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
