@@ -1436,36 +1436,70 @@
 
     var skull = part(new T.SphereGeometry(0.3, 28, 20), skinM, 0, 0, 0, head);
     skull.scale.set(0.9, 1.06, 0.98);
-    // Jaw with stubble: the lower front of the face, a little darker
-    var jaw = part(new T.SphereGeometry(0.296, 24, 14, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.55, Math.PI * 0.35), mat(STUBBLE, { roughness: 1 }), 0, 0, 0, head);
-    jaw.scale.set(0.92, 1.07, 1.0);
-    jaw.rotation.y = Math.PI;            // face the front (-z)
+    // Jaw and chin: a slightly fuller lower face, so the head isn't a plain ball
+    var jawShape = part(new T.SphereGeometry(0.22, 20, 14), skinM, 0, -0.13, -0.06, head);
+    jawShape.scale.set(1.05, 0.8, 1.0);
+    // Light stubble just along the jaw and chin (a thin shell over the jaw, close to the skin tone)
+    var stubbleM = mat(0x5e3d2c, { roughness: 1 });
+    var stub = part(new T.SphereGeometry(0.226, 22, 12, Math.PI * 0.2, Math.PI * 0.6, Math.PI * 0.55, Math.PI * 0.4), stubbleM, 0, -0.13, -0.06, head);
+    stub.scale.set(1.05, 0.8, 1.0);
+    stub.rotation.y = Math.PI;
     // Ears
     [-1, 1].forEach(function (side) {
-      part(new T.SphereGeometry(0.07, 10, 8), mat(SKIN_SHADE), side * 0.27, -0.02, 0.02, head).scale.set(0.5, 1, 0.8);
+      part(new T.SphereGeometry(0.07, 12, 10), mat(SKIN_SHADE), side * 0.27, -0.01, 0.02, head).scale.set(0.45, 1, 0.75);
     });
-    // Eyes, brows and nose (small, since you mostly see him from behind)
+    // Eyes: white, a dark iris, and a lid line; brows a little thicker
+    var eyeWhiteM = mat(0xf2ece4, { roughness: 0.4 }), irisM = mat(0x1c120e, { roughness: 0.3 });
     [-1, 1].forEach(function (side) {
-      part(new T.SphereGeometry(0.03, 10, 8), mat(0x1a1210), side * 0.1, 0.04, -0.27, head);
-      part(new T.BoxGeometry(0.11, 0.025, 0.03), hairM, side * 0.1, 0.12, -0.27, head).rotation.z = side * -0.1;
+      var ew = part(new T.SphereGeometry(0.042, 14, 10), eyeWhiteM, side * 0.098, 0.035, -0.268, head);
+      ew.scale.set(1.15, 0.8, 0.55);
+      part(new T.SphereGeometry(0.024, 12, 10), irisM, side * 0.098, 0.033, -0.29, head).scale.set(1, 1, 0.5);
+      var lid = part(new T.BoxGeometry(0.1, 0.014, 0.02), mat(SKIN_SHADE), side * 0.098, 0.066, -0.272, head);
+      lid.rotation.z = side * -0.08;
+      var brow = part(new T.BoxGeometry(0.12, 0.03, 0.035), hairM, side * 0.1, 0.12, -0.262, head);
+      brow.rotation.z = side * -0.14;
     });
-    part(new T.SphereGeometry(0.045, 10, 8), mat(SKIN_SHADE), 0, -0.04, -0.3, head);
+    // Nose: a bridge and a rounded tip
+    var bridge = part(new T.BoxGeometry(0.045, 0.11, 0.05), skinM, 0, -0.005, -0.285, head);
+    bridge.rotation.x = 0.25;
+    part(new T.SphereGeometry(0.045, 12, 10), mat(SKIN_SHADE), 0, -0.065, -0.296, head).scale.set(1.15, 0.85, 0.8);
+    // Mouth: a soft closed smile
+    var mouth = part(new T.CylinderGeometry(0.05, 0.05, 0.016, 16, 1, false, Math.PI * 1.1, Math.PI * 0.8), mat(0x4a2620, { roughness: 0.8 }), 0, -0.15, -0.284, head);
+    mouth.rotation.x = Math.PI / 2;
+    // Moustache shadow, very light
+    part(new T.BoxGeometry(0.11, 0.022, 0.02), stubbleM, 0, -0.112, -0.288, head);
 
-    // Hair: a cap plus wavy volume swept up and back
-    var cap = part(new T.SphereGeometry(0.315, 28, 16, 0, Math.PI * 2, 0, Math.PI * 0.42), hairM, 0, 0.03, 0.01, head);
-    cap.scale.set(0.95, 1.1, 1.04);
-    var hairBack = part(new T.SphereGeometry(0.3, 22, 14, 0, Math.PI, Math.PI * 0.3, Math.PI * 0.32), hairM, 0, 0.0, 0.04, head);
-    hairBack.scale.set(0.97, 1.05, 1.05);
+    // Hair: short faded sides, more length on top swept up at the front and back over the crown
+    var fadeM = mat(0x2a2224, { roughness: 0.9 });
+    // the fade: a thin shell over the sides and back, stopping above the ears and away from the forehead
+    var sides = part(new T.SphereGeometry(0.308, 30, 16, -Math.PI * 0.18, Math.PI * 1.36, Math.PI * 0.22, Math.PI * 0.36), fadeM, 0, 0.01, 0.01, head);
+    sides.scale.set(0.92, 1.07, 1.0);
+    // the top: a dome sitting higher than the skull, then swept strands
+    var top = part(new T.SphereGeometry(0.29, 30, 16, 0, Math.PI * 2, 0, Math.PI * 0.36), hairM, 0, 0.07, 0.02, head);
+    top.scale.set(0.95, 1.05, 1.05);
+    // swept strands running front to back, lifted at the front (a soft quiff)
     [
-      [0, 0.3, -0.14, 0.15], [-0.11, 0.29, -0.08, 0.13], [0.11, 0.28, -0.1, 0.13],
-      [0, 0.33, 0.0, 0.16], [-0.13, 0.27, 0.07, 0.13], [0.13, 0.27, 0.06, 0.13],
-      [0, 0.28, 0.14, 0.14], [-0.06, 0.34, -0.04, 0.12], [0.07, 0.34, 0.03, 0.12]
-    ].forEach(function (w) {
-      part(new T.SphereGeometry(w[3], 14, 10), hairM, w[0], w[1], w[2], head).scale.set(1, 0.72, 1.1);
+      [0, 0.315, -0.02, 0.1, 0.36, -0.35], [-0.09, 0.3, -0.01, 0.085, 0.32, -0.3], [0.09, 0.3, -0.01, 0.085, 0.32, -0.3],
+      [-0.17, 0.25, 0.01, 0.07, 0.28, -0.2], [0.17, 0.25, 0.01, 0.07, 0.28, -0.2],
+      [-0.05, 0.33, 0.06, 0.08, 0.3, -0.15], [0.05, 0.33, 0.06, 0.08, 0.3, -0.15]
+    ].forEach(function (st) {
+      var strand = part(new T.CapsuleGeometry(st[3], st[4], 6, 12), hairM, st[0], st[1], st[2], head);
+      strand.rotation.set(Math.PI / 2 + st[5], 0, -st[0] * 0.8);
+      strand.scale.set(1, 1, 0.75);
     });
-    // A wave falling at the front
-    var wave = part(new T.SphereGeometry(0.09, 12, 8), hairM, 0.06, 0.24, -0.25, head);
-    wave.scale.set(1.3, 0.6, 0.8);
+    // the quiff itself: volume rising over the forehead, swept slightly to one side
+    var quiff = part(new T.SphereGeometry(0.13, 18, 12), hairM, 0.03, 0.33, -0.17, head);
+    quiff.scale.set(1.55, 0.85, 1.0); quiff.rotation.set(-0.45, 0, -0.12);
+    var curl = part(new T.CapsuleGeometry(0.05, 0.16, 6, 10), hairM, 0.1, 0.36, -0.2, head);
+    curl.rotation.set(0.2, 0, 1.0);
+    // a few lighter strands so the top doesn't read as a solid helmet
+    var sheenM = mat(0x3a2f31, { roughness: 0.55 });
+    [[-0.06, 0.375, -0.06, 0.25], [0.04, 0.38, 0.0, -0.15], [0.12, 0.35, -0.08, 0.3]].forEach(function (hl) {
+      var sh = part(new T.CapsuleGeometry(0.014, 0.2, 4, 8), sheenM, hl[0], hl[1], hl[2], head);
+      sh.rotation.set(Math.PI / 2 - 0.3, hl[3], 0);
+    });
+    // short sideburns
+    [-1, 1].forEach(function (side) { part(new T.BoxGeometry(0.03, 0.1, 0.06), fadeM, side * 0.268, 0.06, -0.04, head); });
 
     /* Where he looks: the monitor by default, the object you open, and now and then you */
     var headTarget = new T.Vector3(-0.3, 3.03, -2.6);
