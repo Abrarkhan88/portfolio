@@ -52,7 +52,7 @@
       '<div class="room__stage"></div>' +
       '<div class="room__hotspots" aria-hidden="true"></div>' +
 
-      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, Automation &amp; ML</span><span>Dhaka</span></p>' +
+      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation &amp; ML</span><span>Dhaka</span></p>' +
       '<div class="room__top">' +
         '<div class="room__actions">' +
           '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
@@ -474,9 +474,9 @@
 
     // Dark herringbone parquet
     var floorTex = canvasTex(1024, 1024, function (g, w, h) {
-      g.fillStyle = '#2a2430'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#231c24'; g.fillRect(0, 0, w, h);
       // Chevron parquet: columns of slanted planks that meet in a V
-      var cw = 128, W = 32, tones = ['#3a3138', '#342c34', '#40363d', '#2f282f', '#372e36'];
+      var cw = 128, W = 32, tones = ['#4a3a44', '#54424c', '#40323d', '#5a4752', '#463741', '#4f3e48'];
       for (var c = 0; c < w / cw; c++) {
         var x0 = c * cw, slope = c % 2 ? cw : -cw;
         for (var y = -cw - W; y < h + cw; y += W) {
@@ -487,7 +487,12 @@
           g.closePath(); g.fill();
         }
       }
-      g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, 0, w, h);
+      // fine grain streaks along the planks
+      g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 1;
+      for (var gr = 0; gr < 900; gr++) {
+        var gx = Math.random() * w, gy = Math.random() * h, sl = (Math.floor(gx / cw) % 2 ? 1 : -1);
+        g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + 18, gy + sl * 18); g.stroke();
+      }
     });
     if (floorTex.wrapS !== undefined) { floorTex.wrapS = floorTex.wrapT = T.RepeatWrapping; if (floorTex.repeat) floorTex.repeat.set(3, 3); }
     var floor = new T.Mesh(new T.PlaneGeometry(RW, RD), new T.MeshStandardMaterial({ map: floorTex, roughness: 0.55 }));
@@ -573,14 +578,37 @@
     box(0.12, 3.76, 0.12, frameM, RX0, 3.6, 0);                         // centre bar
     // Roller-blind box across the top, a little wider than the window, with end caps
     var blindM = mat(0x4b4459, { roughness: 0.55, metalness: 0.1 });
-    var bx0 = RX0 + 0.33, by0 = 5.86;
-    box(0.34, 0.3, 6.6, blindM, bx0, by0, 0);                           // housing
-    box(0.03, 0.02, 6.6, mat(0x6e6585, { roughness: 0.4 }), bx0 + 0.17, by0 + 0.14, 0);   // light catching the top edge
-    box(0.3, 0.03, 6.56, mat(0x2a2633), bx0 - 0.01, by0 - 0.16, 0);     // slot the blind rolls out of
+    var bx0 = RX0 + 0.4, by0 = 5.92, BLEN = 8.9;
+    box(0.46, 0.3, BLEN, blindM, bx0, by0, 0);                          // housing (the curtains hang from inside it)
+    box(0.03, 0.02, BLEN, mat(0x6e6585, { roughness: 0.4 }), bx0 + 0.23, by0 + 0.14, 0);   // light catching the top edge
     [-1, 1].forEach(function (sd) {
-      box(0.38, 0.34, 0.05, mat(0x3a3447, { roughness: 0.5 }), bx0, by0, sd * 3.32);   // end caps
+      box(0.5, 0.34, 0.05, mat(0x3a3447, { roughness: 0.5 }), bx0, by0, sd * (BLEN / 2 + 0.02));   // end caps
     });
-    cyl(0.05, 0.05, 0.06, mat(0x3a3447), bx0, by0, 3.37, scene, 16).rotation.x = Math.PI / 2;   // bracket knob on the end
+    cyl(0.05, 0.05, 0.06, mat(0x3a3447), bx0, by0, BLEN / 2 + 0.07, scene, 16).rotation.x = Math.PI / 2;   // bracket knob on the end
+    // Curtains drawn back to either side: soft grey fabric with deep folds
+    var curtainTex = canvasTex(256, 64, function (g, w, h) {
+      var cg = g.createLinearGradient(0, 0, w, 0);
+      for (var f = 0; f <= 8; f++) cg.addColorStop(f / 8, f % 2 ? '#8d8698' : '#5c5566');
+      g.fillStyle = cg; g.fillRect(0, 0, w, h);
+    });
+    var curtainM = new T.MeshStandardMaterial({ map: curtainTex, roughness: 0.95, side: T.DoubleSide });
+    [[2.95, 4.35], [-4.35, -2.95]].forEach(function (cz) {
+      var cw2 = cz[1] - cz[0], chh = 5.0;
+      var geo = new T.PlaneGeometry(cw2, chh, 32, 1);
+      if (geo.attributes && geo.attributes.position) {                   // pleat the fabric
+        var pos = geo.attributes.position;
+        for (var v = 0; v < pos.count; v++) {
+          var u = (pos.getX(v) + cw2 / 2) / cw2;
+          pos.setZ(v, Math.sin(u * Math.PI * 8) * 0.09 + (pos.getY(v) < 0 ? Math.sin(u * Math.PI * 8) * 0.03 : 0));
+        }
+        geo.computeVertexNormals();
+      }
+      var cur = new T.Mesh(geo, curtainM);
+      cur.rotation.y = Math.PI / 2;
+      cur.position.set(RX0 + 0.42, by0 - chh / 2 + 0.05, (cz[0] + cz[1]) / 2);
+      cur.castShadow = true; cur.receiveShadow = true;
+      scene.add(cur);
+    });
     // Two casement sashes, each hinged on its outer jamb and swung OUT over the street
     function casement(hingeZ, dir, angle) {
       var s = new T.Group();
@@ -955,6 +983,23 @@
     cyl(0.14, 0.12, 0.3, mat(0xece6da), 1.1, 1.78, -0.35, desk);                       // tea cup
     box(0.04, 0.12, 0.04, mat(0xece6da), 1.27, 1.8, -0.35, desk);                     // cup handle
 
+    // Studio speakers on either side of the screen
+    [[-2.05, -0.6], [1.45, -0.72]].forEach(function (sp) {
+      var spk = new T.Group(); spk.position.set(sp[0], 1.63, sp[1]); spk.rotation.y = sp[0] < 0 ? 0.15 : -0.2; desk.add(spk);
+      box(0.5, 0.8, 0.5, mat(0x1e1c23, { roughness: 0.55 }), 0, 0.4, 0, spk);
+      cyl(0.17, 0.17, 0.03, mat(0x2c2a33, { roughness: 0.4, metalness: 0.3 }), 0, 0.33, 0.255, spk, 24).rotation.x = Math.PI / 2;   // woofer
+      cyl(0.06, 0.06, 0.03, mat(0x2c2a33, { roughness: 0.4, metalness: 0.3 }), 0, 0.64, 0.255, spk, 16).rotation.x = Math.PI / 2;  // tweeter
+    });
+    // A podcast mic on a boom arm, clamped to the back of the desk
+    var micArm = new T.Group(); micArm.position.set(1.05, 1.63, -0.95); desk.add(micArm);
+    var micM = mat(0x24222a, { roughness: 0.35, metalness: 0.5 });
+    box(0.12, 0.14, 0.12, micM, 0, 0.07, 0, micArm);
+    var mb1 = box(0.05, 0.95, 0.05, micM, 0, 0.55, 0.12, micArm); mb1.rotation.x = 0.28;
+    var mb2 = box(0.05, 0.85, 0.05, micM, 0, 1.08, 0.55, micArm); mb2.rotation.x = 1.25;
+    var mic = cyl(0.085, 0.085, 0.36, mat(0x8f8a98, { roughness: 0.35, metalness: 0.7 }), 0, 0.9, 0.92, micArm, 18);
+    cyl(0.1, 0.1, 0.04, micM, 0, 0.71, 0.92, micArm, 18);
+    cyl(0.12, 0.12, 0.012, mat(0x16141a, { roughness: 0.9 }), 0, 0.92, 1.12, micArm, 24).rotation.x = Math.PI / 2;   // pop filter
+
     // Arm lamp with a pink shade
     var lampArm = new T.Group();
     lampArm.position.set(2.1, 1.63, -0.55);
@@ -1276,15 +1321,36 @@
     cyl(0.16, 0.12, 0.35, mat(C.teal), 1.3, 3.64, 0, shelf);                        // small pot
     box(0.08, 0.4, 0.08, mat(0x4f8a45), 1.3, 3.95, 0, shelf);
 
-    /* ---------- Chair (the character sits here in stage 3) ---------- */
+    /* ---------- Chair: mesh office chair on a five-star base ---------- */
     var chair = new T.Group();
     chair.position.set(-0.3, 0, -0.4);
     scene.add(chair);
-    box(1.1, 0.14, 1.0, mat(0x2b2a33), 0, 1.05, 0, chair);
-    box(1.1, 1.3, 0.12, mat(0x2b2a33), 0, 1.75, 0.5, chair);
-    box(0.1, 1.0, 0.1, mat(C.metal), 0, 0.5, 0, chair);
-    box(0.9, 0.06, 0.06, mat(C.metal), 0, 0.05, 0, chair);
-    box(0.06, 0.06, 0.9, mat(C.metal), 0, 0.05, 0, chair);
+    var chairM = mat(0x26242c, { roughness: 0.7 }), chromeM = mat(0x8c8796, { roughness: 0.3, metalness: 0.8 });
+    for (var leg5 = 0; leg5 < 5; leg5++) {
+      var la = leg5 * Math.PI * 2 / 5, legG = new T.Group();
+      legG.rotation.y = la; legG.position.y = 0.16; chair.add(legG);
+      box(0.08, 0.06, 0.62, chromeM, 0, 0, 0.31, legG);
+      var caster = new T.Mesh(new T.SphereGeometry(0.075, 10, 8), mat(0x141317)); caster.position.set(0, -0.08, 0.6); legG.add(caster);
+    }
+    cyl(0.05, 0.05, 0.8, chromeM, 0, 0.55, 0, chair, 12);                  // gas lift
+    box(1.1, 0.16, 1.0, chairM, 0, 1.03, 0, chair);                         // seat
+    box(1.0, 0.04, 0.9, mat(0x34313b, { roughness: 0.9 }), 0, 1.12, 0, chair);
+    var backG = new T.Group(); backG.position.set(0, 1.15, 0.52); backG.rotation.x = 0.1; chair.add(backG);
+    box(0.08, 1.6, 0.08, chairM, -0.5, 0.8, 0, backG); box(0.08, 1.6, 0.08, chairM, 0.5, 0.8, 0, backG);   // back frame
+    box(1.08, 0.08, 0.08, chairM, 0, 1.6, 0, backG); box(1.0, 0.08, 0.08, chairM, 0, 0.12, 0, backG);
+    var meshTex = canvasTex(64, 64, function (g, w, h) {
+      g.fillStyle = '#1a191e'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#3a3742'; g.lineWidth = 1;
+      for (var mm = 0; mm < w; mm += 4) { g.beginPath(); g.moveTo(mm, 0); g.lineTo(mm, h); g.stroke(); g.beginPath(); g.moveTo(0, mm); g.lineTo(w, mm); g.stroke(); }
+    });
+    if (meshTex.repeat) { meshTex.wrapS = meshTex.wrapT = T.RepeatWrapping; meshTex.repeat.set(6, 8); }
+    box(0.94, 1.46, 0.03, new T.MeshStandardMaterial({ map: meshTex, roughness: 0.8 }), 0, 0.86, 0, backG);  // mesh back
+    box(0.7, 0.32, 0.12, chairM, 0, 1.86, 0.02, backG);                    // headrest
+    box(0.05, 0.3, 0.05, chairM, 0, 1.68, 0.02, backG);
+    [-1, 1].forEach(function (sd) {                                          // armrests
+      box(0.06, 0.42, 0.06, chairM, sd * 0.6, 1.3, 0.05, chair);
+      box(0.14, 0.06, 0.5, mat(0x1d1c22, { roughness: 0.6 }), sd * 0.6, 1.53, -0.02, chair);
+    });
 
     /* ---------- You: a stylised figure sitting at the desk ----------
        Built from rounded shapes. Faces the monitor (-z). Wavy black hair swept up,
@@ -1419,7 +1485,8 @@
 
     // A big leafy plant in a white pot on a wooden stand, by the window
     var plant = new T.Group();
-    plant.position.set(-6.5, 0, 4.4);
+    plant.position.set(-6.4, 0, 5.3);
+    plant.scale.set(0.85, 0.85, 0.85);
     scene.add(plant);
     var standM = mat(0x5a3a26, { roughness: 0.7 });
     [[-0.32, -0.32], [0.32, -0.32], [-0.32, 0.32], [0.32, 0.32]].forEach(function (lg) {
@@ -1445,23 +1512,230 @@
       stem.add(leaf);
     }
 
-    // Low cabinet under the board's right end, with a speaker glowing pink
+    /* ---------- Media cabinet along the back wall: turntable, records and a ring-lit speaker ---------- */
     var cab = new T.Group();
-    cab.position.set(7.4, 0, -5.25);
+    cab.position.set(7.9, 0, -5.3);
     scene.add(cab);
-    box(2.4, 1.3, 0.85, mat(C.desk, { roughness: 0.6 }), 0, 0.65, 0, cab);
-    box(0.02, 1.1, 0.02, mat(C.metal), 0, 0.68, 0.43, cab);                                // door gap
-    box(0.3, 0.03, 0.03, mat(0x8d8698, { metalness: 0.6 }), -0.3, 0.75, 0.44, cab);        // handles
-    box(0.3, 0.03, 0.03, mat(0x8d8698, { metalness: 0.6 }), 0.3, 0.75, 0.44, cab);
-    box(0.62, 0.86, 0.55, mat(0x1f1d24, { roughness: 0.5 }), -0.5, 1.73, 0, cab);          // speaker
-    var ring = new T.Mesh(new T.RingGeometry(0.15, 0.2, 32), new T.MeshBasicMaterial({ color: C.neon, side: T.DoubleSide }));
-    ring.position.set(-0.5, 1.82, 0.28);
+    var cabM = mat(0x2a2730, { roughness: 0.55 }), cabTopM = mat(0x342f3a, { roughness: 0.45 });
+    box(4.2, 0.1, 1.0, cabTopM, 0, 1.15, 0, cab);                                         // top
+    box(4.1, 0.95, 0.94, cabM, 0, 0.62, 0, cab);                                          // body
+    [-1.95, 1.95].forEach(function (lx) { box(0.08, 0.16, 0.08, mat(C.metal), lx, 0.08, 0.36, cab); box(0.08, 0.16, 0.08, mat(C.metal), lx, 0.08, -0.36, cab); });
+    box(1.3, 0.62, 0.02, mat(0x1d1b22), -1.25, 0.66, 0.475, cab);                         // open shelf on the left
+    box(1.2, 0.04, 0.4, mat(0x111015), -1.25, 0.9, 0.3, cab);                             // an amp in it
+    [0.2, 1.35].forEach(function (dx) {                                                   // two doors with slim handles
+      box(1.08, 0.82, 0.02, mat(0x302c36, { roughness: 0.5 }), dx, 0.63, 0.48, cab);
+      box(0.03, 0.3, 0.03, mat(0x8d8698, { metalness: 0.6 }), dx - 0.44, 0.66, 0.5, cab);
+    });
+    // Turntable
+    var tt = new T.Group(); tt.position.set(-1.35, 1.2, 0.05); cab.add(tt);
+    box(1.0, 0.14, 0.8, mat(0x1c1a20, { roughness: 0.4 }), 0, 0.07, 0, tt);
+    cyl(0.34, 0.34, 0.03, mat(0x0d0c10, { roughness: 0.3 }), -0.1, 0.16, 0, tt, 32);
+    cyl(0.11, 0.11, 0.032, mat(0xff5fd2, { roughness: 0.6 }), -0.1, 0.165, 0, tt, 20);  // record label
+    var tone = box(0.03, 0.03, 0.55, mat(0x9a95a4, { metalness: 0.7, roughness: 0.3 }), 0.33, 0.21, 0.02, tt); tone.rotation.y = 0.35;
+    cyl(0.05, 0.05, 0.08, mat(0x9a95a4, { metalness: 0.7 }), 0.38, 0.18, -0.25, tt, 12);
+    var dust = box(1.02, 0.02, 0.82, new T.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, roughness: 0.1 }), 0, 0.55, -0.42, tt);
+    dust.rotation.x = -1.2;                                                                // lid propped open
+    // A short stack of records lying flat
+    [0x2b2733, 0xe9c14a, 0x3e6e8c].forEach(function (rc, k) {
+      var rr = box(0.62, 0.025, 0.62, mat(rc, { roughness: 0.7 }), -0.35, 1.215 + k * 0.026, 0.05, cab); rr.rotation.y = k * 0.18 - 0.1;
+    });
+    // Records standing in a row
+    var sleeveColors = [0xc4553f, 0x2c4ea3, 0xece6da, 0x5b4a7a, 0xe9c14a, 0x2f7d77, 0x1f1d24, 0xff6ad5, 0x8a5c3c, 0x3e6e8c, 0xd9741c, 0x4a4458];
+    for (var rv = 0; rv < 12; rv++) {
+      var sl2 = box(0.035, 0.66, 0.66, mat(sleeveColors[rv], { roughness: 0.8 }), 0.35 + rv * 0.06, 1.53, 0.0, cab);
+      sl2.rotation.z = -0.12 + (rv === 11 ? -0.15 : 0);
+    }
+    box(0.04, 0.4, 0.5, mat(C.metal), 1.1, 1.4, 0, cab);                                   // bookend
+    // Speaker with a glowing pink ring
+    box(0.64, 0.9, 0.55, mat(0x1f1d24, { roughness: 0.5 }), 1.68, 1.65, 0, cab);
+    var ring = new T.Mesh(new T.RingGeometry(0.16, 0.21, 40), new T.MeshBasicMaterial({ color: C.neon, side: T.DoubleSide }));
+    ring.position.set(1.68, 1.68, 0.28);
     cab.add(ring);
-    cyl(0.14, 0.14, 0.02, mat(0x0f0e12), -0.5, 1.82, 0.28, cab, 24).rotation.x = Math.PI / 2;
-    box(0.9, 0.22, 0.5, mat(0x2f2c36, { roughness: 0.5 }), 0.45, 1.41, 0, cab);           // a small receiver
-    var speakerGlow = new T.PointLight(0xff5fd2, 0.5, 3, 2);
-    speakerGlow.position.set(6.9, 2.0, -4.6);
+    cyl(0.15, 0.15, 0.02, mat(0x0f0e12), 1.68, 1.68, 0.28, cab, 24).rotation.x = Math.PI / 2;
+    var speakerGlow = new T.PointLight(0xff5fd2, 0.6, 3.2, 2);
+    speakerGlow.position.set(9.6, 1.9, -4.5);
     scene.add(speakerGlow);
+
+    /* ---------- Two neon art prints on the back wall ---------- */
+    function poster(x, y, w, h, edge, draw) {
+      var tex = canvasTex(320, Math.round(320 * h / w), draw);
+      box(w + 0.12, h + 0.12, 0.06, mat(0x141317, { roughness: 0.5 }), x, y, RZ0 + 0.2);
+      var pm = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: tex }));
+      pm.position.set(x, y, RZ0 + 0.235);
+      scene.add(pm);
+      var em = new T.MeshBasicMaterial({ color: edge });
+      box(w + 0.16, 0.03, 0.03, em, x, y + h / 2 + 0.08, RZ0 + 0.24); box(w + 0.16, 0.03, 0.03, em, x, y - h / 2 - 0.08, RZ0 + 0.24);
+      box(0.03, h + 0.16, 0.03, em, x - w / 2 - 0.08, y, RZ0 + 0.24); box(0.03, h + 0.16, 0.03, em, x + w / 2 + 0.08, y, RZ0 + 0.24);
+    }
+    // A retro sunset over a grid, with a palm
+    poster(6.95, 4.7, 1.25, 1.6, 0xff5fd2, function (g, w, h) {
+      var bg = g.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, '#1a0f33'); bg.addColorStop(0.55, '#5b1d6e'); bg.addColorStop(0.62, '#2a0f3d'); bg.addColorStop(1, '#12081f');
+      g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      var sun = g.createLinearGradient(0, h * 0.2, 0, h * 0.58);
+      sun.addColorStop(0, '#ffd36b'); sun.addColorStop(1, '#ff4fb8');
+      g.fillStyle = sun; g.beginPath(); g.arc(w / 2, h * 0.45, w * 0.3, Math.PI, 0); g.fill();
+      g.fillStyle = '#5b1d6e';
+      for (var b = 0; b < 5; b++) g.fillRect(w * 0.18, h * (0.36 + b * 0.02), w * 0.64, 3 + b);   // sun stripes
+      g.strokeStyle = '#ff6ad5'; g.lineWidth = 2;
+      for (var gl = 0; gl < 8; gl++) { var gy = h * 0.62 + Math.pow(gl / 7, 1.7) * h * 0.38; g.beginPath(); g.moveTo(0, gy); g.lineTo(w, gy); g.stroke(); }
+      for (var gv = -6; gv <= 6; gv++) { g.beginPath(); g.moveTo(w / 2 + gv * 8, h * 0.62); g.lineTo(w / 2 + gv * 70, h); g.stroke(); }
+      g.fillStyle = '#12081f';                                                              // palm silhouette
+      g.fillRect(w * 0.78, h * 0.28, 7, h * 0.36);
+      for (var pf = 0; pf < 7; pf++) {
+        var pa = -Math.PI + pf * (Math.PI / 6);
+        g.beginPath(); g.moveTo(w * 0.79, h * 0.28);
+        g.quadraticCurveTo(w * 0.79 + Math.cos(pa) * 40, h * 0.28 + Math.sin(pa) * 30 - 10, w * 0.79 + Math.cos(pa) * 70, h * 0.28 + Math.sin(pa) * 20 + 22);
+        g.lineWidth = 6; g.strokeStyle = '#12081f'; g.stroke();
+      }
+    });
+    // A night drive: neon skyline inside a ring
+    poster(8.75, 4.55, 1.2, 1.5, 0x9b6bff, function (g, w, h) {
+      g.fillStyle = '#0f0b1c'; g.fillRect(0, 0, w, h);
+      g.shadowColor = '#ff5fd2'; g.shadowBlur = 18;
+      g.strokeStyle = '#ff7ad9'; g.lineWidth = 6;
+      g.beginPath(); g.arc(w / 2, h * 0.42, w * 0.34, 0, Math.PI * 2); g.stroke();
+      g.shadowBlur = 0;
+      g.fillStyle = '#2a1f4f';
+      [[0.22, 0.5], [0.3, 0.36], [0.4, 0.44], [0.5, 0.3], [0.6, 0.42], [0.7, 0.34], [0.78, 0.5]].forEach(function (bd) {
+        g.fillRect(w * bd[0] - 16, h * bd[1], 32, h * 0.62 - h * bd[1]);
+      });
+      g.fillStyle = '#ffd6f3';
+      for (var wl = 0; wl < 40; wl++) g.fillRect(between(w * 0.2, w * 0.8), between(h * 0.32, h * 0.6), 3, 4);
+      g.fillStyle = '#ff5fd2'; g.fillRect(0, h * 0.62, w, 3);
+      g.fillStyle = '#c9b8ff'; g.font = '700 26px ' + '"Instrument Sans", Arial, sans-serif'; g.textAlign = 'center';
+      if ('letterSpacing' in g) g.letterSpacing = '6px';
+      g.fillText('NIGHT DRIVE', w / 2, h * 0.82);
+    });
+
+    /* ---------- Reading corner: leather armchair and a small round table ---------- */
+    var armchair = new T.Group();
+    armchair.position.set(7.4, 0, 1.6);
+    armchair.rotation.y = -2.25;                                         // facing back into the room
+    scene.add(armchair);
+    var leatherM = mat(0x3b3542, { roughness: 0.42, metalness: 0.05 });
+    var cushionM = mat(0x453e4d, { roughness: 0.45 });
+    function rounded(w, h, d, m, x, y, z, parent) {                   // a softened block: a box with capsule edges
+      var g0 = new T.Group(); g0.position.set(x, y, z); (parent || scene).add(g0);
+      box(w - 0.2, h, d, m, 0, 0, 0, g0);
+      [-1, 1].forEach(function (sd) {
+        var c = new T.Mesh(new T.CapsuleGeometry(0.1, Math.max(0.01, h - 0.2), 6, 12), m);
+        c.position.set(sd * (w / 2 - 0.1), 0, 0); c.scale.set(1, 1, d / 0.2);
+        c.castShadow = true; c.receiveShadow = true; g0.add(c);
+      });
+      return g0;
+    }
+    rounded(1.8, 0.55, 1.6, leatherM, 0, 0.55, 0, armchair);              // base
+    rounded(1.4, 0.24, 1.25, cushionM, 0, 0.95, 0.12, armchair);          // seat cushion
+    var backRest = rounded(1.8, 1.25, 0.4, leatherM, 0, 1.45, -0.62, armchair); backRest.rotation.x = -0.12;
+    [-1, 1].forEach(function (sd) {
+      var armRest = new T.Mesh(new T.CapsuleGeometry(0.2, 1.1, 8, 16), leatherM);
+      armRest.rotation.x = Math.PI / 2; armRest.position.set(sd * 0.8, 1.05, 0.05);
+      armRest.castShadow = true; armchair.add(armRest);
+    });
+    [[-0.7, 0.6], [0.7, 0.6], [-0.7, -0.6], [0.7, -0.6]].forEach(function (lp) { cyl(0.04, 0.03, 0.3, mat(0x2a1c14), lp[0], 0.15, lp[1], armchair, 8); });
+    var sideT = new T.Group(); sideT.position.set(5.3, 0, 2.7); scene.add(sideT);
+    cyl(0.58, 0.58, 0.06, mat(0x2b2832, { roughness: 0.4 }), 0, 1.25, 0, sideT, 32);
+    cyl(0.04, 0.04, 1.2, mat(C.metal, { metalness: 0.5 }), 0, 0.62, 0, sideT, 10);
+    [0, 2.1, 4.2].forEach(function (la2) {
+      var ft = box(0.05, 0.04, 0.5, mat(C.metal, { metalness: 0.5 }), Math.sin(la2) * 0.2, 0.03, Math.cos(la2) * 0.2, sideT); ft.rotation.y = la2;
+    });
+    cyl(0.12, 0.1, 0.24, mat(0xece6da, { roughness: 0.5 }), 0.18, 1.4, 0.12, sideT, 18);         // mug
+    box(0.04, 0.1, 0.04, mat(0xece6da), 0.33, 1.42, 0.12, sideT);
+    var tbook = box(0.5, 0.08, 0.36, mat(0x2a2733, { roughness: 0.7 }), -0.15, 1.32, -0.1, sideT); tbook.rotation.y = 0.4;
+
+    /* ---------- Plants: monstera leaves and trailing pothos ---------- */
+    var monsteraTex = canvasTex(256, 256, function (g, w, h) {
+      g.fillStyle = '#2f6b3a';
+      g.beginPath(); g.moveTo(w / 2, h * 0.98);
+      g.bezierCurveTo(w * 0.02, h * 0.8, w * 0.0, h * 0.18, w / 2, h * 0.08);
+      g.bezierCurveTo(w * 1.0, h * 0.18, w * 0.98, h * 0.8, w / 2, h * 0.98); g.fill();
+      var lg = g.createLinearGradient(0, 0, w, 0);
+      lg.addColorStop(0, 'rgba(0,0,0,0.18)'); lg.addColorStop(0.5, 'rgba(120,200,120,0.18)'); lg.addColorStop(1, 'rgba(0,0,0,0.18)');
+      g.globalCompositeOperation = 'source-atop'; g.fillStyle = lg; g.fillRect(0, 0, w, h);
+      g.globalCompositeOperation = 'destination-out'; g.lineWidth = 9; g.lineCap = 'round';
+      for (var sp = 0; sp < 6; sp++) {                                          // the splits
+        var yy = h * (0.25 + sp * 0.12);
+        g.beginPath(); g.moveTo(0, yy - 10); g.lineTo(w * 0.32, yy + 18); g.stroke();
+        g.beginPath(); g.moveTo(w, yy - 10); g.lineTo(w * 0.68, yy + 18); g.stroke();
+      }
+      g.globalCompositeOperation = 'source-over';
+      g.strokeStyle = '#6fa86b'; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(w / 2, h * 0.96); g.lineTo(w / 2, h * 0.12); g.stroke();
+    });
+    var monsteraM = new T.MeshStandardMaterial({ map: monsteraTex, alphaTest: 0.5, side: T.DoubleSide, roughness: 0.6 });
+    var pothosTex = canvasTex(64, 64, function (g, w, h) {
+      g.fillStyle = '#3f8a3e';
+      g.beginPath(); g.moveTo(w / 2, h * 0.95);
+      g.bezierCurveTo(w * 0.05, h * 0.6, w * 0.1, h * 0.05, w / 2, h * 0.22);
+      g.bezierCurveTo(w * 0.9, h * 0.05, w * 0.95, h * 0.6, w / 2, h * 0.95); g.fill();
+      g.strokeStyle = 'rgba(190,230,140,0.6)'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(w / 2, h * 0.9); g.lineTo(w / 2, h * 0.3); g.stroke();
+    });
+    var pothosM = new T.MeshStandardMaterial({ map: pothosTex, alphaTest: 0.5, side: T.DoubleSide, roughness: 0.65 });
+    var pothosGeo = new T.PlaneGeometry(0.2, 0.2);
+
+    // A tall monstera in a terracotta pot, front-left corner
+    var mon = new T.Group(); mon.position.set(-6.5, 0, 7.6); scene.add(mon);
+    cyl(0.6, 0.45, 1.0, mat(0xb8835e, { roughness: 0.8 }), 0, 0.5, 0, mon, 28);
+    cyl(0.55, 0.55, 0.04, mat(0x2a1f1a), 0, 0.98, 0, mon, 24);
+    for (var ml = 0; ml < 11; ml++) {
+      var st2 = new T.Group();
+      st2.position.y = 0.95;
+      st2.rotation.set(between(0.25, 0.75), ml * 0.6 + between(-0.2, 0.2), 0, 'YXZ');
+      mon.add(st2);
+      var slen = between(1.4, 2.8);
+      var stalk2 = new T.Mesh(new T.CylinderGeometry(0.025, 0.035, slen, 6), mat(0x3d6b35));
+      stalk2.position.y = slen / 2; st2.add(stalk2);
+      var leaf2 = new T.Mesh(new T.PlaneGeometry(1.15, 1.15), monsteraM);
+      leaf2.position.set(0, slen + 0.1, 0.42);
+      leaf2.rotation.x = -between(0.9, 1.3);
+      leaf2.castShadow = true;
+      st2.add(leaf2);
+    }
+
+    // Pothos in hanging pots, trailing down beside the window
+    function hangingPlant(x, z, potY) {
+      var hp = new T.Group(); hp.position.set(x, potY, z); scene.add(hp);
+      cyl(0.32, 0.22, 0.38, mat(0xd9d2c8, { roughness: 0.6 }), 0, 0, 0, hp, 20);
+      [0, 2.1, 4.2].forEach(function (ca) {                                    // three cords up to the ceiling
+        var len = RH - potY - 0.15, cx2 = Math.cos(ca) * 0.28, cz2 = Math.sin(ca) * 0.28;
+        var cord = box(0.012, Math.hypot(len, 0.28), 0.012, mat(0x8c7a64), cx2 / 2, 0.15 + len / 2, cz2 / 2, hp);
+        cord.rotation.set(Math.atan2(cz2, len), 0, -Math.atan2(cx2, len));
+      });
+      for (var tl = 0; tl < 14; tl++) {                                         // a mound of leaves on top
+        var tlf = new T.Mesh(pothosGeo, pothosM);
+        tlf.position.set(between(-0.28, 0.28), 0.2 + between(0, 0.12), between(-0.28, 0.28));
+        tlf.rotation.set(between(-1.2, -0.2), between(0, 6.28), 0); hp.add(tlf);
+      }
+      for (var vn = 0; vn < 10; vn++) {                                         // vines
+        var va = vn * 0.63 + between(-0.2, 0.2), vlen = Math.floor(between(8, 17));
+        var vx = Math.cos(va) * 0.3, vz = Math.sin(va) * 0.3, vy = 0.12;
+        for (var vk = 0; vk < vlen; vk++) {
+          vx += Math.cos(va) * 0.025 + between(-0.02, 0.02); vz += Math.sin(va) * 0.025 + between(-0.02, 0.02); vy -= 0.13;
+          var vl = new T.Mesh(pothosGeo, pothosM);
+          vl.position.set(vx + between(-0.05, 0.05), vy, vz + between(-0.05, 0.05));
+          vl.rotation.set(between(-0.6, 0.6), between(0, 6.28), between(-0.4, 0.4));
+          var vs = 1 - vk / (vlen * 1.6); vl.scale.set(vs, vs, vs);
+          hp.add(vl);
+        }
+      }
+    }
+    hangingPlant(-7.1, 5.0, 5.9);
+    hangingPlant(-7.1, -4.9, 6.1);
+    // and one more trailing off the end of the lower shelf
+    (function () {
+      for (var sv = 0; sv < 4; sv++) {
+        var sx = -5.95 + sv * 0.07, sy = 3.5, sz = -5.35 + sv * 0.05;
+        for (var sk = 0; sk < 7 + sv; sk++) {
+          var svl = new T.Mesh(pothosGeo, pothosM);
+          svl.position.set(sx + between(-0.06, 0.06), sy - sk * 0.13, sz + between(-0.04, 0.08));
+          svl.rotation.set(between(-0.6, 0.6), between(-1, 1), between(-0.4, 0.4));
+          scene.add(svl);
+        }
+      }
+      cyl(0.14, 0.11, 0.26, mat(0xd9d2c8, { roughness: 0.6 }), -5.85, 3.59, -5.45, scene, 16);
+    })();
 
     /* ---------- Views: where the camera goes for each section ---------- */
     var VIEWS = {
