@@ -417,6 +417,8 @@
     var sunset = new T.DirectionalLight(0xd8b4ff, 0.75);              // violet moonlight through the window
     sunset.position.set(-14, 8.5, 3);
     sunset.castShadow = true;
+    sunset.shadow.bias = -0.0006;
+    if ('normalBias' in sunset.shadow) sunset.shadow.normalBias = 0.03;
     sunset.shadow.mapSize.width = 2048;
     sunset.shadow.mapSize.height = 2048;
     sunset.shadow.camera.left = -12; sunset.shadow.camera.right = 12;
@@ -426,6 +428,7 @@
     var lamp = new T.PointLight(0xff7ad9, 1.5, 8, 2);               // pink desk lamp
     lamp.position.set(1.45, 2.8, -2.55);
     lamp.castShadow = true;
+    if (lamp.shadow) lamp.shadow.bias = -0.003;
     scene.add(lamp);
 
     // Neon glow from the desk edge and the board frame, a soft wall light over the shelf, and the fan light
@@ -1619,45 +1622,27 @@
     armchair.position.set(7.4, 0, 1.6);
     armchair.rotation.y = -2.25;                                         // facing back into the room
     scene.add(armchair);
-    // A plump leather club chair: rolled arms, a curved tub back and soft cushions
-    var leatherM = mat(0x4a3f57, { roughness: 0.36, metalness: 0.08 });
-    var cushionM = mat(0x55496a, { roughness: 0.4, metalness: 0.06 });
-    function capsule(r, len, m, x, y, z, rx, ry, rz, parent) {
-      var c = new T.Mesh(new T.CapsuleGeometry(r, Math.max(0.01, len), 8, 16), m);
-      c.position.set(x, y, z); c.rotation.set(rx || 0, ry || 0, rz || 0);
-      c.castShadow = true; c.receiveShadow = true; (parent || armchair).add(c);
-      return c;
+    var leatherM = mat(0x3b3542, { roughness: 0.42, metalness: 0.05 });
+    var cushionM = mat(0x453e4d, { roughness: 0.45 });
+    function rounded(w, h, d, m, x, y, z, parent) {                   // a softened block: a box with capsule edges
+      var g0 = new T.Group(); g0.position.set(x, y, z); (parent || scene).add(g0);
+      box(w - 0.2, h, d, m, 0, 0, 0, g0);
+      [-1, 1].forEach(function (sd) {
+        var c = new T.Mesh(new T.CapsuleGeometry(0.1, Math.max(0.01, h - 0.2), 6, 12), m);
+        c.position.set(sd * (w / 2 - 0.1), 0, 0); c.scale.set(1, 1, d / 0.2);
+        c.castShadow = true; c.receiveShadow = true; g0.add(c);
+      });
+      return g0;
     }
-    function puff(rx, ry, rz, m, x, y, z, parent) {                  // a squashed sphere, for pillowy shapes
-      var sp = new T.Mesh(new T.SphereGeometry(1, 28, 18), m);
-      sp.scale.set(rx, ry, rz); sp.position.set(x, y, z);
-      sp.castShadow = true; sp.receiveShadow = true; (parent || armchair).add(sp);
-      return sp;
-    }
-    // base with a rolled front edge
-    box(1.42, 0.42, 1.36, leatherM, 0, 0.47, -0.04, armchair);
-    capsule(0.21, 1.0, leatherM, 0, 0.47, 0.64, 0, 0, Math.PI / 2);
-    // seat cushion, domed, with a rounded nose
-    box(1.3, 0.16, 1.12, cushionM, 0, 0.78, 0.04, armchair);
-    capsule(0.1, 1.1, cushionM, 0, 0.78, 0.6, 0, 0, Math.PI / 2);
-    puff(0.66, 0.07, 0.56, cushionM, 0, 0.86, 0.04);
-    // curved tub back: overlapping upright rolls on an arc behind the seat
-    for (var bk = 0; bk <= 8; bk++) {
-      var ba = -1.2 + bk * 0.3, br = 0.74;
-      var bh = 1.05 - Math.abs(ba) * 0.32;                           // lower towards the arms
-      capsule(0.17, bh, leatherM, Math.sin(ba) * br, 0.62 + bh / 2 + 0.17, -Math.cos(ba) * br * 0.86 - 0.02, -0.14 * Math.cos(ba), 0, 0);
-    }
-    // loose back cushion leaning against it
-    var bc = puff(0.6, 0.4, 0.15, cushionM, 0, 1.38, -0.42); bc.rotation.x = -0.18;
-    // rolled arms
+    rounded(1.8, 0.55, 1.6, leatherM, 0, 0.55, 0, armchair);              // base
+    rounded(1.4, 0.24, 1.25, cushionM, 0, 0.95, 0.12, armchair);          // seat cushion
+    var backRest = rounded(1.8, 1.25, 0.4, leatherM, 0, 1.45, -0.62, armchair); backRest.rotation.x = -0.12;
     [-1, 1].forEach(function (sd) {
-      box(0.34, 0.5, 1.2, leatherM, sd * 0.8, 0.55, -0.04, armchair);
-      capsule(0.21, 1.05, leatherM, sd * 0.8, 0.95, -0.04, Math.PI / 2, 0, 0);
-      puff(0.2, 0.26, 0.06, leatherM, sd * 0.8, 0.82, 0.62);          // the scroll on the front of each arm
+      var armRest = new T.Mesh(new T.CapsuleGeometry(0.2, 1.1, 8, 16), leatherM);
+      armRest.rotation.x = Math.PI / 2; armRest.position.set(sd * 0.8, 1.05, 0.05);
+      armRest.castShadow = true; armchair.add(armRest);
     });
-    // a darker piping line around the seat
-    box(1.46, 0.025, 0.025, mat(0x2a2333), 0, 0.69, 0.86, armchair);
-    [[-0.82, 0.55], [0.82, 0.55], [-0.82, -0.6], [0.82, -0.6]].forEach(function (lp) { cyl(0.05, 0.035, 0.28, mat(0x5a3a26, { roughness: 0.6 }), lp[0], 0.14, lp[1], armchair, 10); });
+    [[-0.7, 0.6], [0.7, 0.6], [-0.7, -0.6], [0.7, -0.6]].forEach(function (lp) { cyl(0.04, 0.03, 0.3, mat(0x2a1c14), lp[0], 0.15, lp[1], armchair, 8); });
     var sideT = new T.Group(); sideT.position.set(5.3, 0, 2.7); scene.add(sideT);
     cyl(0.58, 0.58, 0.06, mat(0x2b2832, { roughness: 0.4 }), 0, 1.25, 0, sideT, 32);
     cyl(0.04, 0.04, 1.2, mat(C.metal, { metalness: 0.5 }), 0, 0.62, 0, sideT, 10);
@@ -1701,8 +1686,17 @@
 
     // A tall monstera in a terracotta pot, front-left corner
     var mon = new T.Group(); mon.position.set(-5.9, 0, 5.7); scene.add(mon);
-    cyl(0.6, 0.45, 1.0, mat(0xb8835e, { roughness: 0.8 }), 0, 0.5, 0, mon, 28);
-    cyl(0.55, 0.55, 0.04, mat(0x2a1f1a), 0, 0.98, 0, mon, 24);
+    var potM = mat(0xb8835e, { roughness: 0.8, side: T.DoubleSide });
+    var potMesh = new T.Mesh(new T.CylinderGeometry(0.6, 0.45, 1.0, 28, 1, true), potM);   // open at the top
+    potMesh.position.y = 0.5; potMesh.castShadow = true; potMesh.receiveShadow = true; mon.add(potMesh);
+    cyl(0.45, 0.45, 0.02, potM, 0, 0.01, 0, mon, 28);                                      // base
+    var rimM = mat(0xa9744f, { roughness: 0.8, side: T.DoubleSide });
+    var rimBand = new T.Mesh(new T.CylinderGeometry(0.64, 0.63, 0.1, 28, 1, true), rimM);   // thick lip, open in the middle
+    rimBand.position.y = 0.96; mon.add(rimBand);
+    var rimTop = new T.Mesh(new T.RingGeometry(0.56, 0.64, 28), rimM);
+    rimTop.rotation.x = -Math.PI / 2; rimTop.position.y = 1.01; mon.add(rimTop);
+    var soil = cyl(0.57, 0.57, 0.02, mat(0x2a1f1a, { roughness: 1 }), 0, 0.88, 0, mon, 28); // soil sits below the rim
+    soil.castShadow = false;
     for (var ml = 0; ml < 11; ml++) {
       var st2 = new T.Group();
       st2.position.y = 0.95;
