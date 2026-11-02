@@ -916,7 +916,11 @@
       });
     }
     var traffic = [];
-    ['car', 'bus', 'car', 'cng', 'car', 'bus', 'car'].forEach(function (kind, i) {
+    // Vehicles only drive the stretch of road you can see through the window (plus a little either side),
+    // so they come by often instead of spending most of their time out of view
+    var ROAD_U0 = 0.3, ROAD_U1 = 0.72;
+    var FLEET = ['car', 'bus', 'car', 'cng', 'car', 'bus', 'car', 'cng'];
+    FLEET.forEach(function (kind, i) {
       var long = kind === 'bus', lenU = long ? 0.6 : 0.36;
       var m = new T.Mesh(new T.PlaneGeometry(lenU, 0.15), new T.MeshBasicMaterial({ map: vehicleTex(kind), transparent: true, alphaTest: 0.1 }));
       m.rotation.y = Math.PI / 2;
@@ -930,15 +934,30 @@
         dir: dir,
         len: lenU / 26,
         speed: between(0.06, 0.1) * (long ? 0.75 : 1),
-        u: i / 7,    // spreads the 7 vehicles across the length of the road (0 to 1)
+        u: ROAD_U0 + (ROAD_U1 - ROAD_U0) * (i / FLEET.length),   // start spread out along the visible stretch
         wait: 0
       });
     });
     function moveTraffic(dt) {
       traffic.forEach(function (v) {
-        if (v.wait > 0) { v.wait -= dt; v.mesh.visible = false; if (v.wait <= 0) v.u = v.dir > 0 ? -v.len : 1 + v.len; return; }
+        if (v.wait > 0) {
+          v.wait -= dt; v.mesh.visible = false;
+          if (v.wait <= 0) {
+            var start = v.dir > 0 ? ROAD_U0 - v.len : ROAD_U1 + v.len;
+            // don't enter on top of a vehicle already in this lane; try again a moment later
+            var blocked = traffic.some(function (o) { return o !== v && o.dir === v.dir && o.wait <= 0 && Math.abs(o.u - start) < v.len + o.len + 0.006; });
+            if (blocked) v.wait = 0.4; else v.u = start;
+          }
+          return;
+        }
+        // keep a gap behind the vehicle in front instead of driving through it
+        traffic.forEach(function (o) {
+          if (o === v || o.dir !== v.dir || o.wait > 0) return;
+          var ahead = (o.u - v.u) * v.dir;
+          if (ahead > 0 && ahead < v.len + o.len + 0.004) v.u = o.u - v.dir * (v.len + o.len + 0.004);
+        });
         v.u += v.dir * v.speed * dt;
-        if (v.u < -v.len - 0.02 || v.u > 1 + v.len + 0.02) { v.wait = between(3, 12); v.mesh.visible = false; return; }
+        if (v.u < ROAD_U0 - v.len - 0.01 || v.u > ROAD_U1 + v.len + 0.01) { v.wait = between(1.5, 5); v.mesh.visible = false; return; }
         var lane = v.dir > 0 ? 0.004 : -0.002;              // the far lane sits a touch higher
         v.mesh.position.set(RX0 - 3.55, 9.5 - (deckV(v.u) + lane) * 13 + 0.02, 11.5 - v.u * 26);
         v.mesh.visible = true;
