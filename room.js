@@ -968,20 +968,76 @@
     box(0.5, 0.06, 0.4, mat(C.metal), 0, 0.03, 0, monitor);
     box(0.12, 0.7, 0.08, mat(C.metal), 0, 0.4, -0.05, monitor);
     box(2.5, 1.5, 0.12, mat(C.metal, { roughness: 0.4 }), 0, 1.4, 0, monitor);
-    // Glowing screen: says HOME from across the room; up close the projects desktop sits over it
-    var screenTex = canvasTex(1024, 590, function (g, w, h) {
+    /* Glowing screen: a terminal that types a short intro, one command at a time,
+       and ends on "open projects". Up close the projects desktop sits over it. */
+    var TERM_FONT = 'ui-monospace, "SFMono-Regular", Menlo, Consolas, "Courier New", monospace';
+    var TERM_SCRIPT = [
+      { cmd: 'whoami', out: ['abrar sami khan', 'analytics · automation · ML'] },
+      { cmd: 'cat now.txt', out: ['CX analytics @ Therap BD', 'automating monthly reports'] },
+      { cmd: 'ls projects/', out: ['bridge  cinemas  tank-wars', '+ 7 more projects'] },
+      { cmd: 'stack', out: ['python · sql · apps script', 'salesforce · pytorch'] },
+      { cmd: 'open projects', out: ['click the screen \u21b5'], end: true }
+    ];
+    function drawTerminal(g, w, h, st) {
       var bg = g.createLinearGradient(0, 0, w, h);
-      bg.addColorStop(0, '#2a1446'); bg.addColorStop(1, '#5a1f5e');
+      bg.addColorStop(0, '#170b26'); bg.addColorStop(1, '#2a0f36');
       g.fillStyle = bg; g.fillRect(0, 0, w, h);
-      var halo = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.45);
-      halo.addColorStop(0, 'rgba(255,120,220,0.35)'); halo.addColorStop(1, 'rgba(255,120,220,0)');
+      var halo = g.createRadialGradient(w * 0.35, h * 0.55, 10, w * 0.35, h * 0.55, w * 0.6);
+      halo.addColorStop(0, 'rgba(255,106,213,0.14)'); halo.addColorStop(1, 'rgba(255,106,213,0)');
       g.fillStyle = halo; g.fillRect(0, 0, w, h);
-      g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.font = '600 120px "Instrument Sans", "Helvetica Neue", Arial, sans-serif';
-      if ('letterSpacing' in g) g.letterSpacing = '18px';
-      g.shadowColor = 'rgba(255,110,220,0.9)'; g.shadowBlur = 30;
-      g.fillStyle = '#ffd6f3'; g.fillText('HOME', w / 2, h / 2);
+      // title bar
+      g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, 0, w, 58);
+      [['#ff5f57', 34], ['#febc2e', 66], ['#28c840', 98]].forEach(function (d) { g.fillStyle = d[0]; g.beginPath(); g.arc(d[1], 29, 10, 0, Math.PI * 2); g.fill(); });
+      g.textBaseline = 'middle'; g.textAlign = 'center';
+      g.font = '500 24px ' + TERM_FONT; g.fillStyle = 'rgba(233,220,255,0.55)';
+      g.fillText('abrar@dhaka: ~', w / 2, 30);
+      // body
+      g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+      var x = 64, y = 215, lh = 96;
+      g.font = '700 58px ' + TERM_FONT;
+      g.shadowColor = 'rgba(255,106,213,0.8)'; g.shadowBlur = 14;
+      g.fillStyle = '#ff6ad5'; g.fillText('>', x, y);
+      g.shadowColor = 'rgba(233,220,255,0.5)'; g.shadowBlur = 8;
+      g.fillStyle = '#fff1fb'; g.fillText(st.typed, x + 54, y);
+      var cw = g.measureText(st.typed).width;
+      if (st.cursor) { g.shadowBlur = 12; g.fillStyle = '#ff6ad5'; g.fillRect(x + 62 + cw, y - 46, 30, 56); }
+      g.font = '500 50px ' + TERM_FONT;
+      st.lines.forEach(function (ln, i) {
+        g.shadowColor = 'rgba(185,155,255,0.5)'; g.shadowBlur = 8;
+        g.fillStyle = st.end ? '#c9b8ff' : '#e9dcff';
+        g.fillText(ln, x, y + lh * (i + 1));
+      });
+      g.shadowBlur = 0;
+    }
+    var term = { step: 0, phase: 'type', at: 0, typed: '', lines: [], cursor: true, end: false, sig: '' };
+    var screenTex = canvasTex(1024, 590, function (g, w, h) {
+      drawTerminal(g, w, h, { typed: '', lines: [], cursor: true, end: false });
     });
+    // Advance the terminal; redraws only when something on it changes
+    function updateTerminal(dt) {
+      var sc = TERM_SCRIPT[term.step];
+      term.at += dt;
+      if (term.phase === 'type') {
+        var n = Math.min(sc.cmd.length, Math.floor(term.at * 13));
+        term.typed = sc.cmd.slice(0, n);
+        if (n === sc.cmd.length && term.at > sc.cmd.length / 13 + 0.35) { term.phase = 'out'; term.at = 0; }
+      } else if (term.phase === 'out') {
+        term.lines = sc.out.slice(0, Math.min(sc.out.length, 1 + Math.floor(term.at / 0.3)));
+        if (term.lines.length === sc.out.length) { term.phase = 'hold'; term.at = 0; }
+      } else if (term.at > (sc.end ? 4.5 : 2.6)) {
+        term.step = (term.step + 1) % TERM_SCRIPT.length;
+        term.phase = 'type'; term.at = 0; term.typed = ''; term.lines = [];
+      }
+      term.end = !!sc.end;
+      term.cursor = term.phase === 'type' || Math.floor(t * 2) % 2 === 0;
+      var sig = term.typed + '|' + term.lines.length + '|' + term.cursor + '|' + term.step;
+      if (sig === term.sig) return;
+      term.sig = sig;
+      var cv = screenTex.image;
+      if (!cv || !cv.getContext) return;
+      drawTerminal(cv.getContext('2d'), cv.width, cv.height, term);
+      screenTex.needsUpdate = true;
+    }
     var screen = new T.Mesh(new T.PlaneGeometry(2.36, 1.36), new T.MeshBasicMaterial({ map: screenTex }));
     screen.position.set(0, 1.4, 0.065);
     monitor.add(screen);
@@ -2487,6 +2543,7 @@
       lamp.intensity = 1.3 + Math.sin(t * 2.1) * 0.03;   // the faintest lamp flicker
       blades.rotation.y += dt * 2.4;                       // ceiling fan
       moveTraffic(dt);                                     // cars on the expressway
+      if (current === 'home') updateTerminal(dt);          // the intro typing itself out on the monitor
       cardEntries.forEach(function (ce, i) {               // ID cards sway a little in the fan's breeze
         ce.pivot.rotation.z = (ce.flipped && !ce.c.medal ? 0 : Math.sin(t * 0.9 + i * 1.7) * 0.03) + ce.kick.z;
       });
