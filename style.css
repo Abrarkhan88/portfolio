@@ -1654,17 +1654,56 @@ html.room-mode body { overflow: hidden; }
   left: var(--margin);
   bottom: var(--space-5);
   display: grid;
-  gap: 2px;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 20px 14px 22px;
+  border: 1px solid var(--room-edge);
+  border-radius: 16px;
+  background: var(--room-glass);
+  box-shadow: 0 0 28px rgba(255, 106, 213, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   pointer-events: none;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+/* neon bar down the left edge */
+.room__id::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 14px; bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--room-neon), #9b6bff);
+  box-shadow: 0 0 12px var(--room-neon);
 }
 .room__id strong {
   font-family: var(--font-display);
-  font-size: var(--step-1);
+  font-size: var(--step-2);
   font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
   font-variation-settings: "wdth" 88;
+  color: #fff4fb;
+  text-shadow: 0 0 18px rgba(255, 106, 213, 0.45);
 }
-.room__id span { font-size: var(--step--1); color: var(--paper-muted); }
+.room__role {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--room-neon), #b99bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.room__place {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--step--1);
+  color: var(--paper-muted);
+}
+.room__place svg { width: 10px; height: 13px; fill: var(--room-neon); filter: drop-shadow(0 0 4px var(--room-neon)); }
 
 .room__actions { display: flex; gap: var(--space-2); }
 
@@ -2335,7 +2374,8 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   .room { --sheet-gap: 12px; --menu-h: 3.4rem; overflow: hidden; }
 
   .room__top { inset: 12px 12px auto 12px; align-items: center; }
-  .room__id { top: 18px; bottom: auto; left: 12px; }
+  .room__id { top: 14px; bottom: auto; left: 12px; padding: 8px 14px 8px 16px; border-radius: 12px; }
+  .room__id::before { top: 8px; bottom: 8px; }
   .room__id strong { font-size: 1.05rem; }
   .room__num { display: none; }
   .room__menu button { letter-spacing: 0.04em; }
