@@ -1153,14 +1153,12 @@
           var r = box(0.07, 0.42, 0.012, mat(side < 0 ? 0x2f6f8f : 0xe9c14a), side * 0.04, -0.2, 0.01, pivot);
           r.rotation.z = side * 0.12;
         });
-        var disc = cyl(0.17, 0.17, 0.04, mat(0xb07a45, { metalness: 0.7, roughness: 0.35 }), 0, -0.56, 0.03, pivot, 32);
+        var disc = cyl(0.17, 0.17, 0.04, mat(0xc0844e, { metalness: 0.35, roughness: 0.45 }), 0, -0.56, 0.03, pivot, 32);
         disc.rotation.x = Math.PI / 2;
-        cyl(0.11, 0.11, 0.045, mat(0x8f5f34, { metalness: 0.7, roughness: 0.45 }), 0, -0.56, 0.035, pivot, 32).rotation.x = Math.PI / 2;
-        // A bright gold rim and a soft halo so the medal reads against the dark board
-        var rim = new T.Mesh(new T.RingGeometry(0.165, 0.2, 48), new T.MeshBasicMaterial({ color: 0xffd98a, side: T.DoubleSide }));
-        rim.position.set(0, -0.56, 0.058); pivot.add(rim);
-        var halo = new T.Mesh(new T.RingGeometry(0.2, 0.27, 48), new T.MeshBasicMaterial({ color: 0xffb36b, transparent: true, opacity: 0.3, depthWrite: false, side: T.DoubleSide }));
-        halo.position.set(0, -0.56, 0.05); pivot.add(halo);
+        cyl(0.11, 0.11, 0.045, mat(0xa36d3f, { metalness: 0.35, roughness: 0.5 }), 0, -0.56, 0.035, pivot, 32).rotation.x = Math.PI / 2;
+        // A thin warm edge so the medal just reads against the dark board
+        var rim = new T.Mesh(new T.RingGeometry(0.168, 0.18, 48), new T.MeshBasicMaterial({ color: 0xd6a06a, transparent: true, opacity: 0.85, side: T.DoubleSide }));
+        rim.position.set(0, -0.56, 0.056); pivot.add(rim);
         disc.userData.card = i;
         cardMeshes.push(disc);
         entry.hold = disc;
