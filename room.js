@@ -52,7 +52,7 @@
       '<div class="room__stage"></div>' +
       '<div class="room__hotspots" aria-hidden="true"></div>' +
 
-      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation &amp; ML</span><span>Dhaka</span></p>' +
+      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, Automation &amp; ML</span><span>Dhaka</span></p>' +
       '<div class="room__top">' +
         '<div class="room__actions">' +
           '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
@@ -670,7 +670,7 @@
       drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.18,
         colors: ['#b48ad0', '#ab82c8', '#bc94d6'], tanks: 0.4, tankColor: '#9c74bc' });
       // Mosque: dome and two minarets, off to one side of the window view, behind the city
-      var mx = w * 0.603, base = h * 0.7, k = 0.62;
+      var mx = w * 0.526, base = h * 0.7, k = 0.62;
       g.fillStyle = '#8f63b0';
       g.fillRect(mx - 70 * k, base - 40 * k, 140 * k, h - base + 40 * k);
       g.beginPath(); g.arc(mx, base - 40 * k, 62 * k, Math.PI, 0); g.fill();
@@ -790,7 +790,7 @@
       var rects = [];
       drawBuildingsRow(blocks.getContext('2d'), w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.66, gap: 30, cell: 34, lit: 0.42,
         colors: ['#5e3f82', '#66468a', '#573a7a'], tanks: 0.7, tankColor: '#40295e', grills: true, ac: true,
-        clear: [w * 0.58, w * 0.63], out: rects });   // a side street, looking through to the mosque
+        clear: [w * 0.49, w * 0.56], out: rects });   // a side street, looking through to the mosque
       g.drawImage(blocks, 0, 0);
 
       // Elevated expressway weaving through the blocks: concrete deck on pillars, traffic streaking along
