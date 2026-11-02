@@ -52,7 +52,7 @@
       '<div class="room__stage"></div>' +
       '<div class="room__hotspots" aria-hidden="true"></div>' +
 
-      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation &amp; ML</span><span>Dhaka</span></p>' +
+      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, Automation &amp; ML</span><span>Dhaka</span></p>' +
       '<div class="room__top">' +
         '<div class="room__actions">' +
           '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
