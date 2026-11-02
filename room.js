@@ -1783,19 +1783,19 @@
 
     /* ---------- Acoustic guitar leaning on the back wall, between the desk and the cabinet ---------- */
     var guitar = new T.Group();
-    guitar.position.set(4.8, -0.01, -5.28);
-    guitar.rotation.set(-0.17, 0.28, 0.02, 'YXZ');                 // nearly upright, front turned towards you
+    guitar.position.set(4.85, 0.0, -5.12);
+    guitar.rotation.set(-0.2, -0.22, 0.03, 'YXZ');                 // leaning back against the wall
     guitar.scale.set(1.4, 1.4, 1.4);                                // full size: the headstock reaches just under the board
     scene.add(guitar);
     // Natural wood top: light honey spruce, only a touch warmer towards the edge
     var burstTex = canvasTex(256, 256, function (g, w, h) {
       var rg = g.createRadialGradient(w / 2, h * 0.6, 8, w / 2, h * 0.6, w * 0.62);   // canvas is flipped onto the top, so 0.6 down = 0.4 up the body
-      rg.addColorStop(0, '#e6b262'); rg.addColorStop(0.55, '#d69d4a'); rg.addColorStop(0.85, '#b87a33'); rg.addColorStop(1, '#7c4a1e');
+      rg.addColorStop(0, '#ecc995'); rg.addColorStop(0.6, '#e2b47a'); rg.addColorStop(0.9, '#cf9a5e'); rg.addColorStop(1, '#a8703c');
       g.fillStyle = rg; g.fillRect(0, 0, w, h);
       g.strokeStyle = 'rgba(120,70,30,0.1)'; g.lineWidth = 1;          // fine spruce grain
       for (var gx = 0; gx < w; gx += 5) { g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + 2, h); g.stroke(); }
     });
-    var gSideM = mat(0x8a5a2b, { roughness: 0.4 }), gDarkM = mat(0x2a1a12, { roughness: 0.5 });
+    var gSideM = mat(0xb07a45, { roughness: 0.4 }), gDarkM = mat(0x2a1a12, { roughness: 0.5 });
     var gTopM = new T.MeshStandardMaterial({ map: burstTex, roughness: 0.42 });
     var bindM = mat(0x2a1a12, { roughness: 0.5 });
     var BW = 0.42, BH = 1.0, BD = 0.13;                              // half width, body length, depth
@@ -1826,11 +1826,11 @@
       box(BW * 2, BH, BD, gSideM, 0, BH / 2, 0, guitar);
     }
     var FZ = BD / 2 + 0.01;                                          // just in front of the top
-    cyl(0.08, 0.08, 0.01, mat(0x0c0806), 0, 0.66, FZ, guitar, 28).rotation.x = Math.PI / 2;   // sound hole
-    var rosette = new T.Mesh(new T.RingGeometry(0.088, 0.1, 32), new T.MeshStandardMaterial({ color: 0x3a2416, roughness: 0.5 }));
-    rosette.position.set(0, 0.66, FZ + 0.002); guitar.add(rosette);
+    cyl(0.085, 0.085, 0.01, mat(0x0c0806), 0, 0.64, FZ, guitar, 28).rotation.x = Math.PI / 2;   // sound hole
+    var rosette = new T.Mesh(new T.RingGeometry(0.09, 0.11, 32), new T.MeshStandardMaterial({ color: 0xe9dcc4, roughness: 0.5 }));
+    rosette.position.set(0, 0.64, FZ + 0.002); guitar.add(rosette);
     var guard = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 0.004, 24, 1, false, Math.PI * 0.9, Math.PI * 0.9), mat(0x150d09, { roughness: 0.35 }));
-    guard.rotation.x = Math.PI / 2; guard.position.set(0.06, 0.58, FZ); guitar.add(guard);       // pickguard
+    guard.rotation.x = Math.PI / 2; guard.position.set(0.05, 0.6, FZ); guitar.add(guard);       // pickguard
     box(0.24, 0.045, 0.02, gDarkM, 0, 0.24, FZ + 0.005, guitar);   // bridge
     box(0.15, 0.006, 0.006, mat(0xece6da), 0, 0.255, FZ + 0.016, guitar);   // saddle
     // neck, fretboard, frets
