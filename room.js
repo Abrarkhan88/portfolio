@@ -412,9 +412,9 @@
     function between(a, b) { return a + rnd() * (b - a); }
 
     /* ---------- Lights: night in the room ---------- */
-    scene.add(new T.HemisphereLight(0xd8d2f0, 0x2a2633, 1.05));     // soft night fill
+    scene.add(new T.HemisphereLight(0xeedcf0, 0x3d3038, 1.4));      // soft night fill, a little warmer
 
-    var sunset = new T.DirectionalLight(0xbcaaff, 0.6);              // violet moonlight through the window
+    var sunset = new T.DirectionalLight(0xd8b4ff, 0.75);              // violet moonlight through the window
     sunset.position.set(-14, 8.5, 3);
     sunset.castShadow = true;
     sunset.shadow.mapSize.width = 2048;
@@ -434,7 +434,13 @@
       l.position.set(p[0], p[1], p[2]);
       scene.add(l);
     });
-    var fanLight = new T.PointLight(0xd8d0ff, 0.35, 14, 2);
+    // Warm glow pooling on the floor: city light spilling in by the window, and a soft room light
+    [[-5.2, 1.4, 0.2, 0xffa6d0, 1.1, 7], [3.5, 5.6, 3.5, 0xffc8b0, 0.7, 16], [6.4, 2.6, 2.0, 0xffb38a, 0.55, 6]].forEach(function (p) {
+      var l = new T.PointLight(p[3], p[4], p[5], 2);
+      l.position.set(p[0], p[1], p[2]);
+      scene.add(l);
+    });
+    var fanLight = new T.PointLight(0xffe2d0, 0.5, 14, 2);
     fanLight.position.set(0.6, 6.5, 1);
     scene.add(fanLight);
 
@@ -522,7 +528,7 @@
     panelCanvas.width = 256; panelCanvas.height = 256;
     (function (g, w, h) {
       var pg = g.createLinearGradient(0, 0, w, h);
-      pg.addColorStop(0, '#46424e'); pg.addColorStop(1, '#3c3945');
+      pg.addColorStop(0, '#4d4553'); pg.addColorStop(1, '#433b4a');
       g.fillStyle = pg; g.fillRect(0, 0, w, h);
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(0, 0, w, 3); g.fillRect(0, 0, 3, h);
       g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(3, 3, w - 3, 2); g.fillRect(3, 3, 2, h - 3);
@@ -1485,7 +1491,7 @@
 
     // A big leafy plant in a white pot on a wooden stand, by the window
     var plant = new T.Group();
-    plant.position.set(-6.4, 0, 5.3);
+    plant.position.set(-6.3, 0, 3.3);
     plant.scale.set(0.85, 0.85, 0.85);
     scene.add(plant);
     var standM = mat(0x5a3a26, { roughness: 0.7 });
@@ -1613,27 +1619,45 @@
     armchair.position.set(7.4, 0, 1.6);
     armchair.rotation.y = -2.25;                                         // facing back into the room
     scene.add(armchair);
-    var leatherM = mat(0x3b3542, { roughness: 0.42, metalness: 0.05 });
-    var cushionM = mat(0x453e4d, { roughness: 0.45 });
-    function rounded(w, h, d, m, x, y, z, parent) {                   // a softened block: a box with capsule edges
-      var g0 = new T.Group(); g0.position.set(x, y, z); (parent || scene).add(g0);
-      box(w - 0.2, h, d, m, 0, 0, 0, g0);
-      [-1, 1].forEach(function (sd) {
-        var c = new T.Mesh(new T.CapsuleGeometry(0.1, Math.max(0.01, h - 0.2), 6, 12), m);
-        c.position.set(sd * (w / 2 - 0.1), 0, 0); c.scale.set(1, 1, d / 0.2);
-        c.castShadow = true; c.receiveShadow = true; g0.add(c);
-      });
-      return g0;
+    // A plump leather club chair: rolled arms, a curved tub back and soft cushions
+    var leatherM = mat(0x4a3f57, { roughness: 0.36, metalness: 0.08 });
+    var cushionM = mat(0x55496a, { roughness: 0.4, metalness: 0.06 });
+    function capsule(r, len, m, x, y, z, rx, ry, rz, parent) {
+      var c = new T.Mesh(new T.CapsuleGeometry(r, Math.max(0.01, len), 8, 16), m);
+      c.position.set(x, y, z); c.rotation.set(rx || 0, ry || 0, rz || 0);
+      c.castShadow = true; c.receiveShadow = true; (parent || armchair).add(c);
+      return c;
     }
-    rounded(1.8, 0.55, 1.6, leatherM, 0, 0.55, 0, armchair);              // base
-    rounded(1.4, 0.24, 1.25, cushionM, 0, 0.95, 0.12, armchair);          // seat cushion
-    var backRest = rounded(1.8, 1.25, 0.4, leatherM, 0, 1.45, -0.62, armchair); backRest.rotation.x = -0.12;
+    function puff(rx, ry, rz, m, x, y, z, parent) {                  // a squashed sphere, for pillowy shapes
+      var sp = new T.Mesh(new T.SphereGeometry(1, 28, 18), m);
+      sp.scale.set(rx, ry, rz); sp.position.set(x, y, z);
+      sp.castShadow = true; sp.receiveShadow = true; (parent || armchair).add(sp);
+      return sp;
+    }
+    // base with a rolled front edge
+    box(1.42, 0.42, 1.36, leatherM, 0, 0.47, -0.04, armchair);
+    capsule(0.21, 1.0, leatherM, 0, 0.47, 0.64, 0, 0, Math.PI / 2);
+    // seat cushion, domed, with a rounded nose
+    box(1.3, 0.16, 1.12, cushionM, 0, 0.78, 0.04, armchair);
+    capsule(0.1, 1.1, cushionM, 0, 0.78, 0.6, 0, 0, Math.PI / 2);
+    puff(0.66, 0.07, 0.56, cushionM, 0, 0.86, 0.04);
+    // curved tub back: overlapping upright rolls on an arc behind the seat
+    for (var bk = 0; bk <= 8; bk++) {
+      var ba = -1.2 + bk * 0.3, br = 0.74;
+      var bh = 1.05 - Math.abs(ba) * 0.32;                           // lower towards the arms
+      capsule(0.17, bh, leatherM, Math.sin(ba) * br, 0.62 + bh / 2 + 0.17, -Math.cos(ba) * br * 0.86 - 0.02, -0.14 * Math.cos(ba), 0, 0);
+    }
+    // loose back cushion leaning against it
+    var bc = puff(0.6, 0.4, 0.15, cushionM, 0, 1.38, -0.42); bc.rotation.x = -0.18;
+    // rolled arms
     [-1, 1].forEach(function (sd) {
-      var armRest = new T.Mesh(new T.CapsuleGeometry(0.2, 1.1, 8, 16), leatherM);
-      armRest.rotation.x = Math.PI / 2; armRest.position.set(sd * 0.8, 1.05, 0.05);
-      armRest.castShadow = true; armchair.add(armRest);
+      box(0.34, 0.5, 1.2, leatherM, sd * 0.8, 0.55, -0.04, armchair);
+      capsule(0.21, 1.05, leatherM, sd * 0.8, 0.95, -0.04, Math.PI / 2, 0, 0);
+      puff(0.2, 0.26, 0.06, leatherM, sd * 0.8, 0.82, 0.62);          // the scroll on the front of each arm
     });
-    [[-0.7, 0.6], [0.7, 0.6], [-0.7, -0.6], [0.7, -0.6]].forEach(function (lp) { cyl(0.04, 0.03, 0.3, mat(0x2a1c14), lp[0], 0.15, lp[1], armchair, 8); });
+    // a darker piping line around the seat
+    box(1.46, 0.025, 0.025, mat(0x2a2333), 0, 0.69, 0.86, armchair);
+    [[-0.82, 0.55], [0.82, 0.55], [-0.82, -0.6], [0.82, -0.6]].forEach(function (lp) { cyl(0.05, 0.035, 0.28, mat(0x5a3a26, { roughness: 0.6 }), lp[0], 0.14, lp[1], armchair, 10); });
     var sideT = new T.Group(); sideT.position.set(5.3, 0, 2.7); scene.add(sideT);
     cyl(0.58, 0.58, 0.06, mat(0x2b2832, { roughness: 0.4 }), 0, 1.25, 0, sideT, 32);
     cyl(0.04, 0.04, 1.2, mat(C.metal, { metalness: 0.5 }), 0, 0.62, 0, sideT, 10);
@@ -1673,10 +1697,10 @@
       g.beginPath(); g.moveTo(w / 2, h * 0.9); g.lineTo(w / 2, h * 0.3); g.stroke();
     });
     var pothosM = new T.MeshStandardMaterial({ map: pothosTex, alphaTest: 0.5, side: T.DoubleSide, roughness: 0.65 });
-    var pothosGeo = new T.PlaneGeometry(0.2, 0.2);
+    var pothosGeo = new T.PlaneGeometry(0.27, 0.27);
 
     // A tall monstera in a terracotta pot, front-left corner
-    var mon = new T.Group(); mon.position.set(-6.5, 0, 7.6); scene.add(mon);
+    var mon = new T.Group(); mon.position.set(-5.9, 0, 5.7); scene.add(mon);
     cyl(0.6, 0.45, 1.0, mat(0xb8835e, { roughness: 0.8 }), 0, 0.5, 0, mon, 28);
     cyl(0.55, 0.55, 0.04, mat(0x2a1f1a), 0, 0.98, 0, mon, 24);
     for (var ml = 0; ml < 11; ml++) {
@@ -1703,16 +1727,16 @@
         var cord = box(0.012, Math.hypot(len, 0.28), 0.012, mat(0x8c7a64), cx2 / 2, 0.15 + len / 2, cz2 / 2, hp);
         cord.rotation.set(Math.atan2(cz2, len), 0, -Math.atan2(cx2, len));
       });
-      for (var tl = 0; tl < 14; tl++) {                                         // a mound of leaves on top
+      for (var tl = 0; tl < 26; tl++) {                                         // a mound of leaves on top
         var tlf = new T.Mesh(pothosGeo, pothosM);
         tlf.position.set(between(-0.28, 0.28), 0.2 + between(0, 0.12), between(-0.28, 0.28));
         tlf.rotation.set(between(-1.2, -0.2), between(0, 6.28), 0); hp.add(tlf);
       }
-      for (var vn = 0; vn < 10; vn++) {                                         // vines
-        var va = vn * 0.63 + between(-0.2, 0.2), vlen = Math.floor(between(8, 17));
+      for (var vn = 0; vn < 16; vn++) {                                         // vines
+        var va = vn * 0.4 + between(-0.2, 0.2), vlen = Math.floor(between(10, 20));
         var vx = Math.cos(va) * 0.3, vz = Math.sin(va) * 0.3, vy = 0.12;
         for (var vk = 0; vk < vlen; vk++) {
-          vx += Math.cos(va) * 0.025 + between(-0.02, 0.02); vz += Math.sin(va) * 0.025 + between(-0.02, 0.02); vy -= 0.13;
+          vx += Math.cos(va) * 0.025 + between(-0.02, 0.02); vz += Math.sin(va) * 0.025 + between(-0.02, 0.02); vy -= 0.1;
           var vl = new T.Mesh(pothosGeo, pothosM);
           vl.position.set(vx + between(-0.05, 0.05), vy, vz + between(-0.05, 0.05));
           vl.rotation.set(between(-0.6, 0.6), between(0, 6.28), between(-0.4, 0.4));
