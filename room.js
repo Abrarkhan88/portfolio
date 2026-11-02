@@ -558,30 +558,29 @@
     box(0.34, 4.36, 0.24, frameM, RX0 + 0.2, 3.62, -3.13);
     box(0.34, 4.36, 0.24, frameM, RX0 + 0.2, 3.62, 3.13);
     box(0.95, 0.12, 6.7, mat(0x2f2c36, { roughness: 0.5 }), RX0 + 0.4, 1.56, 0);   // deep sill
-    // the fixed frame in the opening
-    box(0.14, 0.12, 6.0, frameM, RX0, 5.54, 0);                         // head
-    box(0.14, 0.12, 6.0, frameM, RX0, 1.66, 0);                         // bottom rail
-    box(0.14, 0.1, 6.0, frameM, RX0, 4.78, 0);                          // transom under the fanlight
-    box(0.14, 3.9, 0.12, frameM, RX0, 3.6, -2.94);
-    box(0.14, 3.9, 0.12, frameM, RX0, 3.6, 2.94);
-    box(0.14, 3.1, 0.1, frameM, RX0, 3.22, 0);                          // centre mullion
-    box(0.14, 0.7, 0.08, frameM, RX0, 5.16, 0);
-    glass(5.8, 0.66, RX0 - 0.02, 5.16, 0);                              // fanlight glass
-    // left pane, closed
-    box(0.08, 0.07, 2.8, frameM, RX0 + 0.04, 4.69, -1.47);
-    box(0.08, 0.07, 2.8, frameM, RX0 + 0.04, 1.75, -1.47);
-    box(0.08, 2.94, 0.07, frameM, RX0 + 0.04, 3.22, -0.1);
-    glass(2.74, 2.88, RX0 + 0.02, 3.22, -1.47);
-    // right pane, swung open on its hinge by the right jamb
-    var sash = new T.Group();
-    sash.position.set(RX0 + 0.04, 3.22, 2.86);
-    sash.rotation.y = -0.42;                                            // opened a little into the room
-    scene.add(sash);
-    box(0.06, 0.07, 2.78, frameM, 0, 1.47, -1.39, sash);
-    box(0.06, 0.07, 2.78, frameM, 0, -1.47, -1.39, sash);
-    box(0.06, 2.94, 0.07, frameM, 0, 0, -0.02, sash);
-    box(0.06, 2.94, 0.07, frameM, 0, 0, -2.76, sash);
-    glass(2.7, 2.88, 0, 0, -1.39, sash);
+    // the fixed frame in the opening, with one full-height bar down the middle
+    box(0.16, 0.14, 6.0, frameM, RX0, 5.5, 0);                          // head
+    box(0.16, 0.14, 6.0, frameM, RX0, 1.7, 0);                          // bottom rail
+    box(0.16, 3.94, 0.14, frameM, RX0, 3.6, -2.93);                     // jambs
+    box(0.16, 3.94, 0.14, frameM, RX0, 3.6, 2.93);
+    box(0.16, 3.7, 0.16, frameM, RX0, 3.6, 0);                          // centre bar
+    // Two casement sashes, each hinged on its outer jamb and swung OUT over the street
+    function casement(hingeZ, dir, angle) {
+      var s = new T.Group();
+      s.position.set(RX0 - 0.1, 3.6, hingeZ);
+      s.rotation.y = -dir * angle;                                       // free edge moves outside (towards -x)
+      scene.add(s);
+      var W = 2.74, H = 3.62;
+      box(0.07, 0.09, W, frameM, 0, H / 2 - 0.045, dir * W / 2, s);     // top rail
+      box(0.07, 0.09, W, frameM, 0, -H / 2 + 0.045, dir * W / 2, s);    // bottom rail
+      box(0.07, H, 0.09, frameM, 0, 0, dir * 0.045, s);                 // hinge stile
+      box(0.07, H, 0.09, frameM, 0, 0, dir * (W - 0.045), s);           // free stile
+      box(0.09, 0.2, 0.03, mat(0xb9b4c4, { metalness: 0.6, roughness: 0.35 }), 0.05, 0, dir * (W - 0.12), s);   // handle
+      glass(W - 0.16, H - 0.16, 0, 0, dir * W / 2, s);
+      return s;
+    }
+    casement(-2.84, 1, 0.62);                                           // left sash
+    casement(2.84, -1, 0.55);                                           // right sash
     var windowGlow = new T.PointLight(0xd7a6ff, 0.6, 8, 2);              // the city's glow spilling in
     windowGlow.position.set(RX0 + 1.2, 3.6, 0);
     scene.add(windowGlow);
