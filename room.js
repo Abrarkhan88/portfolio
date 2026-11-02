@@ -70,6 +70,36 @@
 
       '<div class="room-desk" hidden></div>' +
       '<div class="room-phone" hidden></div>' +
+      '<section class="room-music" hidden aria-label="Music player">' +
+        '<header class="room-music__head">' +
+          '<div class="room-music__now"><p class="room-music__kicker">Now playing</p><p class="room-music__track">Nothing yet</p></div>' +
+          '<button class="room-music__mini" type="button" aria-label="Shrink to mini player"><span aria-hidden="true">&#8600;</span></button>' +
+          '<button class="room-music__stop" type="button" aria-label="Stop music and close">&times;</button>' +
+        '</header>' +
+        '<div class="room-music__screen"><div class="room-music__player"></div></div>' +
+        '<div class="room-music__side">' +
+          '<p class="room-music__track room-music__track--mini">Nothing yet</p>' +
+          '<div class="room-music__controls">' +
+            '<button class="room-music__prev" type="button" aria-label="Previous">&#9198;</button>' +
+            '<button class="room-music__play" type="button" aria-label="Play">&#9654;</button>' +
+            '<button class="room-music__next" type="button" aria-label="Next">&#9197;</button>' +
+          '</div>' +
+          '<div class="room-music__minibar">' +
+            '<button class="room-music__expand" type="button" aria-label="Open the music player"><span aria-hidden="true">&#8598;</span></button>' +
+            '<button class="room-music__stop room-music__stop--mini" type="button" aria-label="Stop music and close">&times;</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="room-music__body">' +
+          '<form class="room-music__search" role="search">' +
+            '<input type="search" name="q" placeholder="Search YouTube for a song or artist" aria-label="Search YouTube for music" autocomplete="off" maxlength="80">' +
+            '<button type="submit">Search</button>' +
+          '</form>' +
+          '<button class="room-music__mine" type="button" hidden>&#9835; Play my playlist</button>' +
+          '<p class="room-music__status" role="status" aria-live="polite"></p>' +
+          '<ul class="room-music__results" data-lenis-prevent></ul>' +
+          '<p class="room-music__note">Music plays through YouTube.</p>' +
+        '</div>' +
+      '</section>' +
       '<section class="room-book" hidden aria-labelledby="room-book-title"></section>' +
       '<div class="room-app" role="dialog" aria-modal="true" aria-labelledby="room-app-title" hidden>' +
         '<div class="room-app__bar">' +
@@ -1079,12 +1109,44 @@
     lampArm.add(shade);
     cyl(0.08, 0.08, 0.06, new T.MeshBasicMaterial({ color: 0xffe6f6 }), -0.66, 1.24, 0.2, lampArm);
 
-    var phone = box(0.34, 0.04, 0.66, mat(0x111214, { roughness: 0.3 }), 1.55, 1.65, 0.35, desk);
+    /* iPhone 15 Pro: a rounded titanium body, edge-to-edge black glass, the Dynamic Island,
+       side buttons and the triple camera on the back */
+    var PW = 0.33, PL = 0.68, PT = 0.036, PR = 0.055;                 // width, length, thickness, corner radius
+    var titaniumM = mat(0x8d8a84, { roughness: 0.32, metalness: 0.85 }); // natural titanium
+    var phoneGeo;
+    if (T.Shape && T.ExtrudeGeometry) {
+      var ps = new T.Shape(), hw = PW / 2, hl = PL / 2;
+      ps.moveTo(-hw + PR, -hl); ps.lineTo(hw - PR, -hl); ps.quadraticCurveTo(hw, -hl, hw, -hl + PR);
+      ps.lineTo(hw, hl - PR); ps.quadraticCurveTo(hw, hl, hw - PR, hl); ps.lineTo(-hw + PR, hl);
+      ps.quadraticCurveTo(-hw, hl, -hw, hl - PR); ps.lineTo(-hw, -hl + PR); ps.quadraticCurveTo(-hw, -hl, -hw + PR, -hl);
+      phoneGeo = new T.ExtrudeGeometry(ps, { depth: PT - 0.012, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 3, curveSegments: 10 });
+      if (phoneGeo.rotateX) { phoneGeo.rotateX(-Math.PI / 2); phoneGeo.center(); }
+    } else {
+      phoneGeo = new T.BoxGeometry(PW, PT, PL);
+    }
+    var phone = new T.Mesh(phoneGeo, titaniumM);
+    phone.position.set(1.55, 1.65, 0.35);
+    phone.castShadow = true; phone.receiveShadow = true;
+    desk.add(phone);
     phone.rotation.y = -0.35;
-    var phoneGlass = new T.Mesh(new T.PlaneGeometry(0.3, 0.6), new T.MeshBasicMaterial({ color: 0x0c0e11 }));
+    var phoneGlass = new T.Mesh(new T.PlaneGeometry(PW - 0.014, PL - 0.014), new T.MeshBasicMaterial({ color: 0x0c0e11 }));
     phoneGlass.rotation.x = -Math.PI / 2;
-    phoneGlass.position.y = 0.021;
+    phoneGlass.position.y = PT / 2 + 0.0015;
     phone.add(phoneGlass);
+    var island = new T.Mesh(new T.PlaneGeometry(0.085, 0.024), new T.MeshBasicMaterial({ color: 0x000000 }));
+    island.rotation.x = -Math.PI / 2;
+    island.position.set(0, PT / 2 + 0.002, -PL / 2 + 0.045);
+    phone.add(island);
+    // side buttons: action button and volume on the left, the side button on the right
+    [[-1, -0.2, 0.035], [-1, -0.12, 0.06], [-1, -0.04, 0.06], [1, -0.1, 0.1]].forEach(function (bt) {
+      box(0.008, 0.016, bt[2], titaniumM, bt[0] * (PW / 2 + 0.003), 0, bt[1], phone);
+    });
+    // camera plateau with three lenses on the back
+    var camPad = box(0.13, 0.008, 0.13, mat(0x6f6c68, { roughness: 0.25, metalness: 0.7 }), -PW / 2 + 0.085, -PT / 2 - 0.004, -PL / 2 + 0.085, phone);
+    [[-0.03, -0.03], [-0.03, 0.03], [0.03, 0]].forEach(function (ln) {
+      var lens = cyl(0.024, 0.024, 0.014, mat(0x111216, { roughness: 0.15, metalness: 0.6 }), ln[0], -0.008, ln[1], camPad, 18);
+      cyl(0.015, 0.015, 0.003, mat(0x1d2440, { roughness: 0.05, metalness: 0.9 }), 0, -0.008, 0, lens, 14);
+    });
     var PHONE_REST = { x: 1.55, y: 1.65, z: 0.35, rx: 0, ry: -0.35 };
     var PHONE_UP = { x: 1.55, y: 2.55, z: 0.75, rx: Math.PI / 2, ry: 0 };   // lifted, facing you (desk sits at z -2.2)
 
@@ -1705,8 +1767,10 @@
     // Turntable
     var tt = new T.Group(); tt.position.set(-1.35, 1.2, 0.05); cab.add(tt);
     box(1.0, 0.14, 0.8, mat(0x1c1a20, { roughness: 0.4 }), 0, 0.07, 0, tt);
-    cyl(0.34, 0.34, 0.03, mat(0x0d0c10, { roughness: 0.3 }), -0.1, 0.16, 0, tt, 32);
-    cyl(0.11, 0.11, 0.032, mat(0xff5fd2, { roughness: 0.6 }), -0.1, 0.165, 0, tt, 20);  // record label
+    var platter = new T.Group(); platter.position.set(-0.1, 0.16, 0); tt.add(platter);       // spins while music plays
+    cyl(0.34, 0.34, 0.03, mat(0x0d0c10, { roughness: 0.3 }), 0, 0, 0, platter, 32);
+    cyl(0.11, 0.11, 0.032, mat(0xff5fd2, { roughness: 0.6 }), 0, 0.005, 0, platter, 20);  // record label
+    box(0.03, 0.034, 0.1, mat(0xffe6f6), 0.05, 0.006, 0, platter);                          // a mark on the label, so you can see it turn
     var tone = box(0.03, 0.03, 0.55, mat(0x9a95a4, { metalness: 0.7, roughness: 0.3 }), 0.33, 0.21, 0.02, tt); tone.rotation.y = 0.35;
     cyl(0.05, 0.05, 0.08, mat(0x9a95a4, { metalness: 0.7 }), 0.38, 0.18, -0.25, tt, 12);
     var dust = box(1.02, 0.02, 0.82, new T.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, roughness: 0.1 }), 0, 0.55, -0.42, tt);
@@ -2247,7 +2311,11 @@
         '<span class="room-phone__label">' + label + '<small>' + sub + '</small></span></a>';
     }
     phoneUi.innerHTML =
-      '<div class="room-phone__status"><span>Dhaka</span><span class="room-phone__battery" aria-hidden="true"></span></div>' +
+      '<div class="room-phone__island" aria-hidden="true"></div>' +
+      '<div class="room-phone__status" aria-hidden="true"><span class="room-phone__clock"></span>' +
+        '<span class="room-phone__icons"><span class="room-phone__signal"><i></i><i></i><i></i><i></i></span>' +
+        '<svg class="room-phone__wifi" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.4 6.8a6.5 6.5 0 0 1 9.2 0l-1.3 1.3a4.6 4.6 0 0 0-6.6 0zM1.2 4.6a9.6 9.6 0 0 1 13.6 0l-1.3 1.3a7.8 7.8 0 0 0-11 0z"/></svg>' +
+        '<span class="room-phone__battery"></span></span></div>' +
       '<p class="room-phone__time" aria-hidden="true"></p>' +
       '<p class="room-phone__date"></p>' +
       '<div class="room-phone__card">' +
@@ -2263,7 +2331,8 @@
         phoneRow('https://github.com/Abrarkhan88', 'gh', 'GitHub', 'Abrarkhan88', ' target="_blank" rel="noopener"') +
         '<div class="room-phone__resume" hidden>' + phoneRow(RESUME, 'cv', 'Resume', 'PDF download', ' download') + '</div>' +
       '</div>' +
-      '<p class="room-phone__toast" role="status" aria-live="polite"></p>';
+      '<p class="room-phone__toast" role="status" aria-live="polite"></p>' +
+      '<span class="room-phone__home" aria-hidden="true"></span>';
 
     // The resume row appears only if the PDF is really there
     if (window.fetch && location.protocol !== 'file:') {
@@ -2286,12 +2355,14 @@
       } else done(EMAIL);
     });
 
-    var phoneTime = phoneUi.querySelector('.room-phone__time'), phoneDate = phoneUi.querySelector('.room-phone__date');
+    var phoneTime = phoneUi.querySelector('.room-phone__time'), phoneDate = phoneUi.querySelector('.room-phone__date'),
+        phoneClock = phoneUi.querySelector('.room-phone__clock');
     function tickPhone() {
       var now = new Date();
       try {
         phoneTime.textContent = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' });
-        phoneDate.textContent = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Dhaka' });
+        phoneDate.textContent = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Dhaka' }) + ' \u00b7 Dhaka';
+        phoneClock.textContent = now.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }).replace(/\s?[ap]m$/i, '');
       } catch (err) { phoneTime.textContent = ''; }
     }
     tickPhone();
@@ -2321,7 +2392,7 @@
       }
     }
     // The HTML screen sits on the lifted phone's glass
-    var PHONE_CORNERS = [[1.4, 2.85, -1.428], [1.7, 2.85, -1.428], [1.4, 2.25, -1.428], [1.7, 2.25, -1.428]];
+    var PHONE_CORNERS = [[1.392, 2.883, -1.43], [1.708, 2.883, -1.43], [1.392, 2.217, -1.43], [1.708, 2.217, -1.43]];
     function placePhone(w, h) {
       if (phoneUi.hidden) return;
       var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -2385,6 +2456,150 @@
       }
     }
 
+    /* ---------- Music: a YouTube player behind the record player ----------
+       Click the turntable: a panel opens with the player, search and my playlist.
+       Shrinking it docks a small player in the corner so music keeps going while you
+       look around. YouTube's rules: the player always stays on screen, at least 200x200,
+       with nothing on top of it, so there is no hidden "background" playback. */
+    var MUSIC_PLAYLIST = '';                                  // YouTube / YouTube Music playlist ID (the part after list=)
+    var MUSIC_SEARCH_URL = '/api/yt-search';                  // serverless search, keeps the API key private
+    var music = (function () {
+      var ui = layer.querySelector('.room-music');
+      var playerEl = ui.querySelector('.room-music__player');
+      var tracks = ui.querySelectorAll('.room-music__track');
+      var playBtn = ui.querySelector('.room-music__play');
+      var statusEl = ui.querySelector('.room-music__status');
+      var resultsEl = ui.querySelector('.room-music__results');
+      var mineBtn = ui.querySelector('.room-music__mine');
+      var yt = null, ytReady = false, pending = null, playing = false, spin = 0, toneAngle = 0.35;
+      if (MUSIC_PLAYLIST) mineBtn.hidden = false;
+
+      function decode(str) { var t2 = document.createElement('textarea'); t2.innerHTML = str; return t2.value; }
+      function setTrack(name) { Array.prototype.forEach.call(tracks, function (el) { el.textContent = name; }); }
+      function say(msg) { statusEl.textContent = msg || ''; }
+
+      function loadApi(cb) {
+        if (window.YT && window.YT.Player) { cb(); return; }
+        var prev = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = function () { if (prev) prev(); cb(); };
+        if (!document.querySelector('script[data-yt-api]')) {
+          var sc = document.createElement('script');
+          sc.src = 'https://www.youtube.com/iframe_api';
+          sc.async = true; sc.setAttribute('data-yt-api', '');
+          sc.onerror = function () { say('YouTube could not be reached. Check your connection or ad blocker.'); };
+          document.head.appendChild(sc);
+        }
+      }
+      function makePlayer() {
+        if (yt) return;
+        yt = new YT.Player(playerEl, {
+          width: '100%', height: '100%',
+          playerVars: { playsinline: 1, rel: 0, origin: location.origin },
+          events: {
+            onReady: function () {
+              ytReady = true;
+              if (pending) { pending(); pending = null; }
+              else if (MUSIC_PLAYLIST) yt.cuePlaylist({ listType: 'playlist', list: MUSIC_PLAYLIST });
+            },
+            onStateChange: function (e) {
+              playing = e.data === YT.PlayerState.PLAYING;
+              playBtn.innerHTML = playing ? '&#10073;&#10073;' : '&#9654;';
+              playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+              ui.classList.toggle('is-playing', playing);
+              duck(playing);
+              try { var d = yt.getVideoData(); if (d && d.title) setTrack(d.title); } catch (err) { /* not ready */ }
+            },
+            onError: function () {
+              say('That one can’t play here (the owner blocks it on other sites). Skipping.');
+              try { yt.nextVideo(); } catch (err) { /* single video */ }
+            }
+          }
+        });
+      }
+      function whenReady(fn) { if (ytReady) fn(); else pending = fn; }
+
+      // The room's own city and fan sound steps back while music plays
+      function duck(on) {
+        if (!audio) return;
+        try {
+          var g = audio.master.gain, now = audio.ctx.currentTime;
+          g.cancelScheduledValues(now); g.setValueAtTime(Math.max(0.0001, g.value), now);
+          g.exponentialRampToValueAtTime(on ? 0.12 : 0.6, now + 0.8);
+        } catch (err) { /* sound off */ }
+      }
+
+      function open() {
+        ui.hidden = false;
+        ui.classList.remove('is-mini');
+        loadApi(makePlayer);
+        if (window.gsap) gsap.fromTo(ui, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.35, ease: 'power2.out' });
+        var q = ui.querySelector('input'); if (q && !isCompact()) q.focus({ preventScroll: true });
+      }
+      function mini() { ui.classList.add('is-mini'); }
+      function stop() {
+        try { if (yt && yt.stopVideo) yt.stopVideo(); } catch (err) { /* not ready */ }
+        playing = false; ui.classList.remove('is-playing'); duck(false);
+        ui.hidden = true; ui.classList.remove('is-mini');
+      }
+
+      ui.querySelector('.room-music__mini').addEventListener('click', mini);
+      ui.querySelector('.room-music__expand').addEventListener('click', function () { ui.classList.remove('is-mini'); });
+      Array.prototype.forEach.call(ui.querySelectorAll('.room-music__stop'), function (b) { b.addEventListener('click', stop); });
+      playBtn.addEventListener('click', function () { whenReady(function () { if (playing) yt.pauseVideo(); else yt.playVideo(); }); });
+      ui.querySelector('.room-music__prev').addEventListener('click', function () { whenReady(function () { yt.previousVideo(); }); });
+      ui.querySelector('.room-music__next').addEventListener('click', function () { whenReady(function () { yt.nextVideo(); }); });
+      mineBtn.addEventListener('click', function () {
+        say('');
+        whenReady(function () { yt.loadPlaylist({ listType: 'playlist', list: MUSIC_PLAYLIST }); });
+      });
+      ui.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !ui.classList.contains('is-mini')) { e.stopPropagation(); mini(); }
+      });
+
+      // Search runs on the server (/api/yt-search), so the YouTube key never reaches the browser
+      ui.querySelector('.room-music__search').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var q = e.target.q.value.trim();
+        if (!q) return;
+        say('Searching…');
+        resultsEl.innerHTML = '';
+        fetch(MUSIC_SEARCH_URL + '?q=' + encodeURIComponent(q))
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(function (data) {
+            var items = (data && data.items) || [];
+            say(items.length ? '' : 'Nothing found. Try another search.');
+            items.forEach(function (it) {
+              var li = document.createElement('li');
+              var b = document.createElement('button');
+              b.type = 'button';
+              b.className = 'room-music__hit';
+              b.innerHTML = '<img alt="" loading="lazy" src="' + it.thumb + '"><span><strong></strong><small></small></span>';
+              b.querySelector('strong').textContent = decode(it.title);
+              b.querySelector('small').textContent = decode(it.channel);
+              b.addEventListener('click', function () {
+                setTrack(decode(it.title)); say('');
+                whenReady(function () { yt.loadVideoById(it.id); });
+              });
+              li.appendChild(b); resultsEl.appendChild(li);
+            });
+          })
+          .catch(function () { say('Search isn’t available right now.'); });
+      });
+
+      return {
+        open: open,
+        tick: function (dt, time) {
+          spin += ((playing ? 3.6 : 0) - spin) * Math.min(1, dt * 1.5);       // spins up and winds down
+          platter.rotation.y -= spin * dt;
+          toneAngle += ((playing ? 0.62 : 0.35) - toneAngle) * Math.min(1, dt * 2);
+          tone.rotation.y = toneAngle;
+          var pulse = playing ? 1 + Math.abs(Math.sin(time * 4.2)) * 0.12 : 1;
+          ring.scale.set(pulse, pulse, 1);
+        },
+        destroy: function () { try { if (yt && yt.destroy) yt.destroy(); } catch (err) { /* gone */ } yt = null; duck(false); }
+      };
+    })();
+
     /* ---------- Floating markers over clickable objects ---------- */
     var markers = HOTSPOTS.map(function (h) {
       var b = document.createElement('button');
@@ -2396,12 +2611,23 @@
       hotspotsEl.appendChild(b);
       return { el: b, at: new T.Vector3(h.at[0], h.at[1], h.at[2]) };
     });
+    // The record player opens music without moving the camera
+    (function () {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'room__marker';
+      b.setAttribute('tabindex', '-1');
+      b.innerHTML = '<span>Music</span>';
+      b.addEventListener('click', function () { music.open(); });
+      hotspotsEl.appendChild(b);
+      markers.push({ el: b, at: new T.Vector3(6.55, 2.25, -5.0), homeOnly: true });
+    })();
     var tmp = new T.Vector3();
 
     function placeMarkers(w, h) {
       markers.forEach(function (m) {
         tmp.copy(m.at).project(camera);
-        var visible = tmp.z < 1;
+        var visible = tmp.z < 1 && !(m.homeOnly && current !== 'home');
         m.el.style.transform = 'translate(' + ((tmp.x * 0.5 + 0.5) * w) + 'px,' + ((-tmp.y * 0.5 + 0.5) * h) + 'px)';
         m.el.style.opacity = visible ? '' : '0';
       });
@@ -2420,6 +2646,7 @@
         var hits = raycaster.intersectObject(HOTSPOTS[i].mesh, true);
         if (hits.length) return HOTSPOTS[i].view;
       }
+      if (raycaster.intersectObject(cab, true).length) return 'music';
       return null;
     }
     function pickCard(clientX, clientY) {
@@ -2473,7 +2700,8 @@
       canvas.style.cursor = 'grab';
       if (moved < 6 && current === 'home') {
         var hit = pickAt(e.clientX, e.clientY);
-        if (hit) flyTo(hit);
+        if (hit === 'music') music.open();
+        else if (hit) flyTo(hit);
       } else if (moved < 6 && current === 'work' && e.target === canvas) {
         var ci = pickCard(e.clientX, e.clientY);
         if (ci >= 0) selectCard(ci);
@@ -2544,6 +2772,7 @@
       blades.rotation.y += dt * 2.4;                       // ceiling fan
       moveTraffic(dt);                                     // cars on the expressway
       if (current === 'home') updateTerminal(dt);          // the intro typing itself out on the monitor
+      music.tick(dt, t);                                   // record spins and the speaker ring pulses while music plays
       cardEntries.forEach(function (ce, i) {               // ID cards sway a little in the fan's breeze
         ce.pivot.rotation.z = (ce.flipped && !ce.c.medal ? 0 : Math.sin(t * 0.9 + i * 1.7) * 0.03) + ce.kick.z;
       });
@@ -2591,6 +2820,7 @@
         closeApp(false);                      // put any open demo back on the flat page
         clearInterval(clockTimer);
         clearInterval(phoneTimer);
+        music.destroy();
         document.removeEventListener('keydown', onKey);
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
