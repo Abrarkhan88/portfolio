@@ -1783,7 +1783,7 @@
 
     /* ---------- Acoustic guitar leaning on the back wall, between the desk and the cabinet ---------- */
     var guitar = new T.Group();
-    guitar.position.set(4.85, 0.0, -5.42);
+    guitar.position.set(5.18, -0.01, -5.42);
     guitar.rotation.set(-0.12, 0.28, 0.02, 'YXZ');                 // nearly upright, front turned towards you
     guitar.scale.set(1.4, 1.4, 1.4);                                // full size: the headstock reaches just under the board
     scene.add(guitar);
