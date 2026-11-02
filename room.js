@@ -791,80 +791,60 @@
     // Layer 2: closer residential blocks with balconies and AC units
     // The expressway's height across the near layer, as a fraction of its texture (0 = top)
     function deckV(u) { return 0.6 - 0.035 * u - Math.sin(u * Math.PI) * 0.012; }
-    /* A coconut palm: a tapering ringed trunk, a coconut cluster, and feathery
-       fronds built from a curved midrib with leaflets hanging off both sides */
-    function drawPalm(g, bx, baseY, top, side) {
-      var lean = side * 34, cx = bx + lean * 1.0, ctlX = bx + lean * 2.4, ctlY = (baseY + top) / 2;
-      function q(t) {                                    // point on the trunk curve, t 0 base .. 1 crown
-        var a = 1 - t;
-        return [a * a * bx + 2 * a * t * ctlX + t * t * cx, a * a * baseY + 2 * a * t * ctlY + t * t * top];
+    /* Electric poles just outside the window, Dhaka style: concrete posts with two
+       cross-arms, insulators, a transformer box, and sagging wires strung between them */
+    var POLE_INK = '#2a2034';
+    function drawPole(g, x, h, top, transformer) {
+      g.fillStyle = POLE_INK;
+      g.beginPath();                                           // post, slightly tapered
+      g.moveTo(x - 7, top); g.lineTo(x + 7, top); g.lineTo(x + 11, h); g.lineTo(x - 11, h); g.closePath(); g.fill();
+      g.fillRect(x - 9, top - 10, 18, 12);                     // cap
+      var anchors = [];
+      [[top + 22, 84], [top + 66, 70]].forEach(function (arm) {
+        var y = arm[0], half = arm[1];
+        g.fillRect(x - half, y, half * 2, 9);                  // cross-arm
+        g.lineWidth = 4; g.strokeStyle = POLE_INK;             // braces
+        g.beginPath(); g.moveTo(x - half * 0.55, y + 8); g.lineTo(x - 4, y + 40); g.moveTo(x + half * 0.55, y + 8); g.lineTo(x + 4, y + 40); g.stroke();
+        [-0.85, -0.4, 0.4, 0.85].forEach(function (f) {        // insulators
+          var ix = x + half * f;
+          g.fillRect(ix - 3, y - 12, 6, 12);
+          g.fillRect(ix - 6, y - 7, 12, 3);
+          anchors.push([ix, y - 10]);
+        });
+      });
+      if (transformer) {                                       // a transformer can strapped to the post
+        var ty = top + 130;
+        g.fillRect(x + 8, ty, 46, 66);
+        g.fillRect(x + 4, ty + 10, 8, 6); g.fillRect(x + 4, ty + 48, 8, 6);
+        g.fillRect(x + 14, ty - 10, 6, 10); g.fillRect(x + 40, ty - 10, 6, 10);
+        g.lineWidth = 3; g.beginPath(); g.moveTo(x + 17, ty - 10); g.lineTo(x - 30, top + 30); g.moveTo(x + 43, ty - 10); g.lineTo(x + 40, top + 30); g.stroke();
+        g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(x + 12, ty + 4, 6, 58);
+        g.fillStyle = POLE_INK;
       }
-      // Trunk
-      var L = [], R = [], N = 48;
-      for (var i = 0; i <= N; i++) {
-        var t = i / N, p = q(t), p2 = q(Math.min(1, t + 0.01)), p1 = q(Math.max(0, t - 0.01));
-        var tx = p2[0] - p1[0], ty = p2[1] - p1[1], tl = Math.hypot(tx, ty) || 1;
-        var nx = -ty / tl, ny = tx / tl;
-        var wd = (13 * (1 - t) + 7 * t) + 9 * Math.pow(1 - t, 6);    // flared foot, slim neck
-        L.push([p[0] + nx * wd, p[1] + ny * wd]); R.push([p[0] - nx * wd, p[1] - ny * wd]);
-      }
-      var tg = g.createLinearGradient(bx - 30, 0, bx + 30, 0);
-      tg.addColorStop(0, side > 0 ? '#2a2231' : '#5b4762');
-      tg.addColorStop(0.5, '#3a3040');
-      tg.addColorStop(1, side > 0 ? '#5b4762' : '#2a2231');
-      g.fillStyle = tg;
-      g.beginPath(); g.moveTo(L[0][0], L[0][1]);
-      L.forEach(function (pp) { g.lineTo(pp[0], pp[1]); });
-      for (var r = R.length - 1; r >= 0; r--) g.lineTo(R[r][0], R[r][1]);
-      g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(18,12,24,0.55)'; g.lineWidth = 2;   // growth rings
-      for (var k = 2; k < N - 1; k += 2) {
-        var l = L[k], rr = R[k];
-        g.beginPath(); g.moveTo(l[0], l[1]); g.quadraticCurveTo((l[0] + rr[0]) / 2, (l[1] + rr[1]) / 2 + 4, rr[0], rr[1]); g.stroke();
-      }
-      // One frond: midrib curving out and drooping, leaflets on both sides
-      function frond(ang, len, col, rim) {
-        var pts = [];
-        for (var s = 0; s <= 1.0001; s += 0.03) {
-          pts.push([cx + Math.cos(ang) * len * s, top + Math.sin(ang) * len * s * 1.0 + 0.72 * len * s * s]);
-        }
-        g.lineCap = 'round';
-        for (var j = 3; j < pts.length; j++) {
-          var s2 = j / (pts.length - 1), p0 = pts[j - 1], p1 = pts[j];
-          var dir = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
-          var ll = (10 + 46 * Math.pow(Math.sin(Math.PI * Math.min(1, s2 * 1.1)), 0.8)) * (1 - 0.35 * s2);
-          for (var sd = -1; sd <= 1; sd += 2) {
-            var d = dir + sd * 0.75 + between(-0.08, 0.08);
-            var ex = p1[0] + Math.cos(d) * ll, ey = p1[1] + Math.sin(d) * ll * 0.7 + ll * 0.6;   // leaflets hang
-            g.strokeStyle = col; g.lineWidth = 3.2 * (1 - 0.4 * s2);
-            g.beginPath(); g.moveTo(p1[0], p1[1]);
-            g.quadraticCurveTo(p1[0] + Math.cos(d) * ll * 0.6, p1[1] + Math.sin(d) * ll * 0.45, ex, ey);
-            g.stroke();
-            if (rim && sd < 0) {                                       // city glow catching the upper leaflets
-              g.strokeStyle = 'rgba(190,235,170,0.3)'; g.lineWidth = 1.1;
-              g.beginPath(); g.moveTo(p1[0], p1[1]); g.quadraticCurveTo(p1[0] + Math.cos(d) * ll * 0.6, p1[1] + Math.sin(d) * ll * 0.45 - 1, ex, ey - 1); g.stroke();
-            }
-          }
-        }
-        g.strokeStyle = '#4d5a3c'; g.lineWidth = 3;                   // the midrib
-        g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
-        pts.forEach(function (pp) { g.lineTo(pp[0], pp[1]); });
-        g.stroke();
-      }
-      // Dry fronds hanging under the crown
-      for (var dd = 0; dd < 3; dd++) {
-        g.strokeStyle = '#4a3a2e'; g.lineWidth = 4;
-        var da = Math.PI / 2 + (dd - 1) * 0.5;
-        g.beginPath(); g.moveTo(cx, top + 6); g.quadraticCurveTo(cx + Math.cos(da) * 30, top + 40, cx + Math.cos(da) * 40, top + 70); g.stroke();
-      }
-      // Back fronds (darker), then the sides, then the near ones drooping towards us
-      var back = [-1.9, -1.45, -1.15, -2.3], mid = [-0.35, -2.8, -0.75, -2.4, 0.0, -3.1], nearF = [-0.55, -2.6, 0.35, -2.95, -1.6];
-      back.forEach(function (a) { frond(a + between(-0.06, 0.06), between(165, 195), '#1d3024', false); });
-      // Coconuts tucked under the crown
-      g.fillStyle = '#3c3a22';
-      [[-8, 8], [7, 9], [0, 15], [-12, 17], [11, 18]].forEach(function (c) { g.beginPath(); g.arc(cx + c[0], top + c[1], 7.5, 0, Math.PI * 2); g.fill(); });
-      mid.forEach(function (a) { frond(a + between(-0.06, 0.06), between(185, 225), '#284634', true); });
-      nearF.forEach(function (a) { frond(a + between(-0.06, 0.06), between(165, 205), '#33583f', true); });
+      // a street lamp arm on the other side
+      g.lineWidth = 6; g.beginPath(); g.moveTo(x, top + 150); g.quadraticCurveTo(x - 40, top + 120, x - 80, top + 126); g.stroke();
+      g.fillRect(x - 96, top + 122, 26, 9);
+      g.fillStyle = 'rgba(255,214,140,0.95)'; g.fillRect(x - 93, top + 131, 20, 4);
+      g.fillStyle = POLE_INK;
+      return anchors;
+    }
+    function drawWire(g, x0, y0, x1, y1, sag) {
+      g.beginPath(); g.moveTo(x0, y0);
+      g.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag, x1, y1);
+      g.stroke();
+    }
+    function drawPolesAndWires(g, w, h) {
+      var A = drawPole(g, w * 0.44, h, h * 0.37, true);
+      var B = drawPole(g, w * 0.622, h, h * 0.38, false);
+      g.strokeStyle = '#1f1828'; g.lineCap = 'round'; g.lineWidth = 3.5;
+      A.forEach(function (a, i) {
+        var b = B[i];
+        drawWire(g, a[0], a[1], b[0], b[1], 34 + (i % 4) * 9);                              // pole to pole
+        drawWire(g, -20, a[1] + 40 + (i % 3) * 18, a[0], a[1], 22 + (i % 2) * 14);         // off to the left
+        drawWire(g, b[0], b[1], w + 20, b[1] + 30 + (i % 3) * 20, 26 + (i % 2) * 12);      // and on to the right
+      });
+      g.lineWidth = 3;                                                                      // a couple of service drops crossing down
+      drawWire(g, A[2][0], A[2][1], w * 0.52, h * 0.62, 30);
     }
 
     var frontC = document.createElement('canvas');   // blocks that stand in front of the road
@@ -906,8 +886,8 @@
         if (i % 2) return;
         fg.drawImage(blocks, r[0], r[1], r[2], h - r[1], r[0], r[1], r[2], h - r[1]);
       });
-      // Two palm trees just outside the window, in silhouette
-      [[0.4, 0.47, 1], [0.662, 0.5, -1]].forEach(function (pt) { drawPalm(fg, w * pt[0], h, h * pt[1], pt[2]); });
+      // Electric poles and wires just outside the window, in silhouette
+      drawPolesAndWires(fg, w, h);
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
     near.position.set(RX0 - 3.6, 3.0, -1.5);
