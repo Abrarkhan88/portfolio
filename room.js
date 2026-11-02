@@ -791,60 +791,46 @@
     // Layer 2: closer residential blocks with balconies and AC units
     // The expressway's height across the near layer, as a fraction of its texture (0 = top)
     function deckV(u) { return 0.6 - 0.035 * u - Math.sin(u * Math.PI) * 0.012; }
-    /* Electric poles just outside the window, Dhaka style: concrete posts with two
-       cross-arms, insulators, a transformer box, and sagging wires strung between them */
-    var POLE_INK = '#2a2034';
-    function drawPole(g, x, h, top, transformer) {
+    /* Electric poles just outside the window: plain posts with two cross-arms and a
+       small box, and a few long wires sagging deep between them */
+    var POLE_INK = '#33263f';
+    function drawPole(g, x, h, top, boxSide, boxY, armsTop, armsLow) {
       g.fillStyle = POLE_INK;
-      g.beginPath();                                           // post, slightly tapered
-      g.moveTo(x - 7, top); g.lineTo(x + 7, top); g.lineTo(x + 11, h); g.lineTo(x - 11, h); g.closePath(); g.fill();
-      g.fillRect(x - 9, top - 10, 18, 12);                     // cap
-      var anchors = [];
-      [[top + 22, 84], [top + 66, 70]].forEach(function (arm) {
-        var y = arm[0], half = arm[1];
-        g.fillRect(x - half, y, half * 2, 9);                  // cross-arm
-        g.lineWidth = 4; g.strokeStyle = POLE_INK;             // braces
-        g.beginPath(); g.moveTo(x - half * 0.55, y + 8); g.lineTo(x - 4, y + 40); g.moveTo(x + half * 0.55, y + 8); g.lineTo(x + 4, y + 40); g.stroke();
-        [-0.85, -0.4, 0.4, 0.85].forEach(function (f) {        // insulators
-          var ix = x + half * f;
-          g.fillRect(ix - 3, y - 12, 6, 12);
-          g.fillRect(ix - 6, y - 7, 12, 3);
-          anchors.push([ix, y - 10]);
-        });
-      });
-      if (transformer) {                                       // a transformer can strapped to the post
-        var ty = top + 130;
-        g.fillRect(x + 8, ty, 46, 66);
-        g.fillRect(x + 4, ty + 10, 8, 6); g.fillRect(x + 4, ty + 48, 8, 6);
-        g.fillRect(x + 14, ty - 10, 6, 10); g.fillRect(x + 40, ty - 10, 6, 10);
-        g.lineWidth = 3; g.beginPath(); g.moveTo(x + 17, ty - 10); g.lineTo(x - 30, top + 30); g.moveTo(x + 43, ty - 10); g.lineTo(x + 40, top + 30); g.stroke();
-        g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(x + 12, ty + 4, 6, 58);
-        g.fillStyle = POLE_INK;
-      }
-      // a street lamp arm on the other side
-      g.lineWidth = 6; g.beginPath(); g.moveTo(x, top + 150); g.quadraticCurveTo(x - 40, top + 120, x - 80, top + 126); g.stroke();
-      g.fillRect(x - 96, top + 122, 26, 9);
-      g.fillStyle = 'rgba(255,214,140,0.95)'; g.fillRect(x - 93, top + 131, 20, 4);
-      g.fillStyle = POLE_INK;
-      return anchors;
+      g.beginPath();                                                   // post, barely tapered
+      g.moveTo(x - 5, top); g.lineTo(x + 5, top); g.lineTo(x + 7, h); g.lineTo(x - 7, h); g.closePath(); g.fill();
+      var yA = top + 16, yB = top + 46;
+      g.fillRect(x - armsTop[0], yA, armsTop[0] + armsTop[1], 7);     // upper cross-arm
+      g.fillRect(x - armsLow[0], yB, armsLow[0] + armsLow[1], 7);     // lower cross-arm
+      g.fillRect(x + boxSide * 5 - (boxSide < 0 ? 24 : 0), top + boxY, 24, 40);   // small box on the post
+      // where the wires hang from: both ends and the middle of each arm
+      return [
+        [x - armsTop[0] + 4, yA + 4], [x + armsTop[1] - 4, yA + 4],
+        [x - armsLow[0] + 4, yB + 4], [x + armsLow[1] - 4, yB + 4], [x, yA + 6]
+      ];
     }
     function drawWire(g, x0, y0, x1, y1, sag) {
       g.beginPath(); g.moveTo(x0, y0);
-      g.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag, x1, y1);
+      g.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag * 2, x1, y1);   // control point at twice the sag
       g.stroke();
     }
     function drawPolesAndWires(g, w, h) {
-      var A = drawPole(g, w * 0.44, h, h * 0.37, true);
-      var B = drawPole(g, w * 0.622, h, h * 0.38, false);
-      g.strokeStyle = '#1f1828'; g.lineCap = 'round'; g.lineWidth = 3.5;
-      A.forEach(function (a, i) {
-        var b = B[i];
-        drawWire(g, a[0], a[1], b[0], b[1], 34 + (i % 4) * 9);                              // pole to pole
-        drawWire(g, -20, a[1] + 40 + (i % 3) * 18, a[0], a[1], 22 + (i % 2) * 14);         // off to the left
-        drawWire(g, b[0], b[1], w + 20, b[1] + 30 + (i % 3) * 20, 26 + (i % 2) * 12);      // and on to the right
-      });
-      g.lineWidth = 3;                                                                      // a couple of service drops crossing down
-      drawWire(g, A[2][0], A[2][1], w * 0.52, h * 0.62, 30);
+      var L = drawPole(g, w * 0.427, h, h * 0.385, -1, 100, [50, 50], [46, 54]);
+      var R = drawPole(g, w * 0.618, h, h * 0.372, -1, 66, [40, 40], [36, 42]);
+      g.strokeStyle = POLE_INK; g.lineCap = 'round'; g.lineWidth = 2.6;
+      // long spans between the two poles, sagging well below the arms
+      drawWire(g, L[1][0], L[1][1], R[0][0], R[0][1], 40);
+      drawWire(g, L[4][0], L[4][1], R[4][0], R[4][1], 52);
+      drawWire(g, L[3][0], L[3][1], R[2][0], R[2][1], 46);
+      drawWire(g, L[1][0], L[1][1], R[2][0], R[2][1], 58);
+      drawWire(g, L[3][0], L[3][1], R[0][0], R[0][1], 64);
+      drawWire(g, L[2][0] + 12, L[2][1], R[3][0], R[3][1], 72);
+      // from off the left edge up to the left pole
+      drawWire(g, w * 0.3, L[0][1] + 90, L[0][0], L[0][1], 10);
+      drawWire(g, w * 0.3, L[2][1] + 120, L[2][0], L[2][1], 12);
+      drawWire(g, w * 0.3, L[2][1] + 160, L[0][0] + 16, L[0][1], 16);
+      // and on past the right pole
+      drawWire(g, R[1][0], R[1][1], w * 0.72, R[1][1] - 20, 10);
+      drawWire(g, R[3][0], R[3][1], w * 0.72, R[3][1] + 20, 12);
     }
 
     var frontC = document.createElement('canvas');   // blocks that stand in front of the road
