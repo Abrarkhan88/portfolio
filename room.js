@@ -1492,34 +1492,110 @@
     }
     cyl(0.12, 0.12, 0.05, new T.MeshBasicMaterial({ color: 0xf2eaff }), 0, -1.1, 0, fan);
 
-    // A big leafy plant in a white pot on a wooden stand, by the window
-    var plant = new T.Group();
-    plant.position.set(-6.3, 0, 3.3);
-    plant.scale.set(0.85, 0.85, 0.85);
-    scene.add(plant);
-    var standM = mat(0x5a3a26, { roughness: 0.7 });
-    [[-0.32, -0.32], [0.32, -0.32], [-0.32, 0.32], [0.32, 0.32]].forEach(function (lg) {
-      var leg = box(0.07, 1.1, 0.07, standM, lg[0], 0.55, lg[1], plant);
-      leg.rotation.z = lg[0] * 0.25; leg.rotation.x = -lg[1] * 0.25;
+    /* ---------- Lounge corner by the window: sofa, coffee table, floor lamp, art and a wall shelf ---------- */
+    var sofa = new T.Group();
+    sofa.position.set(-6.45, 0, 4.95);                               // back against the left wall, facing into the room
+    scene.add(sofa);
+    var fabricM = mat(0x4a4553, { roughness: 0.92 });
+    var fabricDarkM = mat(0x403b49, { roughness: 0.95 });
+    var SL = 3.8;                                                      // length along the wall
+    box(1.5, 0.42, SL, fabricDarkM, 0, 0.4, 0, sofa);                  // base
+    [-SL / 4, SL / 4].forEach(function (cz) {                          // two seat cushions with rounded fronts
+      box(1.15, 0.24, SL / 2 - 0.06, fabricM, 0.1, 0.73, cz, sofa);
+      var nose = new T.Mesh(new T.CapsuleGeometry(0.12, SL / 2 - 0.3, 6, 12), fabricM);
+      nose.rotation.x = Math.PI / 2; nose.position.set(0.66, 0.73, cz); nose.castShadow = true; sofa.add(nose);
     });
-    box(0.8, 0.06, 0.8, standM, 0, 1.08, 0, plant);
-    cyl(0.42, 0.32, 0.75, mat(0xf1eee9, { roughness: 0.5 }), 0, 1.48, 0, plant, 28);
-    for (var lf = 0; lf < 12; lf++) {
-      var stem = new T.Group();
-      stem.position.set(0, 1.8, 0);
-      stem.rotation.set(between(0.5, 1.15), lf * 0.52 + between(-0.15, 0.15), 0, 'YXZ');
-      plant.add(stem);
-      var sl = between(0.7, 1.3);
-      var stalk = new T.Mesh(new T.CylinderGeometry(0.02, 0.025, sl, 6), mat(0x2f6b3a));
-      stalk.position.y = sl / 2;
-      stem.add(stalk);
-      var leaf = new T.Mesh(new T.SphereGeometry(0.42, 16, 10), mat(lf % 3 ? 0x2f7a3f : 0x3b8c4a, { roughness: 0.6, side: T.DoubleSide }));
-      leaf.scale.set(1, 0.08, 0.72);
-      leaf.position.set(0, sl + 0.05, 0.2);
-      leaf.rotation.x = -0.5;
-      leaf.castShadow = true;
-      stem.add(leaf);
+    box(0.36, 1.0, SL, fabricDarkM, -0.6, 1.05, 0, sofa);             // back frame
+    [-SL / 4, SL / 4].forEach(function (cz) {                          // back cushions, leaning slightly
+      var bcu = box(0.3, 0.72, SL / 2 - 0.1, fabricM, -0.33, 1.2, cz, sofa); bcu.rotation.z = -0.12;
+      var top = new T.Mesh(new T.CapsuleGeometry(0.15, SL / 2 - 0.4, 6, 12), fabricM);
+      top.rotation.x = Math.PI / 2; top.position.set(-0.38, 1.56, cz); top.castShadow = true; sofa.add(top);
+    });
+    [-1, 1].forEach(function (sd) {                                    // arms with soft rolled tops
+      box(1.5, 0.62, 0.3, fabricDarkM, 0, 0.62, sd * (SL / 2 + 0.1), sofa);
+      var roll = new T.Mesh(new T.CapsuleGeometry(0.16, 1.2, 6, 12), fabricDarkM);
+      roll.rotation.z = Math.PI / 2; roll.position.set(0, 0.95, sd * (SL / 2 + 0.1)); roll.castShadow = true; sofa.add(roll);
+    });
+    [[-0.6, -1], [0.6, -1], [-0.6, 1], [0.6, 1]].forEach(function (lp) {
+      cyl(0.045, 0.03, 0.2, mat(0x2a1c14), lp[0], 0.1, lp[1] * (SL / 2 + 0.1), sofa, 8);
+    });
+    // Throw cushions: a patterned one and a pale one at each end
+    function cushionTex(bg, fg) {
+      return canvasTex(128, 128, function (g, w, h) {
+        g.fillStyle = bg; g.fillRect(0, 0, w, h);
+        g.strokeStyle = fg; g.lineWidth = 4;
+        for (var d = -w; d < w * 2; d += 22) { g.beginPath(); g.moveTo(d, 0); g.lineTo(d + h, h); g.stroke(); g.beginPath(); g.moveTo(d + h, 0); g.lineTo(d, h); g.stroke(); }
+      });
     }
+    var cushA = new T.MeshStandardMaterial({ map: cushionTex('#8f8798', '#d8d2df'), roughness: 0.95 });
+    var cushB = new T.MeshStandardMaterial({ map: cushionTex('#c9c2cf', '#a59cae'), roughness: 0.95 });
+    [[1.35, cushA, 0.25], [0.85, cushB, -0.2], [-1.35, cushA, -0.25]].forEach(function (cu) {
+      var pil = new T.Mesh(new T.SphereGeometry(1, 20, 14), cu[1]);
+      pil.scale.set(0.12, 0.3, 0.32); pil.position.set(-0.2, 1.15, cu[0]); pil.rotation.set(cu[2], 0, -0.25);
+      pil.castShadow = true; sofa.add(pil);
+    });
+
+    // Coffee table in front of the sofa, with books and a mug
+    var coffee = new T.Group(); coffee.position.set(-4.35, 0, 4.95); scene.add(coffee);
+    var woodDarkM = mat(0x3a2c2a, { roughness: 0.55 });
+    box(1.25, 0.08, 2.3, mat(0x4a3a36, { roughness: 0.45 }), 0, 0.82, 0, coffee);   // top
+    box(1.1, 0.05, 2.1, woodDarkM, 0, 0.3, 0, coffee);                               // lower shelf
+    [[-0.55, -1.08], [0.55, -1.08], [-0.55, 1.08], [0.55, 1.08]].forEach(function (lp) { box(0.07, 0.8, 0.07, woodDarkM, lp[0], 0.4, lp[1], coffee); });
+    [[0x8a5c3c, 0.06], [0xe9c14a, 0.05], [0x2c4ea3, 0.06]].forEach(function (bk2, k) {     // a stack of books on top
+      var b2 = box(0.55, bk2[1], 0.75, mat(bk2[0], { roughness: 0.8 }), -0.1, 0.89 + k * 0.06, -0.45, coffee); b2.rotation.y = k * 0.12;
+    });
+    [0x5b4a7a, 0x2f7d77].forEach(function (bc2, k) { box(0.6, 0.07, 0.8, mat(bc2, { roughness: 0.8 }), 0.05, 0.37 + k * 0.07, 0.4, coffee); });
+    cyl(0.1, 0.09, 0.2, mat(0xece6da, { roughness: 0.5 }), 0.2, 0.96, 0.55, coffee, 16);  // mug
+    box(0.035, 0.09, 0.035, mat(0xece6da), 0.33, 0.98, 0.55, coffee);
+
+    // Tall floor lamp between the window and the shelves, with a warm glowing shade
+    var flamp = new T.Group(); flamp.position.set(-6.7, 0, -3.95); scene.add(flamp);
+    var flampM = mat(0x1d1b22, { roughness: 0.4, metalness: 0.5 });
+    cyl(0.3, 0.32, 0.05, flampM, 0, 0.03, 0, flamp, 24);
+    cyl(0.025, 0.025, 2.9, flampM, 0, 1.5, 0, flamp, 8);
+    var lampShade = new T.Mesh(new T.CylinderGeometry(0.3, 0.36, 0.6, 24, 1, true),
+      new T.MeshStandardMaterial({ color: 0xffe2b8, emissive: 0xffb36b, emissiveIntensity: 0.8, roughness: 0.9, side: T.DoubleSide }));
+    lampShade.position.y = 3.15; flamp.add(lampShade);
+    var flampLight = new T.PointLight(0xffc48a, 1.0, 7, 2);
+    flampLight.position.set(-6.5, 3.0, -3.8);
+    scene.add(flampLight);
+
+    // Framed prints and a small book shelf on the left wall, above the sofa
+    function wallPrint(z, y, w, h, draw) {
+      var tex = canvasTex(256, Math.round(256 * h / w), draw);
+      box(0.06, h + 0.14, w + 0.14, mat(0x141317, { roughness: 0.5 }), RX0 + 0.18, y, z);
+      var pr = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ map: tex, color: 0xd8d0dc }));
+      pr.rotation.y = Math.PI / 2; pr.position.set(RX0 + 0.215, y, z); scene.add(pr);
+    }
+    wallPrint(6.3, 4.3, 1.0, 1.25, function (g, w, h) {              // a figure walking in the rain, in ink
+      g.fillStyle = '#e9e4ea'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(40,36,48,0.25)'; g.lineWidth = 1;
+      for (var r = 0; r < 70; r++) { var rx = Math.random() * w, ry = Math.random() * h; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx - 6, ry + 18); g.stroke(); }
+      g.fillStyle = '#2a2630';
+      g.beginPath(); g.arc(w / 2, h * 0.3, 14, 0, Math.PI * 2); g.fill();                   // head
+      g.beginPath(); g.moveTo(w / 2 - 34, h * 0.86); g.lineTo(w / 2 - 18, h * 0.38); g.lineTo(w / 2 + 18, h * 0.38); g.lineTo(w / 2 + 40, h * 0.86); g.fill();   // coat
+      g.beginPath(); g.ellipse(w / 2 - 6, h * 0.2, 62, 20, -0.1, Math.PI, 0); g.fill();       // umbrella
+      g.fillRect(w / 2 - 7, h * 0.2, 3, h * 0.2);
+    });
+    wallPrint(7.65, 4.5, 0.9, 0.7, function (g, w, h) {               // soft abstract shapes
+      g.fillStyle = '#d9d2dc'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#7a6f86'; g.beginPath(); g.arc(w * 0.35, h * 0.55, h * 0.3, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#3d3647'; g.fillRect(w * 0.55, h * 0.2, w * 0.25, h * 0.6);
+      g.strokeStyle = '#ff7ad9'; g.lineWidth = 4; g.beginPath(); g.moveTo(w * 0.1, h * 0.85); g.lineTo(w * 0.9, h * 0.85); g.stroke();
+    });
+    // Small wall shelf with books and a few trinkets, further along
+    var wshelf = new T.Group(); wshelf.position.set(RX0 + 0.45, 2.85, 7.0); scene.add(wshelf);
+    box(0.55, 0.08, 1.9, mat(C.desk), 0, 0, 0, wshelf);
+    var wsColors = [0xc4553f, 0xe9c14a, 0x2c4ea3, 0xece6da, 0x2f7d77, 0x5b4a7a];
+    for (var wb = 0; wb < 6; wb++) {
+      var wbh = 0.45 + (wb % 3) * 0.08;
+      box(0.36, wbh, 0.12, mat(wsColors[wb], { roughness: 0.8 }), 0, 0.04 + wbh / 2, -0.8 + wb * 0.13, wshelf);
+    }
+    cyl(0.1, 0.08, 0.2, mat(0xd9d2c8, { roughness: 0.6 }), 0, 0.14, 0.45, wshelf, 14);   // tiny pot
+    [0.1, 0.25, 0.4].forEach(function (lz) {
+      var sm = new T.Mesh(new T.SphereGeometry(0.07, 10, 8), mat(0x3f8a3e)); sm.position.set(0, 0.3, 0.38 + lz * 0.2); wshelf.add(sm);
+    });
+    box(0.18, 0.18, 0.18, mat(0x8a5c3c), 0, 0.13, 0.75, wshelf);                           // a little wooden box
 
     /* ---------- Media cabinet along the back wall: turntable, records and a ring-lit speaker ---------- */
     var cab = new T.Group();
@@ -1653,26 +1729,7 @@
     box(0.04, 0.1, 0.04, mat(0xece6da), 0.33, 1.42, 0.12, sideT);
     var tbook = box(0.5, 0.08, 0.36, mat(0x2a2733, { roughness: 0.7 }), -0.15, 1.32, -0.1, sideT); tbook.rotation.y = 0.4;
 
-    /* ---------- Plants: monstera leaves and trailing pothos ---------- */
-    var monsteraTex = canvasTex(256, 256, function (g, w, h) {
-      g.fillStyle = '#2f6b3a';
-      g.beginPath(); g.moveTo(w / 2, h * 0.98);
-      g.bezierCurveTo(w * 0.02, h * 0.8, w * 0.0, h * 0.18, w / 2, h * 0.08);
-      g.bezierCurveTo(w * 1.0, h * 0.18, w * 0.98, h * 0.8, w / 2, h * 0.98); g.fill();
-      var lg = g.createLinearGradient(0, 0, w, 0);
-      lg.addColorStop(0, 'rgba(0,0,0,0.18)'); lg.addColorStop(0.5, 'rgba(120,200,120,0.18)'); lg.addColorStop(1, 'rgba(0,0,0,0.18)');
-      g.globalCompositeOperation = 'source-atop'; g.fillStyle = lg; g.fillRect(0, 0, w, h);
-      g.globalCompositeOperation = 'destination-out'; g.lineWidth = 9; g.lineCap = 'round';
-      for (var sp = 0; sp < 6; sp++) {                                          // the splits
-        var yy = h * (0.25 + sp * 0.12);
-        g.beginPath(); g.moveTo(0, yy - 10); g.lineTo(w * 0.32, yy + 18); g.stroke();
-        g.beginPath(); g.moveTo(w, yy - 10); g.lineTo(w * 0.68, yy + 18); g.stroke();
-      }
-      g.globalCompositeOperation = 'source-over';
-      g.strokeStyle = '#6fa86b'; g.lineWidth = 4;
-      g.beginPath(); g.moveTo(w / 2, h * 0.96); g.lineTo(w / 2, h * 0.12); g.stroke();
-    });
-    var monsteraM = new T.MeshStandardMaterial({ map: monsteraTex, alphaTest: 0.5, side: T.DoubleSide, roughness: 0.6 });
+    /* ---------- Plants: trailing pothos ---------- */
     var pothosTex = canvasTex(64, 64, function (g, w, h) {
       g.fillStyle = '#3f8a3e';
       g.beginPath(); g.moveTo(w / 2, h * 0.95);
@@ -1683,34 +1740,6 @@
     });
     var pothosM = new T.MeshStandardMaterial({ map: pothosTex, alphaTest: 0.5, side: T.DoubleSide, roughness: 0.65 });
     var pothosGeo = new T.PlaneGeometry(0.27, 0.27);
-
-    // A tall monstera in a terracotta pot, front-left corner
-    var mon = new T.Group(); mon.position.set(-5.9, 0, 5.7); scene.add(mon);
-    var potM = mat(0xb8835e, { roughness: 0.8, side: T.DoubleSide });
-    var potMesh = new T.Mesh(new T.CylinderGeometry(0.6, 0.45, 1.0, 28, 1, true), potM);   // open at the top
-    potMesh.position.y = 0.5; potMesh.castShadow = true; potMesh.receiveShadow = true; mon.add(potMesh);
-    cyl(0.45, 0.45, 0.02, potM, 0, 0.01, 0, mon, 28);                                      // base
-    var rimM = mat(0xa9744f, { roughness: 0.8, side: T.DoubleSide });
-    var rimBand = new T.Mesh(new T.CylinderGeometry(0.64, 0.63, 0.1, 28, 1, true), rimM);   // thick lip, open in the middle
-    rimBand.position.y = 0.96; mon.add(rimBand);
-    var rimTop = new T.Mesh(new T.RingGeometry(0.56, 0.64, 28), rimM);
-    rimTop.rotation.x = -Math.PI / 2; rimTop.position.y = 1.01; mon.add(rimTop);
-    var soil = cyl(0.57, 0.57, 0.02, mat(0x2a1f1a, { roughness: 1 }), 0, 0.88, 0, mon, 28); // soil sits below the rim
-    soil.castShadow = false;
-    for (var ml = 0; ml < 11; ml++) {
-      var st2 = new T.Group();
-      st2.position.y = 0.95;
-      st2.rotation.set(between(0.25, 0.75), ml * 0.6 + between(-0.2, 0.2), 0, 'YXZ');
-      mon.add(st2);
-      var slen = between(1.4, 2.8);
-      var stalk2 = new T.Mesh(new T.CylinderGeometry(0.025, 0.035, slen, 6), mat(0x3d6b35));
-      stalk2.position.y = slen / 2; st2.add(stalk2);
-      var leaf2 = new T.Mesh(new T.PlaneGeometry(1.15, 1.15), monsteraM);
-      leaf2.position.set(0, slen + 0.1, 0.42);
-      leaf2.rotation.x = -between(0.9, 1.3);
-      leaf2.castShadow = true;
-      st2.add(leaf2);
-    }
 
     // Pothos in hanging pots, trailing down beside the window
     function hangingPlant(x, z, potY) {
