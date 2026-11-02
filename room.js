@@ -1798,21 +1798,20 @@
     var gSideM = mat(0x8a5a2b, { roughness: 0.4 }), gDarkM = mat(0x2a1a12, { roughness: 0.5 });
     var gTopM = new T.MeshStandardMaterial({ map: burstTex, roughness: 0.42 });
     var bindM = mat(0x2a1a12, { roughness: 0.5 });
-    var BW = 0.4, BH = 1.0, BD = 0.13;                              // half width, body length, depth
+    var BW = 0.42, BH = 1.0, BD = 0.13;                              // half width, body length, depth
     if (T.Shape && T.ExtrudeGeometry) {
       // the body outline: wide lower bout, narrow waist, rounded shoulders
       var gs = new T.Shape();
-      // dreadnought: broad lower bout, gentle waist, wide square shoulders
       gs.moveTo(0, 0);
-      gs.bezierCurveTo(0.28, 0, 0.4, 0.08, 0.4, 0.28);
-      gs.bezierCurveTo(0.4, 0.42, 0.31, 0.48, 0.31, 0.56);
-      gs.bezierCurveTo(0.31, 0.64, 0.345, 0.68, 0.345, 0.8);
-      gs.bezierCurveTo(0.345, 0.94, 0.3, BH, 0.17, BH);
-      gs.lineTo(-0.17, BH);
-      gs.bezierCurveTo(-0.3, BH, -0.345, 0.94, -0.345, 0.8);
-      gs.bezierCurveTo(-0.345, 0.68, -0.31, 0.64, -0.31, 0.56);
-      gs.bezierCurveTo(-0.31, 0.48, -0.4, 0.42, -0.4, 0.28);
-      gs.bezierCurveTo(-0.4, 0.08, -0.28, 0, 0, 0);
+      gs.bezierCurveTo(0.3, 0, BW, 0.12, BW, 0.3);
+      gs.bezierCurveTo(BW, 0.45, 0.27, 0.5, 0.265, 0.56);
+      gs.bezierCurveTo(0.26, 0.62, 0.335, 0.66, 0.335, 0.8);
+      gs.bezierCurveTo(0.335, 0.95, 0.18, BH, 0.07, BH);
+      gs.lineTo(-0.07, BH);
+      gs.bezierCurveTo(-0.18, BH, -0.335, 0.95, -0.335, 0.8);
+      gs.bezierCurveTo(-0.335, 0.66, -0.26, 0.62, -0.265, 0.56);
+      gs.bezierCurveTo(-0.27, 0.5, -BW, 0.45, -BW, 0.3);
+      gs.bezierCurveTo(-BW, 0.12, -0.3, 0, 0, 0);
       var bodyGeo = new T.ExtrudeGeometry(gs, { depth: BD, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 28 });
       if (burstTex.repeat) { burstTex.repeat.set(1 / (BW * 2), 1 / BH); burstTex.offset.set(0.5, 0); }   // map the top's shape coords onto the texture
       var gBody = new T.Mesh(bodyGeo, [gTopM, gSideM]);              // caps get the wood top, the sides a darker brown
