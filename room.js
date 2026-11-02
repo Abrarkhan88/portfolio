@@ -52,7 +52,7 @@
       '<div class="room__stage"></div>' +
       '<div class="room__hotspots" aria-hidden="true"></div>' +
 
-      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, Automation &amp; ML</span><span>Dhaka</span></p>' +
+      '<p class="room__id"><strong>Abrar Sami Khan</strong><span>Analytics, automation &amp; ML</span><span>Dhaka</span></p>' +
       '<div class="room__top">' +
         '<div class="room__actions">' +
           '<button class="room__sound" type="button" aria-pressed="false">Sound off</button>' +
@@ -541,10 +541,10 @@
     box(0.3, RH, RZ1 - 3, panelMat(4.4, 3), RX0, RH / 2, (3 + RZ1) / 2);
     box(0.3, 1.6, 6.0, panelMat(2.4, 0.65), RX0, 0.8, 0);
     box(0.3, RH - 5.6, 6.0, panelMat(2.4, 0.75), RX0, (5.6 + RH) / 2, 0);
-    /* Window: a casing on the room side, a centre bar, and two casement
-       sashes pushed open outwards over the street */
-    var frameM = mat(0x3a3843, { roughness: 0.55, metalness: 0.15 });
-    var glassM = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.035, depthWrite: false, side: T.DoubleSide });
+    /* Window: a slim dark frame set into the wall, a roller-blind box across the top,
+       a centre bar, and two casement sashes pushed open outwards over the street */
+    var frameM = mat(0x2e2a37, { roughness: 0.5, metalness: 0.2 });
+    var glassM = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05, depthWrite: false, side: T.DoubleSide });
     function glass(wz, hy, x, y, z, parent) {
       var g = new T.Mesh(new T.PlaneGeometry(wz, hy), glassM);
       g.rotation.y = Math.PI / 2;
@@ -553,34 +553,51 @@
       (parent || scene).add(g);
       return g;
     }
-    // casing on the room side, standing proud of the wall
-    box(0.34, 0.24, 6.5, frameM, RX0 + 0.2, 5.72, 0);
-    box(0.34, 4.36, 0.24, frameM, RX0 + 0.2, 3.62, -3.13);
-    box(0.34, 4.36, 0.24, frameM, RX0 + 0.2, 3.62, 3.13);
-    box(0.95, 0.12, 6.7, mat(0x2f2c36, { roughness: 0.5 }), RX0 + 0.4, 1.56, 0);   // deep sill
+    var revealM = mat(0x24212c, { roughness: 0.8 });
+    // dark lining on the inside faces of the opening
+    box(0.3, 0.02, 6.0, revealM, RX0, 5.59, 0);
+    box(0.3, 4.0, 0.02, revealM, RX0, 3.6, -2.99);
+    box(0.3, 4.0, 0.02, revealM, RX0, 3.6, 2.99);
+    // slim trim around the opening on the room side
+    box(0.05, 0.1, 6.2, frameM, RX0 + 0.17, 5.65, 0);
+    box(0.05, 4.1, 0.1, frameM, RX0 + 0.17, 3.6, -3.05);
+    box(0.05, 4.1, 0.1, frameM, RX0 + 0.17, 3.6, 3.05);
+    // a thin sill that just steps out from the wall
+    box(0.42, 0.07, 6.35, mat(0x3a3546, { roughness: 0.45 }), RX0 + 0.2, 1.58, 0);
+    box(0.02, 0.07, 6.35, mat(0x4f4860, { roughness: 0.4 }), RX0 + 0.41, 1.58, 0);   // lit front edge
     // the fixed frame in the opening, with one full-height bar down the middle
-    box(0.16, 0.14, 6.0, frameM, RX0, 5.5, 0);                          // head
-    box(0.16, 0.14, 6.0, frameM, RX0, 1.7, 0);                          // bottom rail
-    box(0.16, 3.94, 0.14, frameM, RX0, 3.6, -2.93);                     // jambs
-    box(0.16, 3.94, 0.14, frameM, RX0, 3.6, 2.93);
-    box(0.16, 3.7, 0.16, frameM, RX0, 3.6, 0);                          // centre bar
+    box(0.12, 0.1, 6.0, frameM, RX0, 5.53, 0);                          // head
+    box(0.12, 0.1, 6.0, frameM, RX0, 1.67, 0);                          // bottom rail
+    box(0.12, 3.96, 0.1, frameM, RX0, 3.6, -2.95);                      // jambs
+    box(0.12, 3.96, 0.1, frameM, RX0, 3.6, 2.95);
+    box(0.12, 3.76, 0.12, frameM, RX0, 3.6, 0);                         // centre bar
+    // Roller-blind box across the top, a little wider than the window, with end caps
+    var blindM = mat(0x4b4459, { roughness: 0.55, metalness: 0.1 });
+    var bx0 = RX0 + 0.33, by0 = 5.86;
+    box(0.34, 0.3, 6.6, blindM, bx0, by0, 0);                           // housing
+    box(0.03, 0.02, 6.6, mat(0x6e6585, { roughness: 0.4 }), bx0 + 0.17, by0 + 0.14, 0);   // light catching the top edge
+    box(0.3, 0.03, 6.56, mat(0x2a2633), bx0 - 0.01, by0 - 0.16, 0);     // slot the blind rolls out of
+    [-1, 1].forEach(function (sd) {
+      box(0.38, 0.34, 0.05, mat(0x3a3447, { roughness: 0.5 }), bx0, by0, sd * 3.32);   // end caps
+    });
+    cyl(0.05, 0.05, 0.06, mat(0x3a3447), bx0, by0, 3.37, scene, 16).rotation.x = Math.PI / 2;   // bracket knob on the end
     // Two casement sashes, each hinged on its outer jamb and swung OUT over the street
     function casement(hingeZ, dir, angle) {
       var s = new T.Group();
-      s.position.set(RX0 - 0.1, 3.6, hingeZ);
+      s.position.set(RX0 - 0.08, 3.6, hingeZ);
       s.rotation.y = -dir * angle;                                       // free edge moves outside (towards -x)
       scene.add(s);
-      var W = 2.74, H = 3.62;
-      box(0.07, 0.09, W, frameM, 0, H / 2 - 0.045, dir * W / 2, s);     // top rail
-      box(0.07, 0.09, W, frameM, 0, -H / 2 + 0.045, dir * W / 2, s);    // bottom rail
-      box(0.07, H, 0.09, frameM, 0, 0, dir * 0.045, s);                 // hinge stile
-      box(0.07, H, 0.09, frameM, 0, 0, dir * (W - 0.045), s);           // free stile
+      var W = 2.76, H = 3.68;
+      box(0.06, 0.08, W, frameM, 0, H / 2 - 0.045, dir * W / 2, s);     // top rail
+      box(0.06, 0.08, W, frameM, 0, -H / 2 + 0.045, dir * W / 2, s);    // bottom rail
+      box(0.06, H, 0.08, frameM, 0, 0, dir * 0.045, s);                 // hinge stile
+      box(0.06, H, 0.08, frameM, 0, 0, dir * (W - 0.045), s);           // free stile
       box(0.09, 0.2, 0.03, mat(0xb9b4c4, { metalness: 0.6, roughness: 0.35 }), 0.05, 0, dir * (W - 0.12), s);   // handle
       glass(W - 0.16, H - 0.16, 0, 0, dir * W / 2, s);
       return s;
     }
-    casement(-2.84, 1, 0.62);                                           // left sash
-    casement(2.84, -1, 0.55);                                           // right sash
+    casement(-2.88, 1, 0.5);                                           // left sash
+    casement(2.88, -1, 0.72);                                           // right sash
     var windowGlow = new T.PointLight(0xe6b4ff, 0.95, 9, 2);              // the city's glow spilling in
     windowGlow.position.set(RX0 + 1.2, 3.6, 0);
     scene.add(windowGlow);
