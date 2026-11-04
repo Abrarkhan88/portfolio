@@ -1707,7 +1707,6 @@ html.room-mode body { overflow: hidden; }
 
 .room__actions { display: flex; gap: var(--space-2); }
 
-.room__sound,
 .room__flat,
 .room__back {
   padding: var(--space-2) var(--space-4);
@@ -1722,9 +1721,8 @@ html.room-mode body { overflow: hidden; }
   backdrop-filter: blur(8px);
   transition: border-color var(--dur-fast) var(--ease-out);
 }
-.room__flat:hover, .room__back:hover, .room__sound:hover,
-.room__flat:focus-visible, .room__back:focus-visible, .room__sound:focus-visible { border-color: var(--room-neon); box-shadow: 0 0 14px rgba(25, 217, 255, 0.35); }
-.room__sound[aria-pressed="true"] { border-color: var(--signal); color: var(--signal); }
+.room__flat:hover, .room__back:hover,
+.room__flat:focus-visible, .room__back:focus-visible { border-color: var(--room-neon); box-shadow: 0 0 14px rgba(25, 217, 255, 0.35); }
 
 .room__back {
   position: absolute;
@@ -2550,7 +2548,7 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   .room__menu button { letter-spacing: 0.04em; }
   .room__id span { display: none; }
   .room__actions { gap: 6px; }
-  .room__sound, .room__flat, .room__back { padding: 6px 12px; font-size: 0.78rem; }
+  .room__flat, .room__back { padding: 6px 12px; font-size: 0.78rem; }
   .room__back { top: 60px; left: 12px; }
   .room__back kbd { display: none; }
 
