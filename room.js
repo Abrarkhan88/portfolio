@@ -613,7 +613,7 @@
       SET:  { t: hexRGB('#3b3f8a'), m: hexRGB('#e5708a'), h: hexRGB('#ffa36a'), s: 0.05 },
       DUSK: { t: hexRGB('#171c52'), m: hexRGB('#6a3a86'), h: hexRGB('#d46a8a'), s: 0.6 }
     };
-    var LOOKS = { hemonto: 1, borsha: 1, grishmo: 1, shorot: 1 };                       // the ritu that have their own look so far
+    var LOOKS = { hemonto: 1, borsha: 1, grishmo: 1, shorot: 1, shit: 1 };                       // the ritu that have their own look so far
     function moodAt(hours, ritu) {
       var R = RITU[ritu] || RITU.hemonto, sr = R.sr, ss = R.ss, noon = (sr + ss) / 2;
       var ks = [[0, 'N'], [sr - 1, 'N'], [sr - 0.4, 'PRE'], [sr + 0.25, 'RISE'], [sr + 1.5, 'MORN'], [noon, 'NOON'], [ss - 2, 'AFT'], [ss - 0.6, 'GOLD'], [ss + 0.1, 'SET'], [ss + 0.8, 'DUSK'], [ss + 1.5, 'N'], [24, 'N']];
@@ -631,6 +631,10 @@
       }
       if (look === 'shorot') {                                       // clear washed air: a deeper blue sky with big white clouds
         c.t = mixc(c.t, [40, 120, 226], 0.5 * dayK); c.m = mixc(c.m, [118, 188, 246], 0.45 * dayK); c.h = mixc(c.h, [236, 245, 252], 0.4 * dayK);
+      }
+      if (look === 'shit') {                                         // cold grey-white air
+        c.t = mixc(c.t, [190, 202, 214], 0.6 * dayK); c.m = mixc(c.m, [212, 220, 226], 0.7 * dayK); c.h = mixc(c.h, [232, 232, 230], 0.65 * dayK);
+        c.t = mixc(c.t, [14, 22, 52], 0.25 * c.s); c.m = mixc(c.m, [34, 44, 86], 0.25 * c.s);
       }
       var storm = 0, dust = 0;
       if (look === 'grishmo') {                                      // dust haze by day; a Kalbaishakhi storm cloud builds in the afternoon and stays into the night
@@ -653,6 +657,10 @@
       var since = hours - sr;                                        // morning mist, thickest just after sunrise
       m.mist = (1 - m.d) * (since < 0 ? 0.3 : clamp(0.34 - since * 0.04, 0.08, 0.34));
       m.mistCol = mixc([232, 232, 238], [92, 86, 132], m.d);
+      if (look === 'shit') {                                         // thick fog at dawn, thinning by late morning, back again at dusk and through the night
+        var fg = hours < sr ? 0.55 + 0.25 * clamp((hours - (sr - 3)) / 3, 0, 1) : Math.max(0.2 + 0.6 * clamp(1 - (hours - sr) / 4.5, 0, 1), 0.2 + 0.35 * clamp((hours - (ss - 1.5)) / 2, 0, 1));
+        m.fog = fg; m.mist = fg; m.mistCol = mixc([228, 232, 236], [64, 72, 104], m.d);
+      }
       if (look === 'shorot') { m.mist = 0.06 * (1 - m.d); m.mistCol = mixc([240, 246, 252], [92, 86, 132], m.d); m.cloud = 1; }   // crisp air
       if (look === 'grishmo') { m.mist = 0.3 * dust + 0.2 * storm * (1 - m.d) + (1 - m.d) * 0; m.mistCol = mixc(mixc([222, 196, 150], [96, 82, 100], storm), mixc([70, 60, 92], [44, 48, 62], storm), m.d); }   // dust haze
       if (look === 'borsha') { m.mist = 0.36 * (1 - m.d) + 0.2 * m.d; m.mistCol = mixc([172, 178, 190], [60, 58, 92], m.d); }   // rain haze all day
@@ -663,6 +671,7 @@
       var col = mixc(hexRGB(day), hexRGB(night), m.d); if (haze) col = mixc(col, m.c.h, 0.2 * (1 - m.d));
       if (m.wet) col = mixc(col, mixc([88, 96, 114], [30, 34, 52], m.d), 0.35);          // wet walls
       if (m.dust) col = mixc(col, [204, 172, 128], 0.2 * m.dust);                        // dusty walls
+      if (m.fog) col = mixc(col, m.mistCol, 0.5 * m.fog);                                // fog on the walls
       return rgbS(col);
     }
 
@@ -768,7 +777,7 @@
       }
       // The sun, low over the rooftops in the morning and the afternoon, high and out of frame at midday
       if (m.sun.on && day > 0.05 && !m.overcast && !(m.storm > 0.9)) {
-        var sday = day * (1 - 0.9 * (m.storm || 0)), al = m.sun.alt, sxp = w * (0.36 + 0.28 * m.sun.frac), syp = h * (0.62 - 0.22 * al);
+        var sday = day * (1 - 0.9 * (m.storm || 0)) * (1 - 0.55 * (m.fog || 0)), al = m.sun.alt, sxp = w * (0.36 + 0.28 * m.sun.frac), syp = h * (0.62 - 0.22 * al);
         var scol = mixc([255, 160, 90], [255, 246, 220], Math.pow(al, 0.5));
         var sg = g.createRadialGradient(sxp, syp, 6, sxp, syp, h * 0.36);
         sg.addColorStop(0, rgbaS(scol, 0.7 * sday)); sg.addColorStop(1, rgbaS(scol, 0));
@@ -779,6 +788,20 @@
       g.fillStyle = rgbaS(mixc([255, 255, 255], [120, 100, 220], d), m.overcast ? 0 : 0.3 - 0.2 * d);
       for (var i = 0; i < 9; i++) {
         g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
+      }
+      // Shit: kites in the winter sky, thin strings trailing down behind the city
+      if (m.look === 'shit' && day > 0.05) {
+        var kk = 31, kkr = function () { kk = (kk * 16807) % 2147483647; return (kk - 1) / 2147483646; };
+        var kites = [[0.41, 0.468, '#e63946'], [0.47, 0.5, '#ffd23f'], [0.52, 0.462, '#2ec4b6'], [0.57, 0.5, '#ff6fb5'], [0.62, 0.47, '#7b5cff'], [0.45, 0.535, '#ff9f1c'], [0.33, 0.4, '#e63946'], [0.7, 0.42, '#ffd23f'], [0.25, 0.5, '#2ec4b6'], [0.8, 0.46, '#ff6fb5']];
+        kites.forEach(function (kt) {
+          var kx = w * kt[0], ky = h * kt[1], ks = 15 + kkr() * 9, rot = (kkr() - 0.5) * 0.7, ka = day * (1 - 0.35 * m.fog);
+          g.save(); g.translate(kx, ky); g.rotate(rot); g.globalAlpha = ka;
+          g.strokeStyle = 'rgba(60,60,80,0.7)'; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(0, ks * 1.2); g.bezierCurveTo(-ks * 0.8, ks * 2.2, ks * 0.8, ks * 3.2, -ks * 0.3, ks * 4.2); g.stroke();        // the tail
+          g.fillStyle = kt[2]; g.beginPath(); g.moveTo(0, -ks * 1.2); g.lineTo(ks * 0.85, 0); g.lineTo(0, ks * 1.2); g.lineTo(-ks * 0.85, 0); g.closePath(); g.fill();
+          g.strokeStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.moveTo(0, -ks * 1.2); g.lineTo(0, ks * 1.2); g.moveTo(-ks * 0.85, 0); g.lineTo(ks * 0.85, 0); g.stroke();
+          g.restore();
+        });
       }
       // Shorot: big white cumulus drifting in a clean blue sky (warmed at sunset, faint and silvery at night)
       if (m.cloud) {
@@ -1048,7 +1071,15 @@
       farL.g.clearRect(0, 0, SKY_W, SKY_H); paintFar(farL.g, SKY_W, SKY_H, m); farL.tex.needsUpdate = true;
       seed = SEED_NEAR;
       nearL.g.clearRect(0, 0, SKY_W, SKY_H); frontC.getContext('2d').clearRect(0, 0, SKY_W, SKY_H);
-      paintNear(nearL.g, SKY_W, SKY_H, m); nearL.tex.needsUpdate = true; frontTex.needsUpdate = true;
+      paintNear(nearL.g, SKY_W, SKY_H, m);
+      if (m.fog) {                                                 // fog over the nearer blocks and the poles, only where something is painted
+        [nearL.g, frontC.getContext('2d')].forEach(function (cg, ci) {
+          cg.save(); cg.globalCompositeOperation = 'source-atop';
+          var fv = cg.createLinearGradient(0, SKY_H * 0.35, 0, SKY_H); fv.addColorStop(0, rgbaS(m.mistCol, (ci ? 0.35 : 0.62) * m.fog)); fv.addColorStop(1, rgbaS(m.mistCol, (ci ? 0.5 : 0.8) * m.fog));
+          cg.fillStyle = fv; cg.fillRect(0, 0, SKY_W, SKY_H); cg.restore();
+        });
+      }
+      nearL.tex.needsUpdate = true; frontTex.needsUpdate = true;
       seed = keep;
     }
 
