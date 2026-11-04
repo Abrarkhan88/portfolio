@@ -613,7 +613,7 @@
       SET:  { t: hexRGB('#3b3f8a'), m: hexRGB('#e5708a'), h: hexRGB('#ffa36a'), s: 0.05 },
       DUSK: { t: hexRGB('#171c52'), m: hexRGB('#6a3a86'), h: hexRGB('#d46a8a'), s: 0.6 }
     };
-    var LOOKS = { hemonto: 1, borsha: 1, grishmo: 1 };                       // the ritu that have their own look so far
+    var LOOKS = { hemonto: 1, borsha: 1, grishmo: 1, shorot: 1 };                       // the ritu that have their own look so far
     function moodAt(hours, ritu) {
       var R = RITU[ritu] || RITU.hemonto, sr = R.sr, ss = R.ss, noon = (sr + ss) / 2;
       var ks = [[0, 'N'], [sr - 1, 'N'], [sr - 0.4, 'PRE'], [sr + 0.25, 'RISE'], [sr + 1.5, 'MORN'], [noon, 'NOON'], [ss - 2, 'AFT'], [ss - 0.6, 'GOLD'], [ss + 0.1, 'SET'], [ss + 0.8, 'DUSK'], [ss + 1.5, 'N'], [24, 'N']];
@@ -628,6 +628,9 @@
       if (look === 'borsha') {                                       // low grey cloud by day, dark slate cloud by night
         var kd = 0.62 * dayK, kn = 0.5 * c.s;
         ['t', 'm', 'h'].forEach(function (q) { c[q] = mixc(mixc(c[q], [112, 120, 134], kd), [34, 38, 58], kn); });
+      }
+      if (look === 'shorot') {                                       // clear washed air: a deeper blue sky with big white clouds
+        c.t = mixc(c.t, [40, 120, 226], 0.5 * dayK); c.m = mixc(c.m, [118, 188, 246], 0.45 * dayK); c.h = mixc(c.h, [236, 245, 252], 0.4 * dayK);
       }
       var storm = 0, dust = 0;
       if (look === 'grishmo') {                                      // dust haze by day; a Kalbaishakhi storm cloud builds in the afternoon and stays into the night
@@ -650,6 +653,7 @@
       var since = hours - sr;                                        // morning mist, thickest just after sunrise
       m.mist = (1 - m.d) * (since < 0 ? 0.3 : clamp(0.34 - since * 0.04, 0.08, 0.34));
       m.mistCol = mixc([232, 232, 238], [92, 86, 132], m.d);
+      if (look === 'shorot') { m.mist = 0.06 * (1 - m.d); m.mistCol = mixc([240, 246, 252], [92, 86, 132], m.d); m.cloud = 1; }   // crisp air
       if (look === 'grishmo') { m.mist = 0.3 * dust + 0.2 * storm * (1 - m.d) + (1 - m.d) * 0; m.mistCol = mixc(mixc([222, 196, 150], [96, 82, 100], storm), mixc([70, 60, 92], [44, 48, 62], storm), m.d); }   // dust haze
       if (look === 'borsha') { m.mist = 0.36 * (1 - m.d) + 0.2 * m.d; m.mistCol = mixc([172, 178, 190], [60, 58, 92], m.d); }   // rain haze all day
       return m;
@@ -775,6 +779,22 @@
       g.fillStyle = rgbaS(mixc([255, 255, 255], [120, 100, 220], d), m.overcast ? 0 : 0.3 - 0.2 * d);
       for (var i = 0; i < 9; i++) {
         g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
+      }
+      // Shorot: big white cumulus drifting in a clean blue sky (warmed at sunset, faint and silvery at night)
+      if (m.cloud) {
+        var kr = 777, krr = function () { kr = (kr * 16807) % 2147483647; return (kr - 1) / 2147483646; };
+        var gl = clamp(1 - Math.abs(m.hours - (m.sun.on ? 17.3 : 0)) / 1.6, 0, 1) * day;
+        var cl = mixc(mixc([255, 255, 255], [255, 214, 190], gl * 0.7), [150, 150, 200], d), shd = mixc(mixc([196, 214, 236], [226, 170, 170], gl * 0.6), [70, 70, 120], d);
+        var ca = clamp(day * 1.8, 0, 1) * 0.96;                       // opaque puffs, so no circles show; they fade out as the light goes
+        for (var cu = 0; ca > 0.02 && cu < 11; cu++) {
+          var ccx = cu < 3 ? w * (0.36 + krr() * 0.34) : krr() * w, ccy = cu < 3 ? h * (0.42 + krr() * 0.1) : h * (0.12 + krr() * 0.34), cs = (cu < 3 ? 0.5 : 0.8) + krr() * 0.6;
+          var puffs = [];
+          for (var pf = 0; pf < 7; pf++) puffs.push([ccx + (pf - 3) * 34 * cs + krr() * 14, ccy - Math.sin(pf / 6 * Math.PI) * 26 * cs - krr() * 12, (26 + krr() * 22) * cs]);
+          g.fillStyle = rgbaS(shd, ca);
+          puffs.forEach(function (p) { g.beginPath(); g.arc(p[0], p[1] + p[2] * 0.3, p[2], 0, Math.PI * 2); g.fill(); });
+          g.fillStyle = rgbaS(cl, ca);
+          puffs.forEach(function (p) { g.beginPath(); g.arc(p[0], p[1], p[2], 0, Math.PI * 2); g.fill(); });
+        }
       }
       // Borsha: a low, heavy cloud deck over the whole sky
       if (m.look === 'borsha') {
