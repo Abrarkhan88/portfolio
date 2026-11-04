@@ -468,8 +468,8 @@
       l.position.set(p[0], p[1], p[2]);
       scene.add(l);
     });
-    // Warm glow pooling on the floor: city light spilling in by the window, and a soft room light
-    [[-5.2, 1.4, 0.2, 0xffc9a0, 1.1, 7], [3.5, 5.6, 3.5, 0xffc8b0, 0.7, 16], [6.4, 2.6, 2.0, 0xffb38a, 0.55, 6]].forEach(function (p) {
+    // Cool glow pooling on the floor: light spilling in by the window, and a soft room light
+    [[-5.2, 1.4, 0.2, 0xcfe0f5, 1.0, 7], [3.5, 5.6, 3.5, 0xdfeaff, 0.7, 16], [6.4, 2.6, 2.0, 0xcfe0f5, 0.55, 6]].forEach(function (p) {
       var l = new T.PointLight(p[3], p[4], p[5], 2);
       l.position.set(p[0], p[1], p[2]);
       scene.add(l);
