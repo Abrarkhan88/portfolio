@@ -640,7 +640,7 @@
         ['t', 'm'].forEach(function (q) { c[q] = mixc(mixc(c[q], [66, 54, 74], 0.7 * storm * dayK), [24, 20, 42], 0.5 * storm * c.s); });
         c.h = mixc(mixc(c.h, [226, 138, 78], 0.35 * storm * dayK), [48, 34, 66], 0.35 * storm * c.s);
       }
-      var m = { c: c, d: c.s, hours: hours, ritu: ritu, look: look, storm: storm, dust: dust, starA: look === 'borsha' ? 0 : c.s * (1 - 0.75 * storm), rain: look === 'borsha' ? 1 : 0, wet: look === 'borsha' ? 1 : 0, overcast: look === 'borsha' ? 1 : 0 };
+      var m = { c: c, d: c.s, hours: hours, ritu: ritu, look: look, storm: storm, dust: dust, starA: look === 'borsha' ? 0 : c.s * (1 - 0.95 * storm), rain: look === 'borsha' ? 1 : 0, wet: look === 'borsha' ? 1 : 0, overcast: look === 'borsha' ? 1 : 0 };
       m.lit = clamp((m.d - 0.15) / 0.6, 0, 1);                       // city windows and lamps coming on
       if (m.overcast) m.lit = Math.max(m.lit, 0.3 * (1 - m.d));      // on a dark wet day some windows are lit already
       m.moonA = clamp((m.d - 0.5) * 2, 0, 1) * (look === 'borsha' ? 0.08 : 1 - 0.7 * storm);
@@ -793,12 +793,12 @@
         var sr1 = 9091, srr = function () { sr1 = (sr1 * 16807) % 2147483647; return (sr1 - 1) / 2147483646; };
         var sc = mixc([92, 76, 98], [22, 20, 38], d);
         for (var q2 = 0; q2 < 34; q2++) {
-          var qx = srr() * w, qy = h * (0.0 + srr() * 0.5), qw = 140 + srr() * 320, qh = 50 + srr() * 90;
+          var qx = srr() * w, qy = h * (0.0 + srr() * 0.64), qw = 140 + srr() * 320, qh = 50 + srr() * 90;
           g.fillStyle = rgbaS(mixc(mixc(sc, [24, 20, 36], 0.5 * srr()), [170, 128, 124], (1 - d) * 0.3 * srr()), 0.6 * m.storm);
           g.beginPath(); g.ellipse(qx, qy, qw, qh, 0, 0, Math.PI * 2); g.fill();
         }
-        var so = g.createLinearGradient(0, 0, 0, h * 0.58); so.addColorStop(0, rgbaS(sc, 0.8 * m.storm)); so.addColorStop(1, rgbaS(sc, 0.2 * m.storm));
-        g.fillStyle = so; g.fillRect(0, 0, w, h * 0.58);
+        var so = g.createLinearGradient(0, 0, 0, h * 0.7); so.addColorStop(0, rgbaS(sc, 0.9 * m.storm)); so.addColorStop(0.6, rgbaS(sc, 0.82 * m.storm)); so.addColorStop(1, rgbaS(sc, 0.5 * m.storm));
+        g.fillStyle = so; g.fillRect(0, 0, w, h * 0.7);
         var rim = g.createLinearGradient(0, h * 0.44, 0, h * 0.64); rim.addColorStop(0, 'rgba(236,140,84,0)'); rim.addColorStop(1, rgbaS([236, 140, 84], 0.38 * m.storm * day));
         g.fillStyle = rim; g.fillRect(0, h * 0.44, w, h * 0.2);
       }
@@ -809,7 +809,7 @@
       // City glow on the horizon (a warm haze by day), then a distant haze line of buildings
       var hzc = mixc([255, 226, 196], [255, 150, 170], d);
       var haze = g.createLinearGradient(0, h * 0.42, 0, h * 0.78);
-      haze.addColorStop(0, rgbaS(hzc, 0)); haze.addColorStop(1, rgbaS(hzc, 0.3 + 0.08 * d));
+      haze.addColorStop(0, rgbaS(hzc, 0)); haze.addColorStop(1, rgbaS(hzc, (0.3 + 0.08 * d) * (1 - 0.6 * (m.storm || 0))));
       g.fillStyle = haze; g.fillRect(0, h * 0.42, w, h * 0.36);
       drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.22, litK: m.lit, glassA: 0.2 * day,
         colors: [bcol('#2c2268', '#8d96bd', m, true), bcol('#32286f', '#848db6', m, true), bcol('#291f60', '#969fc4', m, true)], tanks: 0.4, tankColor: bcol('#241b58', '#7d86ad', m, true) });
