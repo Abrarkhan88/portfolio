@@ -337,7 +337,8 @@
     function between(a, b) { return a + rnd() * (b - a); }
 
     /* ---------- Lights: night in the room ---------- */
-    scene.add(new T.HemisphereLight(0xdbe6f4, 0x2a3038, 1.4));      // soft night fill, a little warmer
+    var hemi = new T.HemisphereLight(0xdbe6f4, 0x2a3038, 1.4);      // soft night fill; the clock brightens it by day
+    scene.add(hemi);
 
     var sunset = new T.DirectionalLight(0xb4ccff, 0.75);              // cool moonlight through the window
     sunset.position.set(-14, 8.5, 3);
@@ -357,10 +358,12 @@
     scene.add(lamp);
 
     // Neon glow from the desk edge and the board frame, a soft wall light over the shelf, and the fan light
+    var neonLights = [];
     [[0.1, 1.3, -0.7, 0x19d9ff, 1.0, 5], [3.6, 4.2, -4.9, 0x19d9ff, 1.1, 6], [-4.4, 6.2, -5.1, 0x7fa6ff, 0.6, 6]].forEach(function (p) {
       var l = new T.PointLight(p[3], p[4], p[5], 2);
       l.position.set(p[0], p[1], p[2]);
       scene.add(l);
+      neonLights.push({ l: l, base: p[4] });
     });
     // Cool glow pooling on the floor: light spilling in by the window, and a soft room light
     [[-5.2, 1.4, 0.2, 0xcfe0f5, 1.0, 7], [3.5, 5.6, 3.5, 0xdfeaff, 0.7, 16], [6.4, 2.6, 2.0, 0xcfe0f5, 0.55, 6]].forEach(function (p) {
@@ -564,12 +567,80 @@
     windowGlow.position.set(RX0 + 1.2, 3.6, 0);
     scene.add(windowGlow);
 
-    /* ---------- Dhaka at night, outside the window ----------
-       Three layers at different depths so the city shifts as the camera moves. */
+    /* ---------- Dhaka's clock and seasons ----------
+       The room follows the time in Dhaka. Add ?time=22:30 (and ?season=shit) to the address to look at any moment.
+       Only Hemonto has its own look so far; the other ritu borrow it, with their own sunrise and sunset. */
+    var RITU = {
+      grishmo: { sr: 5.55, ss: 18.35 }, borsha: { sr: 5.4, ss: 18.65 }, shorot: { sr: 5.75, ss: 18.0 },
+      hemonto: { sr: 6.15, ss: 17.3 }, shit: { sr: 6.6, ss: 17.45 }, boshonto: { sr: 6.1, ss: 18.0 }
+    };
+    function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+    function hexRGB(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+    function mixc(a, b, k) { return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+    function rgbS(c) { return 'rgb(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ')'; }
+    function rgbaS(c, a) { return 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + a.toFixed(3) + ')'; }
+    function dhakaClock() {
+      var o = {};
+      try {
+        new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: 'numeric', minute: 'numeric', hour12: false, day: 'numeric', month: 'numeric' })
+          .formatToParts(new Date()).forEach(function (p) { o[p.type] = p.value; });
+      } catch (err) {
+        var dd = new Date(Date.now() + 6 * 3600000);
+        o = { hour: dd.getUTCHours(), minute: dd.getUTCMinutes(), day: dd.getUTCDate(), month: dd.getUTCMonth() + 1 };
+      }
+      var md = (+o.month) * 100 + (+o.day), id;       // the six ritu, split near the middle of each month
+      if (md >= 1015 && md <= 1214) id = 'hemonto'; else if (md >= 1215 || md <= 213) id = 'shit'; else if (md >= 214 && md <= 413) id = 'boshonto';
+      else if (md >= 414 && md <= 614) id = 'grishmo'; else if (md >= 615 && md <= 814) id = 'borsha'; else id = 'shorot';
+      return { hours: ((+o.hour) % 24) + (+o.minute) / 60, ritu: id, fixed: false };
+    }
+    var testClock = null;                                   // set by the TIME TEST panel below
+    function clockNow() {
+      var c = dhakaClock(), q = params.get('time'), sId = params.get('season');
+      if (q) { var mm = /^(\d{1,2})(?::(\d{2}))?$/.exec(q); if (mm) { c.hours = clamp(+mm[1] + (+mm[2] || 0) / 60, 0, 23.99); c.fixed = true; } }
+      if (sId && RITU[sId]) c.ritu = sId;
+      if (testClock) { c.hours = testClock.hours; c.ritu = testClock.ritu; c.fixed = true; }
+      return c;
+    }
+    // Sky colours (top, middle, horizon) and how many stars show, at moments relative to sunrise and sunset
+    var KEY = {
+      N:    { t: hexRGB('#04061a'), m: hexRGB('#1b1659'), h: hexRGB('#5a2f7c'), s: 1 },      // the moonlit night
+      PRE:  { t: hexRGB('#0b1235'), m: hexRGB('#2a2a6a'), h: hexRGB('#6a4a8a'), s: 0.8 },
+      RISE: { t: hexRGB('#4a6ab0'), m: hexRGB('#f0a4a0'), h: hexRGB('#ffd08a'), s: 0 },
+      MORN: { t: hexRGB('#5b94d6'), m: hexRGB('#9ec8ee'), h: hexRGB('#f6e2c0'), s: 0 },
+      NOON: { t: hexRGB('#3f86d8'), m: hexRGB('#78b6ee'), h: hexRGB('#cde6f6'), s: 0 },
+      AFT:  { t: hexRGB('#4a8ad4'), m: hexRGB('#86bbe8'), h: hexRGB('#e6e2c8'), s: 0 },
+      GOLD: { t: hexRGB('#5a78c0'), m: hexRGB('#f0b27a'), h: hexRGB('#ffcf86'), s: 0 },
+      SET:  { t: hexRGB('#3b3f8a'), m: hexRGB('#e5708a'), h: hexRGB('#ffa36a'), s: 0.05 },
+      DUSK: { t: hexRGB('#171c52'), m: hexRGB('#6a3a86'), h: hexRGB('#d46a8a'), s: 0.6 }
+    };
+    function moodAt(hours, ritu) {
+      var R = RITU[ritu] || RITU.hemonto, sr = R.sr, ss = R.ss, noon = (sr + ss) / 2;
+      var ks = [[0, 'N'], [sr - 1, 'N'], [sr - 0.4, 'PRE'], [sr + 0.25, 'RISE'], [sr + 1.5, 'MORN'], [noon, 'NOON'], [ss - 2, 'AFT'], [ss - 0.6, 'GOLD'], [ss + 0.1, 'SET'], [ss + 0.8, 'DUSK'], [ss + 1.5, 'N'], [24, 'N']];
+      var i = 0; while (i < ks.length - 2 && hours > ks[i + 1][0]) i++;
+      var a = ks[i], b = ks[i + 1], k = clamp((hours - a[0]) / (b[0] - a[0] || 1), 0, 1), A = KEY[a[1]], B = KEY[b[1]];
+      var c = { t: mixc(A.t, B.t, k), m: mixc(A.m, B.m, k), h: mixc(A.h, B.h, k), s: A.s + (B.s - A.s) * k };
+      var dayK = 1 - c.s, gold = [255, 210, 150];                    // Hemonto: a little soft gold in the daylight
+      c.t = mixc(c.t, gold, 0.1 * dayK); c.m = mixc(c.m, gold, 0.1 * dayK); c.h = mixc(c.h, gold, 0.1 * dayK);
+      var m = { c: c, d: c.s, hours: hours, ritu: ritu, starA: c.s };
+      m.lit = clamp((m.d - 0.15) / 0.6, 0, 1);                       // city windows and lamps coming on
+      m.moonA = clamp((m.d - 0.5) * 2, 0, 1);
+      var fr = clamp((hours - sr) / (ss - sr), 0, 1);
+      m.sun = { on: hours > sr - 0.2 && hours < ss + 0.2, frac: fr, alt: Math.sin(Math.PI * fr) };
+      var since = hours - sr;                                        // morning mist, thickest just after sunrise
+      m.mist = (1 - m.d) * (since < 0 ? 0.3 : clamp(0.34 - since * 0.04, 0.08, 0.34));
+      return m;
+    }
+    function dcol(night, day, d) { return rgbS(mixc(hexRGB(day), hexRGB(night), d)); }          // night colour at d = 1
+    function bcol(night, day, m, haze) { var col = mixc(hexRGB(day), hexRGB(night), m.d); if (haze) col = mixc(col, m.c.h, 0.2 * (1 - m.d)); return rgbS(col); }
+
+    /* ---------- Dhaka outside the window ----------
+       Three layers at different depths so the city shifts as the camera moves. The two painted layers
+       are repainted from the clock; the buildings stay exactly where they are. */
     var SKY_W = 2048, SKY_H = 1024;
+    function skyLayer(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return { c: c, g: c.getContext('2d'), tex: new T.CanvasTexture(c) }; }
 
     function drawBuildingsRow(g, w, h, opts) {
-      var x = -20;
+      var x = -20, litK = opts.litK == null ? 1 : opts.litK;
       while (x < w + 20) {
         var bw = between(opts.minW, opts.maxW);
         if (opts.clear && x + bw > opts.clear[0] && x < opts.clear[1]) { x = opts.clear[1] + between(0, 20); continue; }   // keep this view open
@@ -578,21 +649,28 @@
         g.fillStyle = opts.colors[Math.floor(rnd() * opts.colors.length)];
         g.fillRect(x, top, bw, h - top);
         if (opts.out) opts.out.push([x, top, bw]);
-        // Windows: a mix of warm bulbs and white tube lights; many dark
+        // Windows: a mix of warm bulbs and white tube lights; many dark. Which ones can light is fixed;
+        // the clock decides how many of them are on.
         var cols = Math.max(2, Math.floor(bw / opts.cell));
         var rows = Math.floor((h - top) / (opts.cell * 1.25));
         var cw = bw / cols;
         for (var r = 0; r < rows; r++) {
           for (var c = 0; c < cols; c++) {
-            var lit = rnd();
+            var lit = rnd(), wx = x + c * cw + cw * 0.22, wy = top + 10 + r * opts.cell * 1.25;
+            var on = false;
             if (lit < opts.lit) {
-              var tone = rnd(); g.fillStyle = tone < 0.18 ? 'rgba(226,240,255,0.95)' : tone < 0.3 ? 'rgba(255,170,210,0.9)' : 'rgba(255,196,120,0.95)';
-              if (opts.glow) { g.shadowColor = g.fillStyle; g.shadowBlur = opts.glow; }
-              g.fillRect(x + c * cw + cw * 0.22, top + 10 + r * opts.cell * 1.25, cw * 0.56, opts.cell * 0.6);
-              if (opts.glow) g.shadowBlur = 0;
-            } else if (opts.grills) {
-              g.fillStyle = 'rgba(0,0,0,0.25)';
-              g.fillRect(x + c * cw + cw * 0.22, top + 10 + r * opts.cell * 1.25, cw * 0.56, opts.cell * 0.6);
+              var tone = rnd();
+              if (lit < opts.lit * litK) {
+                on = true;
+                g.fillStyle = tone < 0.18 ? 'rgba(226,240,255,0.95)' : tone < 0.3 ? 'rgba(255,170,210,0.9)' : 'rgba(255,196,120,0.95)';
+                if (opts.glow) { g.shadowColor = g.fillStyle; g.shadowBlur = opts.glow; }
+                g.fillRect(wx, wy, cw * 0.56, opts.cell * 0.6);
+                if (opts.glow) g.shadowBlur = 0;
+              }
+            }
+            if (!on) {
+              if (opts.glassA > 0.01) { g.fillStyle = 'rgba(30,40,90,' + opts.glassA.toFixed(3) + ')'; g.fillRect(wx, wy, cw * 0.56, opts.cell * 0.6); }   // daytime glass
+              if (opts.grills) { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(wx, wy, cw * 0.56, opts.cell * 0.6); }
             }
             if (opts.grills) {
               // balcony rail under each floor
@@ -614,7 +692,7 @@
         // AC units on facades of near buildings
         if (opts.ac) {
           for (var a = 0; a < 3; a++) if (rnd() < 0.5) {
-            g.fillStyle = 'rgba(150,140,190,0.35)';
+            g.fillStyle = opts.acColor || 'rgba(150,140,190,0.35)';
             g.fillRect(x + between(4, bw - 26), top + between(20, h - top - 30), 22, 14);
           }
         }
@@ -622,70 +700,98 @@
       }
     }
 
-    // Layer 1: sky, sun, far skyline with a mosque
-    var farTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
+    // Layer 1: sky, sun and moon, stars, far skyline with a mosque
+    function paintFar(g, w, h, m) {
+      var c = m.c, d = m.d, day = 1 - d;
       var sk = g.createLinearGradient(0, 0, 0, h);
-      sk.addColorStop(0, '#04061a');
-      sk.addColorStop(0.3, '#0b0e38');
-      sk.addColorStop(0.55, '#1b1659');
-      sk.addColorStop(0.75, '#3a2270');
-      sk.addColorStop(1, '#5a2f7c');
+      sk.addColorStop(0, rgbS(c.t));
+      sk.addColorStop(0.3, rgbS(mixc(c.t, c.m, 0.4)));
+      sk.addColorStop(0.55, rgbS(c.m));
+      sk.addColorStop(0.75, rgbS(mixc(c.m, c.h, 0.5)));
+      sk.addColorStop(1, rgbS(c.h));
       g.fillStyle = sk; g.fillRect(0, 0, w, h);
-      // Stars: a dense field, thickest over the window's view; a few bigger ones, some warm
+      // Stars: a dense field, thickest over the window's view; a few bigger ones, some warm (drawn only when the sky is dark)
       for (var st = 0; st < 1500; st++) {
         var inView = st >= 1100;                               // the extra ones fill the strip the window shows
         var sx0 = inView ? between(w * 0.38, w * 0.68) : rnd() < 0.55 ? between(w * 0.3, w * 0.74) : between(0, w);
         var sy0 = inView ? between(h * 0.44, h * 0.62) : Math.pow(rnd(), 1.25) * h * 0.66;
         var sz = rnd() < 0.15 ? between(3, 4.5) : between(1.6, 3);
-        g.fillStyle = rnd() < 0.2 ? 'rgba(255,225,190,' + between(0.55, 1) + ')' : 'rgba(225,235,255,' + between(0.5, 1) + ')';
-        g.fillRect(sx0, sy0, sz, sz);
+        var warm = rnd() < 0.2, sal = warm ? between(0.55, 1) : between(0.5, 1);
+        if (m.starA > 0.02) {
+          g.fillStyle = (warm ? 'rgba(255,225,190,' : 'rgba(225,235,255,') + (sal * m.starA).toFixed(3) + ')';
+          g.fillRect(sx0, sy0, sz, sz);
+        }
       }
       // A pale moon with a soft halo
-      var sx = w * 0.47, sy = h * 0.505;
-      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 200);
-      glow.addColorStop(0, 'rgba(200,210,255,0.42)');
-      glow.addColorStop(1, 'rgba(150,160,255,0)');
-      g.fillStyle = glow; g.fillRect(0, 0, w, h);
-      g.fillStyle = '#f4f1ff'; g.beginPath(); g.arc(sx, sy, 40, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(150,150,205,0.28)';
-      [[-12, -9, 9.5], [11, 7, 7], [-5, 15, 5.5], [14, -13, 4]].forEach(function (cr) { g.beginPath(); g.arc(sx + cr[0], sy + cr[1], cr[2], 0, Math.PI * 2); g.fill(); });
+      if (m.moonA > 0.02) {
+        var sx = w * 0.47, sy = h * 0.505;
+        var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 200);
+        glow.addColorStop(0, 'rgba(200,210,255,' + (0.42 * m.moonA).toFixed(3) + ')');
+        glow.addColorStop(1, 'rgba(150,160,255,0)');
+        g.fillStyle = glow; g.fillRect(0, 0, w, h);
+        g.fillStyle = 'rgba(244,241,255,' + m.moonA.toFixed(3) + ')'; g.beginPath(); g.arc(sx, sy, 40, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(150,150,205,' + (0.28 * m.moonA).toFixed(3) + ')';
+        [[-12, -9, 9.5], [11, 7, 7], [-5, 15, 5.5], [14, -13, 4]].forEach(function (cr) { g.beginPath(); g.arc(sx + cr[0], sy + cr[1], cr[2], 0, Math.PI * 2); g.fill(); });
+      }
+      // The sun, low over the rooftops in the morning and the afternoon, high and out of frame at midday
+      if (m.sun.on && day > 0.05) {
+        var al = m.sun.alt, sxp = w * (0.36 + 0.28 * m.sun.frac), syp = h * (0.62 - 0.22 * al);
+        var scol = mixc([255, 160, 90], [255, 246, 220], Math.pow(al, 0.5));
+        var sg = g.createRadialGradient(sxp, syp, 6, sxp, syp, h * 0.36);
+        sg.addColorStop(0, rgbaS(scol, 0.7 * day)); sg.addColorStop(1, rgbaS(scol, 0));
+        g.fillStyle = sg; g.fillRect(0, 0, w, h);
+        g.fillStyle = rgbaS(scol, day); g.beginPath(); g.arc(sxp, syp, 44, 0, Math.PI * 2); g.fill();
+      }
       // Long thin clouds
-      g.fillStyle = 'rgba(120,100,220,0.10)';
+      g.fillStyle = rgbaS(mixc([255, 255, 255], [120, 100, 220], d), 0.3 - 0.2 * d);
       for (var i = 0; i < 9; i++) {
         g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
       }
-      // City glow on the horizon, then a distant haze line of buildings
+      // City glow on the horizon (a warm haze by day), then a distant haze line of buildings
+      var hzc = mixc([255, 226, 196], [255, 150, 170], d);
       var haze = g.createLinearGradient(0, h * 0.42, 0, h * 0.78);
-      haze.addColorStop(0, 'rgba(255,150,170,0)'); haze.addColorStop(1, 'rgba(255,150,170,0.38)');
+      haze.addColorStop(0, rgbaS(hzc, 0)); haze.addColorStop(1, rgbaS(hzc, 0.3 + 0.08 * d));
       g.fillStyle = haze; g.fillRect(0, h * 0.42, w, h * 0.36);
-      drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.22,
-        colors: ['#2c2268', '#32286f', '#291f60'], tanks: 0.4, tankColor: '#241b58' });
+      drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.22, litK: m.lit, glassA: 0.2 * day,
+        colors: [bcol('#2c2268', '#8d96bd', m, true), bcol('#32286f', '#848db6', m, true), bcol('#291f60', '#969fc4', m, true)], tanks: 0.4, tankColor: bcol('#241b58', '#7d86ad', m, true) });
       // Mosque: dome and two minarets, off to one side of the window view, behind the city
-      var mx = w * 0.526, base = h * 0.7, k = 0.62;
-      g.fillStyle = '#1a1348';
+      var mx = w * 0.526, base = h * 0.7, k = 0.62, mosqueC = bcol('#1a1348', '#5d6694', m, true);
+      g.fillStyle = mosqueC;
       g.fillRect(mx - 70 * k, base - 40 * k, 140 * k, h - base + 40 * k);
       g.beginPath(); g.arc(mx, base - 40 * k, 62 * k, Math.PI, 0); g.fill();
       g.fillRect(mx - 2, base - 40 * k - 62 * k - 14, 4, 16);
       g.beginPath(); g.arc(mx, base - 40 * k - 62 * k - 15, 4, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(255,214,150,0.9)';                                // lit arched windows
-      for (var mw = -2; mw <= 2; mw++) g.fillRect(mx + mw * 22 * k - 4 * k, base - 22 * k, 8 * k, 16 * k);
+      if (m.lit > 0.02) {
+        g.fillStyle = 'rgba(255,214,150,' + (0.9 * m.lit).toFixed(3) + ')';                                // lit arched windows
+        for (var mw = -2; mw <= 2; mw++) g.fillRect(mx + mw * 22 * k - 4 * k, base - 22 * k, 8 * k, 16 * k);
+      }
       [mx - 118 * k, mx + 104 * k].forEach(function (px) {
-        g.fillStyle = '#1a1348';
+        g.fillStyle = mosqueC;
         g.fillRect(px, base - 190 * k, 14 * k, h - base + 190 * k);
         g.beginPath(); g.arc(px + 7 * k, base - 190 * k, 11 * k, Math.PI, 0); g.fill();
         g.fillRect(px + 6 * k, base - 214 * k, 2, 16 * k);
         g.fillRect(px - 3, base - 140 * k, 14 * k + 6, 4);   // balcony ring
-        for (var li = 0; li < 4; li++) {                       // small evening lights on the minarets
-          g.fillStyle = li % 2 ? 'rgba(170,255,190,0.85)' : 'rgba(255,250,225,0.85)';
+        if (m.lit > 0.02) for (var li = 0; li < 4; li++) {     // small evening lights on the minarets
+          g.fillStyle = (li % 2 ? 'rgba(170,255,190,' : 'rgba(255,250,225,') + (0.85 * m.lit).toFixed(3) + ')';
           g.beginPath(); g.arc(px + 7 * k, base - 176 * k + li * 22 * k, 2.2, 0, Math.PI * 2); g.fill();
         }
       });
       // Mid-distance blocks, kept a little lower in front of the dome so it peeks over them
-      drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.4, glow: 5,
-        colors: ['#201858', '#261d60', '#1c1550'], tanks: 0.55, tankColor: '#150f40',
+      drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.4, litK: m.lit, glow: 5 * m.lit, glassA: 0.3 * day,
+        colors: [bcol('#201858', '#707aa6', m, true), bcol('#261d60', '#6a749f', m, true), bcol('#1c1550', '#7d86ae', m, true)], tanks: 0.55, tankColor: bcol('#150f40', '#5e688f', m, true),
         low: [mx - 80 * k, mx + 80 * k, 0.735] });
-    });
-    var far = new T.Mesh(new T.PlaneGeometry(34, 17), new T.MeshBasicMaterial({ map: farTex }));
+      // Morning mist hanging over the rooftops
+      if (m.mist > 0.01) {
+        var mc = mixc([232, 232, 238], [92, 86, 132], d), mg = g.createLinearGradient(0, h * 0.46, 0, h * 0.82);
+        mg.addColorStop(0, rgbaS(mc, 0)); mg.addColorStop(0.7, rgbaS(mc, m.mist * 0.85)); mg.addColorStop(1, rgbaS(mc, m.mist));
+        g.fillStyle = mg; g.fillRect(0, h * 0.46, w, h * 0.36);
+      }
+    }
+    var farL = skyLayer(SKY_W, SKY_H);
+    var clock0 = clockNow(), mood = moodAt(clock0.hours, clock0.ritu), curMood = mood;
+    var SEED_FAR = seed;                                   // the layers always repaint from the same random start, so the city never changes
+    paintFar(farL.g, SKY_W, SKY_H, mood);
+    var far = new T.Mesh(new T.PlaneGeometry(34, 17), new T.MeshBasicMaterial({ map: farL.tex }));
     far.position.set(RX0 - 7, 4.9, -3);
     far.rotation.y = Math.PI / 2;
     scene.add(far);
@@ -716,7 +822,7 @@
     function deckV(u) { return 0.6 - 0.035 * u - Math.sin(u * Math.PI) * 0.012; }
     /* Electric poles just outside the window: plain posts with two cross-arms and a
        small box, and a few long wires sagging deep between them */
-    var POLE_INK = '#0a0720';
+    var POLE_INK = '#0a0720', RIM_A = 0.35;
     function drawPole(g, x, h, top, boxSide, boxY, armsTop, armsLow) {
       g.fillStyle = POLE_INK;
       g.beginPath();                                                   // post, barely tapered
@@ -740,7 +846,7 @@
     }
     // A faint rim along each wire, so it reads against the dark sky
     function drawWireRims(halo, wires) {
-      halo.strokeStyle = 'rgba(170,150,255,0.35)'; halo.lineWidth = 6; halo.lineCap = 'round';
+      halo.strokeStyle = 'rgba(170,150,255,' + RIM_A.toFixed(3) + ')'; halo.lineWidth = 6; halo.lineCap = 'round';
       wires.forEach(function (w) {
         halo.beginPath(); halo.moveTo(w[0], w[1]); halo.quadraticCurveTo((w[0] + w[2]) / 2, Math.max(w[1], w[3]) + w[4] * 2, w[2], w[3]); halo.stroke();
       });
@@ -765,44 +871,51 @@
       drawWire(g, R[1][0], R[1][1], w * 0.72, R[1][1] - 20, 10);
       drawWire(g, R[3][0], R[3][1], w * 0.72, R[3][1] + 20, 12);
       var spans = wireLog; wireLog = null;
-      if (halo) drawWireRims(halo, spans);
+      if (halo && RIM_A > 0.01) drawWireRims(halo, spans);
     }
 
     var frontC = document.createElement('canvas');   // blocks that stand in front of the road
     frontC.width = SKY_W; frontC.height = SKY_H;
-    var nearTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
+    var frontTex = new T.CanvasTexture(frontC);
+    function paintNear(g, w, h, m) {
+      var d = m.d, day = 1 - d;
+      POLE_INK = dcol('#0a0720', '#262a40', d); RIM_A = 0.35 * d;
       // The blocks go on their own canvas first, so some can be stamped back in front of the expressway
       var blocks = document.createElement('canvas'); blocks.width = w; blocks.height = h;
       var rects = [];
-      drawBuildingsRow(blocks.getContext('2d'), w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.66, gap: 30, cell: 34, lit: 0.5, glow: 8,
-        colors: ['#2a2058', '#30265f', '#251c4f'], tanks: 0.7, tankColor: '#171040', grills: true, ac: true,
+      drawBuildingsRow(blocks.getContext('2d'), w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.66, gap: 30, cell: 34, lit: 0.5, litK: m.lit, glow: 8 * m.lit, glassA: 0.3 * day,
+        colors: [bcol('#2a2058', '#59628f', m), bcol('#30265f', '#5f6896', m), bcol('#251c4f', '#525b88', m)], tanks: 0.7, tankColor: bcol('#171040', '#454e7c', m), grills: true, ac: true,
+        acColor: rgbaS(mixc([214, 218, 230], [150, 140, 190], d), 0.55 - 0.2 * d),
         clear: [w * 0.49, w * 0.56], out: rects });   // a side street, looking through to the mosque
       g.drawImage(blocks, 0, 0);
 
       // Elevated expressway weaving through the blocks: concrete deck on pillars, traffic streaking along
       var deckY = function (x) { return h * deckV(x / w); };
       var line = function (off) { g.beginPath(); for (var dx = -10; dx <= w + 10; dx += 20) { if (dx < 0) g.moveTo(dx, deckY(dx) + off); else g.lineTo(dx, deckY(dx) + off); } g.stroke(); };
-      g.fillStyle = '#1e1646';
+      g.fillStyle = dcol('#1e1646', '#4a5282', d);
       for (var px = 70; px < w; px += 240) {                       // pillars with pier caps
         var py = deckY(px);
         g.fillRect(px - 13, py + 18, 26, h - py);
         g.fillRect(px - 26, py + 14, 52, 9);
       }
       g.lineCap = 'butt';
-      g.strokeStyle = '#3a2d68'; g.lineWidth = 24; line(0);          // deck
-      g.strokeStyle = '#140e32'; g.lineWidth = 6; line(12);          // shadowed underside edge
-      g.strokeStyle = '#9d86d6'; g.lineWidth = 4; line(-13);         // parapet catching the city glow
+      g.strokeStyle = dcol('#3a2d68', '#7a82aa', d); g.lineWidth = 24; line(0);          // deck
+      g.strokeStyle = dcol('#140e32', '#383d62', d); g.lineWidth = 6; line(12);          // shadowed underside edge
+      g.strokeStyle = dcol('#9d86d6', '#c6cce4', d); g.lineWidth = 4; line(-13);         // parapet catching the city glow
+      var lightK = 0.35 + 0.65 * d;
       for (var cl = 0; cl < 16; cl++) {                               // a few far-off lights; real cars drive past below
         var cx = between(0, w), head = rnd() < 0.5;
-        g.fillStyle = head ? 'rgba(255,244,210,0.95)' : 'rgba(255,80,64,0.9)';
+        g.fillStyle = head ? 'rgba(255,244,210,' + (0.95 * lightK).toFixed(3) + ')' : 'rgba(255,80,64,' + (0.9 * lightK).toFixed(3) + ')';
         g.fillRect(cx, deckY(cx) + (head ? -6 : 2), between(10, 22), 3);
       }
       for (var lp = 50; lp < w; lp += 170) {                          // lamp posts along the parapet
         g.fillStyle = '#211a2e'; g.fillRect(lp, deckY(lp) - 48, 3, 36); g.fillRect(lp, deckY(lp) - 48, 10, 3);
-        var lg = g.createRadialGradient(lp + 10, deckY(lp) - 45, 2, lp + 10, deckY(lp) - 45, 38);   // a pool of warm light
-        lg.addColorStop(0, 'rgba(255,214,140,0.7)'); lg.addColorStop(1, 'rgba(255,214,140,0)');
-        g.fillStyle = lg; g.fillRect(lp - 30, deckY(lp) - 85, 80, 80);
-        g.fillStyle = 'rgba(255,230,170,1)'; g.beginPath(); g.arc(lp + 10, deckY(lp) - 45, 4, 0, Math.PI * 2); g.fill();
+        if (m.lit > 0.02) {
+          var lg = g.createRadialGradient(lp + 10, deckY(lp) - 45, 2, lp + 10, deckY(lp) - 45, 38);   // a pool of warm light
+          lg.addColorStop(0, 'rgba(255,214,140,' + (0.7 * m.lit).toFixed(3) + ')'); lg.addColorStop(1, 'rgba(255,214,140,0)');
+          g.fillStyle = lg; g.fillRect(lp - 30, deckY(lp) - 85, 80, 80);
+        }
+        g.fillStyle = 'rgba(255,230,170,' + (0.45 + 0.55 * m.lit).toFixed(3) + ')'; g.beginPath(); g.arc(lp + 10, deckY(lp) - 45, 4, 0, Math.PI * 2); g.fill();
       }
       // Every other block stands in front of the road (on its own layer, so passing cars slip behind them)
       var fg = frontC.getContext('2d');
@@ -812,18 +925,33 @@
       });
       // Electric poles and wires just outside the window, in silhouette
       drawPolesAndWires(fg, w, h, g);
-    });
-    var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
+    }
+    var nearL = skyLayer(SKY_W, SKY_H);
+    var SEED_NEAR = seed;
+    paintNear(nearL.g, SKY_W, SKY_H, mood);
+    frontTex.needsUpdate = true;
+    var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearL.tex, transparent: true }));
     near.position.set(RX0 - 3.6, 3.0, -1.5);
     near.rotation.y = Math.PI / 2;
     near.renderOrder = 1;
     scene.add(near);
 
-    var front = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: new T.CanvasTexture(frontC), transparent: true, alphaTest: 0.5 }));
+    var front = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: frontTex, transparent: true, alphaTest: 0.5 }));
     front.position.set(RX0 - 3.5, 3.0, -1.5);
     front.rotation.y = Math.PI / 2;
     front.renderOrder = 3;
     scene.add(front);
+
+    // Repaint the sky and the city from the clock (the buildings are drawn from the same random start every time)
+    function repaintSky(m) {
+      var keep = seed;
+      seed = SEED_FAR;
+      farL.g.clearRect(0, 0, SKY_W, SKY_H); paintFar(farL.g, SKY_W, SKY_H, m); farL.tex.needsUpdate = true;
+      seed = SEED_NEAR;
+      nearL.g.clearRect(0, 0, SKY_W, SKY_H); frontC.getContext('2d').clearRect(0, 0, SKY_W, SKY_H);
+      paintNear(nearL.g, SKY_W, SKY_H, m); nearL.tex.needsUpdate = true; frontTex.needsUpdate = true;
+      seed = keep;
+    }
 
     /* Traffic on the expressway: cars and Dhaka buses drive past now and then.
        They sit between the road layer and the front blocks, so they weave behind buildings. */
@@ -879,8 +1007,8 @@
     seed = -2028929348;   // the plants and ID-card barcodes below draw from the same point as before the night sky
     function moveTraffic(dt) {
       twinkleT += dt;                                       // stars twinkle
-      twinkle[0].opacity = 0.6 + 0.4 * Math.sin(twinkleT * 1.7);
-      twinkle[1].opacity = 0.6 + 0.4 * Math.sin(twinkleT * 1.3 + 2.2);
+      twinkle[0].opacity = (0.6 + 0.4 * Math.sin(twinkleT * 1.7)) * curMood.starA;
+      twinkle[1].opacity = (0.6 + 0.4 * Math.sin(twinkleT * 1.3 + 2.2)) * curMood.starA;
       traffic.forEach(function (v) {
         if (v.wait > 0) {
           v.wait -= dt; v.mesh.visible = false;
@@ -2759,9 +2887,10 @@
         yawTarget += (0 - yawTarget) * Math.min(1, dt * 0.6);
         pitchTarget += (0 - pitchTarget) * Math.min(1, dt * 0.6);
       }
-      lamp.intensity = 1.3 + Math.sin(t * 2.1) * 0.03;   // the faintest lamp flicker
+      lamp.intensity = (1.3 + Math.sin(t * 2.1) * 0.03) * lampK;   // the faintest lamp flicker
       blades.rotation.y += dt * 2.4;                       // ceiling fan
       moveTraffic(dt);                                     // cars on the expressway
+      checkMood(dt);                                       // the sky follows the Dhaka clock
       if (current === 'home') updateTerminal(dt);          // the intro typing itself out on the monitor
       music.tick(dt, t);                                   // record spins and the speaker ring pulses while music plays
       cardEntries.forEach(function (ce, i) {               // ID cards sway a little in the fan's breeze
@@ -2792,6 +2921,87 @@
       placeDesk(W, H);
       placePhone(W, H);
       raf = requestAnimationFrame(frame);
+    }
+
+    /* ---------- The clock moves the light ----------
+       At night every value below is exactly what the room had before, so the moonlit look is unchanged. */
+    var lampK = 1, NEON_RGB = [25 / 255, 217 / 255, 1];
+    function setRGB(col, c) { col.setRGB(c[0] / 255, c[1] / 255, c[2] / 255); }
+    function applyMood(m) {
+      try {
+        var d = m.d, day = 1 - d, sun = m.sun, al = sun.alt;
+        var warm = mixc([255, 168, 104], [255, 242, 214], Math.pow(al, 0.5));       // low sun is orange, high sun is white
+        hemi.intensity = 1.4 + 0.4 * day;
+        setRGB(hemi.color, mixc([219, 230, 244], mixc([255, 246, 232], m.c.h, 0.2), day));
+        setRGB(hemi.groundColor, mixc([42, 48, 56], [96, 92, 100], day));
+        setRGB(sunset.color, mixc([180, 204, 255], warm, day));
+        sunset.intensity = 0.75 * d + (sun.on ? 0.4 + 1.0 * al : 0.15) * day;
+        sunset.position.set(-14, 8.5 * d + (3 + 9 * al) * day, 3 * d + (-8 + 16 * sun.frac) * day);
+        neonLights.forEach(function (n) { n.l.intensity = n.base * (0.3 + 0.7 * d); });
+        var nk = 0.5 + 0.5 * d;                                                        // neon is softer in daylight
+        neonM.color.setRGB(NEON_RGB[0] * nk, NEON_RGB[1] * nk, NEON_RGB[2] * nk);
+        ring.material.color.setRGB(NEON_RGB[0] * nk, NEON_RGB[1] * nk, NEON_RGB[2] * nk);
+        speakerGlow.intensity = 0.6 * (0.4 + 0.6 * d);
+        lampK = 0.3 + 0.7 * d;                                                         // the desk lamp
+        var fl = 0.15 + 0.85 * clamp(d * 1.6, 0, 1);                                  // the floor lamp comes on at dusk
+        flampLight.intensity = fl;
+        lampShade.material.emissiveIntensity = 0.8 * (0.25 + 0.75 * fl);
+        setRGB(windowGlow.color, mixc([184, 200, 255], mixc(m.c.h, [255, 255, 255], 0.3), day));
+        windowGlow.intensity = 0.95 + 0.35 * day;
+      } catch (err) { /* a stripped-down renderer: keep the night look */ }
+    }
+    var paintedAt = mood.hours, moodTimer = 0;
+    function checkMood(dt) {
+      moodTimer += dt;
+      if (moodTimer < 15) return;
+      moodTimer = 0;
+      var c = clockNow();
+      if (c.fixed) return;                                                            // ?time=... holds one moment still
+      if (Math.abs(c.hours - paintedAt) < 2 / 60 && c.ritu === curMood.ritu) return;    // repaint about every two minutes
+      curMood = moodAt(c.hours, c.ritu); paintedAt = c.hours;
+      repaintSky(curMood); applyMood(curMood);
+    }
+    applyMood(curMood);
+
+    /* ---------- TIME TEST: for checking every hour and season. Only appears with ?timetest in the address.
+       Temporary: delete this whole block (and the testClock lines above) before launch. ---------- */
+    if (params.has('timetest') && layer) {
+      var tp = document.createElement('div');
+      tp.setAttribute('style', 'position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;max-width:92vw;padding:8px 12px;border-radius:12px;background:rgba(10,14,22,.85);border:1px solid rgba(25,217,255,.45);color:#e8f4ff;font:12px/1.2 system-ui,sans-serif;');
+      tp.innerHTML = '<b style="letter-spacing:.08em">TIME TEST</b>' +
+        '<input type="range" min="0" max="1439" step="5" aria-label="Time in Dhaka" style="width:min(320px,48vw)">' +
+        '<output style="min-width:78px;font:12px ui-monospace,monospace"></output>' +
+        '<button type="button" data-a="play">Play</button><button type="button" data-a="now">Live</button>' +
+        '<select aria-label="Season"></select>';
+      var tr = tp.querySelector('input'), tout = tp.querySelector('output'), tsel = tp.querySelector('select'),
+          tplay = tp.querySelector('[data-a="play"]'), tlive = tp.querySelector('[data-a="now"]'), tpend = false, tgo = null;
+      Object.keys(RITU).forEach(function (k) {
+        var op = document.createElement('option'); op.value = k; op.textContent = k.charAt(0).toUpperCase() + k.slice(1); tsel.appendChild(op);
+      });
+      var tfmt = function (h) { var mm = Math.round(h * 60) % 1440, hh = Math.floor(mm / 60), ap = hh >= 12 ? 'pm' : 'am'; return (hh % 12 || 12) + ':' + ('0' + (mm % 60)).slice(-2) + ' ' + ap; };
+      var tshow = function (h) {
+        testClock = { hours: h, ritu: tsel.value };
+        curMood = moodAt(h, tsel.value); paintedAt = h; repaintSky(curMood); applyMood(curMood);
+        tout.textContent = tfmt(h);
+      };
+      var tstop = function () { if (tgo) { clearInterval(tgo); tgo = null; tplay.textContent = 'Play'; } };
+      tr.addEventListener('input', function () { tstop(); if (tpend) return; tpend = true; requestAnimationFrame(function () { tpend = false; tshow(+tr.value / 60); }); });
+      tsel.addEventListener('change', function () { tshow(+tr.value / 60); });
+      tplay.addEventListener('click', function () {
+        if (tgo) { tstop(); return; }
+        tplay.textContent = 'Pause';
+        tgo = setInterval(function () {
+          if (!tp.isConnected) { clearInterval(tgo); tgo = null; return; }
+          tr.value = (+tr.value + 10) % 1440; tshow(+tr.value / 60);        // about nine seconds for a whole day
+        }, 100);
+      });
+      tlive.addEventListener('click', function () {
+        tstop(); testClock = null;
+        var c = clockNow(); curMood = moodAt(c.hours, c.ritu); paintedAt = c.hours; repaintSky(curMood); applyMood(curMood);
+        tr.value = Math.round(c.hours * 60); tsel.value = c.ritu; tout.textContent = tfmt(c.hours) + ' (live)';
+      });
+      tr.value = Math.round(curMood.hours * 60); tsel.value = curMood.ritu; tout.textContent = tfmt(curMood.hours) + ' (live)';
+      layer.appendChild(tp);
     }
 
     // Start in the far corner, then glide to the home view
