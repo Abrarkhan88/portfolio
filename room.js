@@ -613,7 +613,7 @@
       SET:  { t: hexRGB('#3b3f8a'), m: hexRGB('#e5708a'), h: hexRGB('#ffa36a'), s: 0.05 },
       DUSK: { t: hexRGB('#171c52'), m: hexRGB('#6a3a86'), h: hexRGB('#d46a8a'), s: 0.6 }
     };
-    var LOOKS = { hemonto: 1, borsha: 1, grishmo: 1, shorot: 1, shit: 1 };                       // the ritu that have their own look so far
+    var LOOKS = { hemonto: 1, borsha: 1, grishmo: 1, shorot: 1, shit: 1, boshonto: 1 };                       // the ritu that have their own look so far
     function moodAt(hours, ritu) {
       var R = RITU[ritu] || RITU.hemonto, sr = R.sr, ss = R.ss, noon = (sr + ss) / 2;
       var ks = [[0, 'N'], [sr - 1, 'N'], [sr - 0.4, 'PRE'], [sr + 0.25, 'RISE'], [sr + 1.5, 'MORN'], [noon, 'NOON'], [ss - 2, 'AFT'], [ss - 0.6, 'GOLD'], [ss + 0.1, 'SET'], [ss + 0.8, 'DUSK'], [ss + 1.5, 'N'], [24, 'N']];
@@ -636,6 +636,9 @@
         c.t = mixc(c.t, [190, 202, 214], 0.6 * dayK); c.m = mixc(c.m, [212, 220, 226], 0.7 * dayK); c.h = mixc(c.h, [232, 232, 230], 0.65 * dayK);
         c.t = mixc(c.t, [14, 22, 52], 0.25 * c.s); c.m = mixc(c.m, [34, 44, 86], 0.25 * c.s);
       }
+      if (look === 'boshonto') {                                     // fresh, soft spring light with a warm pink-gold edge
+        c.t = mixc(c.t, [112, 170, 226], 0.4 * dayK); c.m = mixc(c.m, [206, 228, 242], 0.5 * dayK); c.h = mixc(c.h, [255, 232, 214], 0.5 * dayK);
+      }
       var storm = 0, dust = 0;
       if (look === 'grishmo') {                                      // dust haze by day; a Kalbaishakhi storm cloud builds in the afternoon and stays into the night
         var sr0 = sr, ss0 = ss;
@@ -657,8 +660,9 @@
       var since = hours - sr;                                        // morning mist, thickest just after sunrise
       m.mist = (1 - m.d) * (since < 0 ? 0.3 : clamp(0.34 - since * 0.04, 0.08, 0.34));
       m.mistCol = mixc([232, 232, 238], [92, 86, 132], m.d);
+      if (look === 'boshonto') { m.mist = 0.1 * (1 - m.d); m.mistCol = mixc([255, 240, 232], [92, 86, 132], m.d); }   // a little morning dew haze
       if (look === 'shit') {                                         // thick fog at dawn, thinning by late morning, back again at dusk and through the night
-        var fg = hours < sr ? 0.55 + 0.25 * clamp((hours - (sr - 3)) / 3, 0, 1) : Math.max(0.2 + 0.6 * clamp(1 - (hours - sr) / 4.5, 0, 1), 0.2 + 0.35 * clamp((hours - (ss - 1.5)) / 2, 0, 1));
+        var fg = hours < sr ? 0.65 + 0.15 * clamp((hours - (sr - 3)) / 3, 0, 1) : Math.max(0.2 + 0.6 * clamp(1 - (hours - sr) / 4.5, 0, 1), 0.2 + 0.45 * clamp((hours - (ss - 1.5)) / 2, 0, 1));
         m.fog = fg; m.mist = fg; m.mistCol = mixc([228, 232, 236], [64, 72, 104], m.d);
       }
       if (look === 'shorot') { m.mist = 0.06 * (1 - m.d); m.mistCol = mixc([240, 246, 252], [92, 86, 132], m.d); m.cloud = 1; }   // crisp air
@@ -790,10 +794,10 @@
         g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
       }
       // Shit: kites in the winter sky, thin strings trailing down behind the city
-      if (m.look === 'shit' && day > 0.05) {
+      if ((m.look === 'shit' || m.look === 'boshonto') && day > 0.05) {
         var kk = 31, kkr = function () { kk = (kk * 16807) % 2147483647; return (kk - 1) / 2147483646; };
         var kites = [[0.41, 0.468, '#e63946'], [0.47, 0.5, '#ffd23f'], [0.52, 0.462, '#2ec4b6'], [0.57, 0.5, '#ff6fb5'], [0.62, 0.47, '#7b5cff'], [0.45, 0.535, '#ff9f1c'], [0.33, 0.4, '#e63946'], [0.7, 0.42, '#ffd23f'], [0.25, 0.5, '#2ec4b6'], [0.8, 0.46, '#ff6fb5']];
-        kites.forEach(function (kt) {
+        (m.look === 'boshonto' ? [[0.6, 0.5, '#ff6fb5'], [0.645, 0.468, '#ffd23f'], [0.575, 0.455, '#2ec4b6']] : kites).forEach(function (kt) {
           var kx = w * kt[0], ky = h * kt[1], ks = 15 + kkr() * 9, rot = (kkr() - 0.5) * 0.7, ka = day * (1 - 0.35 * m.fog);
           g.save(); g.translate(kx, ky); g.rotate(rot); g.globalAlpha = ka;
           g.strokeStyle = 'rgba(60,60,80,0.7)'; g.lineWidth = 1.2;
@@ -887,6 +891,37 @@
         var mc = m.mistCol, mg = g.createLinearGradient(0, h * 0.46, 0, h * 0.82);
         mg.addColorStop(0, rgbaS(mc, 0)); mg.addColorStop(0.7, rgbaS(mc, m.mist * 0.85)); mg.addColorStop(1, rgbaS(mc, m.mist));
         g.fillStyle = mg; g.fillRect(0, h * 0.46, w, h * 0.36);
+      }
+      // Boshonto: a branch of spring blossom (pink and coral) reaching in from the top-left of the view; dim and moonlit at night
+      if (m.look === 'boshonto') {
+        var bb = 515, bbr = function () { bb = (bb * 16807) % 2147483647; return (bb - 1) / 2147483646; };
+        var wood = mixc([92, 62, 50], [30, 26, 44], d), lit = 1 - 0.55 * d;
+        var pts = [[0.378, 0.432], [0.405, 0.447], [0.44, 0.458], [0.478, 0.462], [0.515, 0.456]];
+        var twigs = [[1, -0.012, 0.03], [2, 0.014, 0.034], [3, -0.01, 0.03], [4, 0.012, 0.028]];
+        g.lineCap = 'round'; g.strokeStyle = rgbaS(wood, 1); g.lineWidth = 6;
+        g.beginPath(); g.moveTo(w * pts[0][0], h * pts[0][1]); for (var bp = 1; bp < pts.length; bp++) g.lineTo(w * pts[bp][0], h * pts[bp][1]); g.stroke();
+        g.lineWidth = 3;
+        var tips = [];
+        twigs.forEach(function (tw) {
+          var sx = w * pts[tw[0]][0], sy = h * pts[tw[0]][1], ex = sx + w * tw[2], ey = sy + h * tw[1] * 1.6;
+          g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo((sx + ex) / 2, sy + (ey - sy) * 0.2 - 8, ex, ey); g.stroke(); tips.push([ex, ey]);
+        });
+        tips.push([w * pts[4][0], h * pts[4][1]]);
+        var leaf = mixc([112, 168, 92], [30, 52, 52], d);
+        for (var lf = 0; lf < 16; lf++) {
+          var lt = tips[Math.floor(bbr() * tips.length)], lx = lt[0] + (bbr() - 0.5) * 70, ly = lt[1] + (bbr() - 0.3) * 24;
+          g.fillStyle = rgbaS(leaf, 0.95); g.beginPath(); g.ellipse(lx, ly, 8 + bbr() * 5, 3.5, bbr() * 3, 0, Math.PI * 2); g.fill();
+        }
+        var petal = [[255, 176, 208], [255, 126, 98], [255, 214, 230], [244, 92, 120]];
+        for (var fl = 0; fl < 46; fl++) {
+          var seg = bbr() * (tips.length + 1), fx, fy;
+          if (seg < 1.6) { var sp = seg / 1.6 * (pts.length - 1), si = Math.min(Math.floor(sp), pts.length - 2), sf = sp - si; fx = w * (pts[si][0] + (pts[si + 1][0] - pts[si][0]) * sf); fy = h * (pts[si][1] + (pts[si + 1][1] - pts[si][1]) * sf); }
+          else { var tt = tips[Math.min(tips.length - 1, Math.floor(seg - 0.6))], tf = bbr(); fx = tt[0] - (1 - tf) * 38 + (bbr() - 0.5) * 18; fy = tt[1] - (1 - tf) * 8 + (bbr() - 0.5) * 22; }
+          var pr = 6 + bbr() * 5, pc = mixc(petal[Math.floor(bbr() * petal.length)], [120, 120, 170], 0.45 * d);
+          g.fillStyle = rgbaS(pc, lit);
+          for (var pt = 0; pt < 5; pt++) { var pa = pt / 5 * Math.PI * 2 + fl; g.beginPath(); g.arc(fx + Math.cos(pa) * pr * 0.75, fy + Math.sin(pa) * pr * 0.75, pr * 0.6, 0, Math.PI * 2); g.fill(); }
+          g.fillStyle = rgbaS(mixc([255, 214, 90], [150, 130, 120], d), lit); g.beginPath(); g.arc(fx, fy, pr * 0.28, 0, Math.PI * 2); g.fill();
+        }
       }
     }
     var farL = skyLayer(SKY_W, SKY_H);
