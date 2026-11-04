@@ -1621,12 +1621,12 @@ html.room-mode,
 html.room-mode body { overflow: hidden; }
 
 .room {
-  --room-ink: #141219;
-  --room-glass: rgba(22, 18, 30, 0.72);
-  --room-neon: #ff6ad5;
-  --room-edge: rgba(255, 106, 213, 0.38);
-  --signal: #ff6ad5;          /* the room's accent is pink neon; the flat site keeps marigold */
-  --signal-ink: #1a0f1c;
+  --room-ink: #0f131b;
+  --room-glass: rgba(16, 21, 31, 0.72);
+  --room-neon: #19d9ff;
+  --room-edge: rgba(25, 217, 255, 0.38);
+  --signal: #19d9ff;          /* the room's accent is cyan neon; the flat site keeps marigold */
+  --signal-ink: #04141a;
   position: fixed;
   inset: 0;
   z-index: 200;            /* above the site, below the custom cursor */
@@ -1660,7 +1660,7 @@ html.room-mode body { overflow: hidden; }
   border: 1px solid var(--room-edge);
   border-radius: 16px;
   background: var(--room-glass);
-  box-shadow: 0 0 28px rgba(255, 106, 213, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 28px rgba(25, 217, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   pointer-events: none;
@@ -1673,7 +1673,7 @@ html.room-mode body { overflow: hidden; }
   left: 0; top: 14px; bottom: 14px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: linear-gradient(180deg, var(--room-neon), #9b6bff);
+  background: linear-gradient(180deg, var(--room-neon), #5b8cff);
   box-shadow: 0 0 12px var(--room-neon);
 }
 .room__id strong {
@@ -1683,15 +1683,15 @@ html.room-mode body { overflow: hidden; }
   line-height: 1;
   letter-spacing: -0.01em;
   font-variation-settings: "wdth" 88;
-  color: #fff4fb;
-  text-shadow: 0 0 18px rgba(255, 106, 213, 0.45);
+  color: #f0fdff;
+  text-shadow: 0 0 18px rgba(25, 217, 255, 0.45);
 }
 .room__role {
   font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: linear-gradient(90deg, var(--room-neon), #b99bff);
+  background: linear-gradient(90deg, var(--room-neon), #9cb8ff);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1723,7 +1723,7 @@ html.room-mode body { overflow: hidden; }
   transition: border-color var(--dur-fast) var(--ease-out);
 }
 .room__flat:hover, .room__back:hover, .room__sound:hover,
-.room__flat:focus-visible, .room__back:focus-visible, .room__sound:focus-visible { border-color: var(--room-neon); box-shadow: 0 0 14px rgba(255, 106, 213, 0.35); }
+.room__flat:focus-visible, .room__back:focus-visible, .room__sound:focus-visible { border-color: var(--room-neon); box-shadow: 0 0 14px rgba(25, 217, 255, 0.35); }
 .room__sound[aria-pressed="true"] { border-color: var(--signal); color: var(--signal); }
 
 .room__back {
@@ -1752,7 +1752,7 @@ html.room-mode body { overflow: hidden; }
   border: 1px solid var(--room-edge);
   border-radius: 999px;
   background: var(--room-glass);
-  box-shadow: 0 0 24px rgba(255, 106, 213, 0.12);
+  box-shadow: 0 0 24px rgba(25, 217, 255, 0.12);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   transform: translate(-50%, 140%);
@@ -1777,9 +1777,9 @@ html.room-mode body { overflow: hidden; }
 .room__menu button:focus-visible { color: var(--paper); }
 .room__num { color: var(--room-neon); margin-right: 0.35em; font-variant-numeric: tabular-nums; }
 .room__menu button[aria-current="true"] {
-  background: rgba(255, 106, 213, 0.16);
+  background: rgba(25, 217, 255, 0.16);
   color: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--room-neon), 0 0 16px rgba(255, 106, 213, 0.35);
+  box-shadow: inset 0 0 0 1px var(--room-neon), 0 0 16px rgba(25, 217, 255, 0.35);
 }
 
 /* Floating markers over clickable objects */
@@ -1808,8 +1808,8 @@ html.room-mode body { overflow: hidden; }
   content: "";
   width: 12px;
   height: 12px;
-  background: linear-gradient(135deg, #ffd2f2, var(--room-neon));
-  box-shadow: 0 0 10px var(--room-neon), 0 0 22px rgba(255, 106, 213, 0.6);
+  background: linear-gradient(135deg, #c9f6ff, var(--room-neon));
+  box-shadow: 0 0 10px var(--room-neon), 0 0 22px rgba(25, 217, 255, 0.6);
   transform: rotate(45deg);
   animation: room-bob 2.4s ease-in-out infinite;
 }
@@ -1905,7 +1905,7 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   flex-direction: column;
   overflow: hidden;
   border-radius: 0.3em;
-  background: linear-gradient(135deg, #16262b, #221b2e);
+  background: linear-gradient(135deg, #16262b, #1a2230);
   color: var(--paper);
   font-size: 16px;                 /* JS scales this to the monitor's size */
   line-height: 1.3;
@@ -2150,13 +2150,13 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   overflow: hidden;
   border-radius: 2.6em;            /* iPhone 15 Pro corner */
   background:
-    radial-gradient(110% 55% at 20% 0%, rgba(155, 107, 255, 0.45), transparent 60%),
-    radial-gradient(90% 50% at 90% 100%, rgba(255, 95, 210, 0.3), transparent 60%),
-    linear-gradient(180deg, #1c1638 0%, #120f1e 100%);
+    radial-gradient(110% 55% at 20% 0%, rgba(91, 140, 255, 0.45), transparent 60%),
+    radial-gradient(90% 50% at 90% 100%, rgba(25, 217, 255, 0.3), transparent 60%),
+    linear-gradient(180deg, #142038 0%, #0d131e 100%);
   color: var(--paper);
   font-size: 14px;                 /* JS scales this to the phone's size */
   line-height: 1.3;
-  box-shadow: 0 0 3em rgba(155, 107, 255, 0.2);
+  box-shadow: 0 0 3em rgba(91, 140, 255, 0.2);
 }
 .room-phone[hidden] { display: none; }
 /* Dynamic Island */
@@ -2418,7 +2418,7 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   border: 1px solid var(--room-edge);
   border-radius: 18px;
   background: var(--room-glass);
-  box-shadow: 0 0 32px rgba(255, 106, 213, 0.16);
+  box-shadow: 0 0 32px rgba(25, 217, 255, 0.16);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   color: var(--paper);
@@ -2451,7 +2451,7 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   background: rgba(255, 255, 255, 0.05);
   font-size: 0.95rem;
 }
-.room-music__controls .room-music__play { width: 48px; height: 48px; border-color: var(--room-neon); background: rgba(255, 106, 213, 0.18); box-shadow: 0 0 14px rgba(255, 106, 213, 0.35); }
+.room-music__controls .room-music__play { width: 48px; height: 48px; border-color: var(--room-neon); background: rgba(25, 217, 255, 0.18); box-shadow: 0 0 14px rgba(25, 217, 255, 0.35); }
 .room-music__controls button:hover { border-color: var(--room-neon); }
 .room-music__body { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 .room-music__search { display: flex; gap: 8px; }
@@ -2466,14 +2466,14 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 .room-music__search button {
   padding: 0 16px;
   border: 1px solid var(--room-neon); border-radius: 999px;
-  background: rgba(255, 106, 213, 0.16);
+  background: rgba(25, 217, 255, 0.16);
   font-size: 0.85rem; font-weight: 600;
 }
 .room-music__mine {
   justify-self: start;
   padding: 7px 14px;
   border: 1px solid var(--room-edge); border-radius: 999px;
-  background: rgba(155, 107, 255, 0.16);
+  background: rgba(91, 140, 255, 0.16);
   font-size: 0.85rem;
 }
 .room-music__mine[hidden] { display: none; }
@@ -2484,10 +2484,10 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
   flex: 1 1 auto; min-height: 140px; max-height: 360px;
   margin: 0; padding: 0 4px 0 0;
   overflow-y: auto; list-style: none; overscroll-behavior: contain;
-  scrollbar-width: thin; scrollbar-color: rgba(255, 106, 213, 0.5) transparent;
+  scrollbar-width: thin; scrollbar-color: rgba(25, 217, 255, 0.5) transparent;
 }
 .room-music__results::-webkit-scrollbar { width: 6px; }
-.room-music__results::-webkit-scrollbar-thumb { border-radius: 6px; background: rgba(255, 106, 213, 0.5); }
+.room-music__results::-webkit-scrollbar-thumb { border-radius: 6px; background: rgba(25, 217, 255, 0.5); }
 .room-music__results::-webkit-scrollbar-track { background: transparent; }
 .room-music__results:empty { display: none; }
 .room-music__hit {
@@ -2530,7 +2530,7 @@ html.room-mode.has-cursor .room a { cursor: pointer; }
 .room-music.is-mini .room-music__controls button { width: 34px; height: 34px; font-size: 0.8rem; }
 .room-music.is-mini .room-music__controls .room-music__play { width: 40px; height: 40px; }
 .room-music.is-mini .room-music__minibar { display: flex; gap: 8px; }
-.room-music.is-playing { box-shadow: 0 0 36px rgba(255, 106, 213, 0.3); }
+.room-music.is-playing { box-shadow: 0 0 36px rgba(25, 217, 255, 0.3); }
 
 @media (max-width: 899px), (max-height: 499px) {
   .room { --sheet-gap: 12px; --menu-h: 3.4rem; overflow: hidden; }
