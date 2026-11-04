@@ -892,37 +892,6 @@
         mg.addColorStop(0, rgbaS(mc, 0)); mg.addColorStop(0.7, rgbaS(mc, m.mist * 0.85)); mg.addColorStop(1, rgbaS(mc, m.mist));
         g.fillStyle = mg; g.fillRect(0, h * 0.46, w, h * 0.36);
       }
-      // Boshonto: a branch of spring blossom (pink and coral) reaching in from the top-left of the view; dim and moonlit at night
-      if (m.look === 'boshonto') {
-        var bb = 515, bbr = function () { bb = (bb * 16807) % 2147483647; return (bb - 1) / 2147483646; };
-        var wood = mixc([92, 62, 50], [30, 26, 44], d), lit = 1 - 0.55 * d;
-        var pts = [[0.378, 0.432], [0.405, 0.447], [0.44, 0.458], [0.478, 0.462], [0.515, 0.456]];
-        var twigs = [[1, -0.012, 0.03], [2, 0.014, 0.034], [3, -0.01, 0.03], [4, 0.012, 0.028]];
-        g.lineCap = 'round'; g.strokeStyle = rgbaS(wood, 1); g.lineWidth = 6;
-        g.beginPath(); g.moveTo(w * pts[0][0], h * pts[0][1]); for (var bp = 1; bp < pts.length; bp++) g.lineTo(w * pts[bp][0], h * pts[bp][1]); g.stroke();
-        g.lineWidth = 3;
-        var tips = [];
-        twigs.forEach(function (tw) {
-          var sx = w * pts[tw[0]][0], sy = h * pts[tw[0]][1], ex = sx + w * tw[2], ey = sy + h * tw[1] * 1.6;
-          g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo((sx + ex) / 2, sy + (ey - sy) * 0.2 - 8, ex, ey); g.stroke(); tips.push([ex, ey]);
-        });
-        tips.push([w * pts[4][0], h * pts[4][1]]);
-        var leaf = mixc([112, 168, 92], [30, 52, 52], d);
-        for (var lf = 0; lf < 16; lf++) {
-          var lt = tips[Math.floor(bbr() * tips.length)], lx = lt[0] + (bbr() - 0.5) * 70, ly = lt[1] + (bbr() - 0.3) * 24;
-          g.fillStyle = rgbaS(leaf, 0.95); g.beginPath(); g.ellipse(lx, ly, 8 + bbr() * 5, 3.5, bbr() * 3, 0, Math.PI * 2); g.fill();
-        }
-        var petal = [[255, 176, 208], [255, 126, 98], [255, 214, 230], [244, 92, 120]];
-        for (var fl = 0; fl < 46; fl++) {
-          var seg = bbr() * (tips.length + 1), fx, fy;
-          if (seg < 1.6) { var sp = seg / 1.6 * (pts.length - 1), si = Math.min(Math.floor(sp), pts.length - 2), sf = sp - si; fx = w * (pts[si][0] + (pts[si + 1][0] - pts[si][0]) * sf); fy = h * (pts[si][1] + (pts[si + 1][1] - pts[si][1]) * sf); }
-          else { var tt = tips[Math.min(tips.length - 1, Math.floor(seg - 0.6))], tf = bbr(); fx = tt[0] - (1 - tf) * 38 + (bbr() - 0.5) * 18; fy = tt[1] - (1 - tf) * 8 + (bbr() - 0.5) * 22; }
-          var pr = 6 + bbr() * 5, pc = mixc(petal[Math.floor(bbr() * petal.length)], [120, 120, 170], 0.45 * d);
-          g.fillStyle = rgbaS(pc, lit);
-          for (var pt = 0; pt < 5; pt++) { var pa = pt / 5 * Math.PI * 2 + fl; g.beginPath(); g.arc(fx + Math.cos(pa) * pr * 0.75, fy + Math.sin(pa) * pr * 0.75, pr * 0.6, 0, Math.PI * 2); g.fill(); }
-          g.fillStyle = rgbaS(mixc([255, 214, 90], [150, 130, 120], d), lit); g.beginPath(); g.arc(fx, fy, pr * 0.28, 0, Math.PI * 2); g.fill();
-        }
-      }
     }
     var farL = skyLayer(SKY_W, SKY_H);
     var clock0 = clockNow(), mood = moodAt(clock0.hours, clock0.ritu), curMood = mood;
