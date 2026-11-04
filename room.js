@@ -670,7 +670,7 @@
     windowGlow.position.set(RX0 + 1.2, 3.6, 0);
     scene.add(windowGlow);
 
-    /* ---------- Dhaka at dusk, outside the window ----------
+    /* ---------- Dhaka at night, outside the window ----------
        Three layers at different depths so the city shifts as the camera moves. */
     var SKY_W = 2048, SKY_H = 1024;
 
@@ -692,8 +692,10 @@
           for (var c = 0; c < cols; c++) {
             var lit = rnd();
             if (lit < opts.lit) {
-              var tone = rnd(); g.fillStyle = tone < 0.3 ? 'rgba(232,244,255,0.9)' : tone < 0.5 ? 'rgba(255,140,220,0.9)' : 'rgba(255,205,140,0.92)';
+              var tone = rnd(); g.fillStyle = tone < 0.18 ? 'rgba(226,240,255,0.95)' : tone < 0.3 ? 'rgba(255,170,210,0.9)' : 'rgba(255,196,120,0.95)';
+              if (opts.glow) { g.shadowColor = g.fillStyle; g.shadowBlur = opts.glow; }
               g.fillRect(x + c * cw + cw * 0.22, top + 10 + r * opts.cell * 1.25, cw * 0.56, opts.cell * 0.6);
+              if (opts.glow) g.shadowBlur = 0;
             } else if (opts.grills) {
               g.fillStyle = 'rgba(0,0,0,0.25)';
               g.fillRect(x + c * cw + cw * 0.22, top + 10 + r * opts.cell * 1.25, cw * 0.56, opts.cell * 0.6);
@@ -718,7 +720,7 @@
         // AC units on facades of near buildings
         if (opts.ac) {
           for (var a = 0; a < 3; a++) if (rnd() < 0.5) {
-            g.fillStyle = 'rgba(220,210,200,0.55)';
+            g.fillStyle = 'rgba(150,140,190,0.35)';
             g.fillRect(x + between(4, bw - 26), top + between(20, h - top - 30), 22, 14);
           }
         }
@@ -729,40 +731,51 @@
     // Layer 1: sky, sun, far skyline with a mosque
     var farTex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
       var sk = g.createLinearGradient(0, 0, 0, h);
-      sk.addColorStop(0, '#8a6cc4');
-      sk.addColorStop(0.35, '#b98fdc');
-      sk.addColorStop(0.6, '#dca6e0');
-      sk.addColorStop(0.8, '#f2b6da');
-      sk.addColorStop(1, '#fbd0e2');
+      sk.addColorStop(0, '#04061a');
+      sk.addColorStop(0.3, '#0b0e38');
+      sk.addColorStop(0.55, '#1b1659');
+      sk.addColorStop(0.75, '#3a2270');
+      sk.addColorStop(1, '#5a2f7c');
       g.fillStyle = sk; g.fillRect(0, 0, w, h);
-      for (var st = 0; st < 140; st++) {                                  // stars
-        g.fillStyle = 'rgba(255,255,255,' + between(0.3, 0.9) + ')';
-        g.fillRect(between(0, w), between(0, h * 0.45), between(1, 3), between(1, 3));
+      // Stars: a dense field, thickest over the window's view; a few bigger ones, some warm
+      for (var st = 0; st < 1100; st++) {
+        var sx0 = rnd() < 0.55 ? between(w * 0.3, w * 0.74) : between(0, w);
+        var sy0 = Math.pow(rnd(), 1.25) * h * 0.66;
+        var sz = rnd() < 0.15 ? between(3, 4.5) : between(1.6, 3);
+        g.fillStyle = rnd() < 0.2 ? 'rgba(255,225,190,' + between(0.55, 1) + ')' : 'rgba(225,235,255,' + between(0.5, 1) + ')';
+        g.fillRect(sx0, sy0, sz, sz);
       }
       // A pale moon with a soft halo
-      var sx = w * 0.36, sy = h * 0.3;
-      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 220);
-      glow.addColorStop(0, 'rgba(255,235,255,0.55)');
-      glow.addColorStop(1, 'rgba(255,200,255,0)');
+      var sx = w * 0.5, sy = h * 0.2;
+      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 240);
+      glow.addColorStop(0, 'rgba(200,210,255,0.42)');
+      glow.addColorStop(1, 'rgba(150,160,255,0)');
       g.fillStyle = glow; g.fillRect(0, 0, w, h);
-      g.fillStyle = '#fbeaff'; g.beginPath(); g.arc(sx, sy, 30, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#f4f1ff'; g.beginPath(); g.arc(sx, sy, 34, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(150,150,205,0.28)';
+      [[-10, -8, 8], [9, 6, 6], [-4, 13, 4.5], [12, -11, 3.5]].forEach(function (cr) { g.beginPath(); g.arc(sx + cr[0], sy + cr[1], cr[2], 0, Math.PI * 2); g.fill(); });
       // Long thin clouds
-      g.fillStyle = 'rgba(255,170,230,0.18)';
+      g.fillStyle = 'rgba(120,100,220,0.10)';
       for (var i = 0; i < 9; i++) {
         g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
       }
-      // Distant haze line of buildings
-      drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.18,
-        colors: ['#b48ad0', '#ab82c8', '#bc94d6'], tanks: 0.4, tankColor: '#9c74bc' });
+      // City glow on the horizon, then a distant haze line of buildings
+      var haze = g.createLinearGradient(0, h * 0.42, 0, h * 0.78);
+      haze.addColorStop(0, 'rgba(255,150,170,0)'); haze.addColorStop(1, 'rgba(255,150,170,0.38)');
+      g.fillStyle = haze; g.fillRect(0, h * 0.42, w, h * 0.36);
+      drawBuildingsRow(g, w, h, { minW: 30, maxW: 80, topMin: 0.6, topMax: 0.72, gap: 4, cell: 12, lit: 0.22,
+        colors: ['#2c2268', '#32286f', '#291f60'], tanks: 0.4, tankColor: '#241b58' });
       // Mosque: dome and two minarets, off to one side of the window view, behind the city
       var mx = w * 0.526, base = h * 0.7, k = 0.62;
-      g.fillStyle = '#8f63b0';
+      g.fillStyle = '#1a1348';
       g.fillRect(mx - 70 * k, base - 40 * k, 140 * k, h - base + 40 * k);
       g.beginPath(); g.arc(mx, base - 40 * k, 62 * k, Math.PI, 0); g.fill();
       g.fillRect(mx - 2, base - 40 * k - 62 * k - 14, 4, 16);
       g.beginPath(); g.arc(mx, base - 40 * k - 62 * k - 15, 4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,214,150,0.9)';                                // lit arched windows
+      for (var mw = -2; mw <= 2; mw++) g.fillRect(mx + mw * 22 * k - 4 * k, base - 22 * k, 8 * k, 16 * k);
       [mx - 118 * k, mx + 104 * k].forEach(function (px) {
-        g.fillStyle = '#8f63b0';
+        g.fillStyle = '#1a1348';
         g.fillRect(px, base - 190 * k, 14 * k, h - base + 190 * k);
         g.beginPath(); g.arc(px + 7 * k, base - 190 * k, 11 * k, Math.PI, 0); g.fill();
         g.fillRect(px + 6 * k, base - 214 * k, 2, 16 * k);
@@ -773,27 +786,42 @@
         }
       });
       // Mid-distance blocks, kept a little lower in front of the dome so it peeks over them
-      drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.32,
-        colors: ['#8a5eae', '#8058a6', '#9466b6'], tanks: 0.55, tankColor: '#6c4892',
+      drawBuildingsRow(g, w, h, { minW: 50, maxW: 130, topMin: 0.66, topMax: 0.8, gap: 10, cell: 16, lit: 0.4, glow: 5,
+        colors: ['#201858', '#261d60', '#1c1550'], tanks: 0.55, tankColor: '#150f40',
         low: [mx - 80 * k, mx + 80 * k, 0.735] });
-      // A few birds over the sky
-      g.strokeStyle = 'rgba(70,40,96,0.55)'; g.lineWidth = 3;
-      for (var b = 0; b < 7; b++) {
-        var bx = between(w * 0.15, w * 0.85), by = between(h * 0.2, h * 0.45), s = between(8, 14);
-        g.beginPath(); g.moveTo(bx - s, by); g.quadraticCurveTo(bx - s / 2, by - s / 2, bx, by); g.quadraticCurveTo(bx + s / 2, by - s / 2, bx + s, by); g.stroke();
-      }
     });
     var far = new T.Mesh(new T.PlaneGeometry(34, 17), new T.MeshBasicMaterial({ map: farTex }));
     far.position.set(RX0 - 7, 4.9, -3);
     far.rotation.y = Math.PI / 2;
     scene.add(far);
 
+    // Twinkling stars: two sparse layers just in front of the sky that pulse out of step with each other
+    var twinkle = [0, 1].map(function () {
+      var tex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
+        for (var s = 0; s < 70; s++) {
+          var tx0 = between(w * 0.22, w * 0.82), ty0 = Math.pow(rnd(), 1.2) * h * 0.6, r = between(2, 3.6);
+          var tg = g.createRadialGradient(tx0, ty0, 0, tx0, ty0, r * 3);
+          tg.addColorStop(0, 'rgba(255,255,255,0.95)'); tg.addColorStop(0.3, 'rgba(210,225,255,0.3)'); tg.addColorStop(1, 'rgba(210,225,255,0)');
+          g.fillStyle = tg; g.fillRect(tx0 - r * 3, ty0 - r * 3, r * 6, r * 6);
+          g.fillStyle = '#fff'; g.beginPath(); g.arc(tx0, ty0, r * 0.55, 0, Math.PI * 2); g.fill();
+          if (s % 4 === 0) { g.fillRect(tx0 - r * 3, ty0 - 0.5, r * 6, 1); g.fillRect(tx0 - 0.5, ty0 - r * 3, 1, r * 6); }   // a little glint
+        }
+      });
+      var tm = new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+      var tp = new T.Mesh(new T.PlaneGeometry(34, 17), tm);
+      tp.position.set(RX0 - 6.9, 4.9, -3);
+      tp.rotation.y = Math.PI / 2;
+      scene.add(tp);
+      return tm;
+    });
+    var twinkleT = 0;
+
     // Layer 2: closer residential blocks with balconies and AC units
     // The expressway's height across the near layer, as a fraction of its texture (0 = top)
     function deckV(u) { return 0.6 - 0.035 * u - Math.sin(u * Math.PI) * 0.012; }
     /* Electric poles just outside the window: plain posts with two cross-arms and a
        small box, and a few long wires sagging deep between them */
-    var POLE_INK = '#33263f';
+    var POLE_INK = '#0a0720';
     function drawPole(g, x, h, top, boxSide, boxY, armsTop, armsLow) {
       g.fillStyle = POLE_INK;
       g.beginPath();                                                   // post, barely tapered
@@ -808,12 +836,38 @@
         [x - armsLow[0] + 4, yB + 4], [x + armsLow[1] - 4, yB + 4], [x, yA + 6]
       ];
     }
+    var wireLog = null;
     function drawWire(g, x0, y0, x1, y1, sag) {
+      if (wireLog) wireLog.push([x0, y0, x1, y1, sag]);
       g.beginPath(); g.moveTo(x0, y0);
       g.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag * 2, x1, y1);   // control point at twice the sag
       g.stroke();
     }
-    function drawPolesAndWires(g, w, h) {
+    // Fairy lights strung along the wires: a soft halo on the road layer, a bright bead in the silhouette layer
+    function drawBulbs(halo, core, wires) {
+      var tones = ['255,214,140', '255,170,215', '255,244,214', '170,215,255'];
+      var bi = 0;
+      wires.forEach(function (s) {
+        var x0 = s[0], y0 = s[1], x1 = s[2], y1 = s[3], mx = (x0 + x1) / 2, cy = Math.max(y0, y1) + s[4] * 2;
+        halo.strokeStyle = 'rgba(170,150,255,0.35)'; halo.lineWidth = 6; halo.lineCap = 'round';   // a faint rim, so the wire reads against the dark
+        halo.beginPath(); halo.moveTo(x0, y0); halo.quadraticCurveTo(mx, cy, x1, y1); halo.stroke();
+        var n = Math.max(2, Math.round(Math.abs(x1 - x0) / 46));
+        for (var i = 1; i < n; i++) {
+          var t = i / n, u = 1 - t;
+          var bx = u * u * x0 + 2 * u * t * mx + t * t * x1;
+          var by = u * u * y0 + 2 * u * t * cy + t * t * y1;
+          var tone = tones[bi++ % tones.length];
+          var gl = halo.createRadialGradient(bx, by + 5, 1, bx, by + 5, 20);
+          gl.addColorStop(0, 'rgba(' + tone + ',0.85)'); gl.addColorStop(1, 'rgba(' + tone + ',0)');
+          halo.fillStyle = gl; halo.fillRect(bx - 20, by - 15, 40, 40);
+          core.fillStyle = 'rgb(' + tone + ')';
+          core.beginPath(); core.arc(bx, by + 5, 3.4, 0, Math.PI * 2); core.fill();
+          core.fillRect(bx - 1, by, 2, 3);                                  // a little stalk up to the wire
+        }
+      });
+    }
+    function drawPolesAndWires(g, w, h, halo) {
+      wireLog = [];
       var L = drawPole(g, w * 0.427, h, h * 0.385, -1, 100, [50, 50], [46, 54]);
       var R = drawPole(g, w * 0.618, h, h * 0.372, -1, 66, [40, 40], [36, 42]);
       g.strokeStyle = POLE_INK; g.lineCap = 'round'; g.lineWidth = 2.6;
@@ -831,6 +885,8 @@
       // and on past the right pole
       drawWire(g, R[1][0], R[1][1], w * 0.72, R[1][1] - 20, 10);
       drawWire(g, R[3][0], R[3][1], w * 0.72, R[3][1] + 20, 12);
+      var spans = wireLog; wireLog = null;
+      if (halo) drawBulbs(halo, g, spans);
     }
 
     var frontC = document.createElement('canvas');   // blocks that stand in front of the road
@@ -839,24 +895,24 @@
       // The blocks go on their own canvas first, so some can be stamped back in front of the expressway
       var blocks = document.createElement('canvas'); blocks.width = w; blocks.height = h;
       var rects = [];
-      drawBuildingsRow(blocks.getContext('2d'), w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.66, gap: 30, cell: 34, lit: 0.42,
-        colors: ['#5e3f82', '#66468a', '#573a7a'], tanks: 0.7, tankColor: '#40295e', grills: true, ac: true,
+      drawBuildingsRow(blocks.getContext('2d'), w, h, { minW: 160, maxW: 320, topMin: 0.42, topMax: 0.66, gap: 30, cell: 34, lit: 0.5, glow: 8,
+        colors: ['#2a2058', '#30265f', '#251c4f'], tanks: 0.7, tankColor: '#171040', grills: true, ac: true,
         clear: [w * 0.49, w * 0.56], out: rects });   // a side street, looking through to the mosque
       g.drawImage(blocks, 0, 0);
 
       // Elevated expressway weaving through the blocks: concrete deck on pillars, traffic streaking along
       var deckY = function (x) { return h * deckV(x / w); };
       var line = function (off) { g.beginPath(); for (var dx = -10; dx <= w + 10; dx += 20) { if (dx < 0) g.moveTo(dx, deckY(dx) + off); else g.lineTo(dx, deckY(dx) + off); } g.stroke(); };
-      g.fillStyle = '#4c3468';
+      g.fillStyle = '#1e1646';
       for (var px = 70; px < w; px += 240) {                       // pillars with pier caps
         var py = deckY(px);
         g.fillRect(px - 13, py + 18, 26, h - py);
         g.fillRect(px - 26, py + 14, 52, 9);
       }
       g.lineCap = 'butt';
-      g.strokeStyle = '#6e5290'; g.lineWidth = 24; line(0);          // deck
-      g.strokeStyle = '#3e2a58'; g.lineWidth = 6; line(12);          // shadowed underside edge
-      g.strokeStyle = '#e6b8f4'; g.lineWidth = 4; line(-13);         // parapet catching the city glow
+      g.strokeStyle = '#3a2d68'; g.lineWidth = 24; line(0);          // deck
+      g.strokeStyle = '#140e32'; g.lineWidth = 6; line(12);          // shadowed underside edge
+      g.strokeStyle = '#9d86d6'; g.lineWidth = 4; line(-13);         // parapet catching the city glow
       for (var cl = 0; cl < 16; cl++) {                               // a few far-off lights; real cars drive past below
         var cx = between(0, w), head = rnd() < 0.5;
         g.fillStyle = head ? 'rgba(255,244,210,0.95)' : 'rgba(255,80,64,0.9)';
@@ -864,7 +920,10 @@
       }
       for (var lp = 50; lp < w; lp += 170) {                          // lamp posts along the parapet
         g.fillStyle = '#211a2e'; g.fillRect(lp, deckY(lp) - 48, 3, 36); g.fillRect(lp, deckY(lp) - 48, 10, 3);
-        g.fillStyle = 'rgba(255,214,140,0.95)'; g.beginPath(); g.arc(lp + 10, deckY(lp) - 45, 4, 0, Math.PI * 2); g.fill();
+        var lg = g.createRadialGradient(lp + 10, deckY(lp) - 45, 2, lp + 10, deckY(lp) - 45, 38);   // a pool of warm light
+        lg.addColorStop(0, 'rgba(255,214,140,0.7)'); lg.addColorStop(1, 'rgba(255,214,140,0)');
+        g.fillStyle = lg; g.fillRect(lp - 30, deckY(lp) - 85, 80, 80);
+        g.fillStyle = 'rgba(255,230,170,1)'; g.beginPath(); g.arc(lp + 10, deckY(lp) - 45, 4, 0, Math.PI * 2); g.fill();
       }
       // Every other block stands in front of the road (on its own layer, so passing cars slip behind them)
       var fg = frontC.getContext('2d');
@@ -873,7 +932,7 @@
         fg.drawImage(blocks, r[0], r[1], r[2], h - r[1], r[0], r[1], r[2], h - r[1]);
       });
       // Electric poles and wires just outside the window, in silhouette
-      drawPolesAndWires(fg, w, h);
+      drawPolesAndWires(fg, w, h, g);
     });
     var near = new T.Mesh(new T.PlaneGeometry(26, 13), new T.MeshBasicMaterial({ map: nearTex, transparent: true }));
     near.position.set(RX0 - 3.6, 3.0, -1.5);
@@ -938,7 +997,11 @@
         wait: 0
       });
     });
+    seed = -2028929348;   // the plants and ID-card barcodes below draw from the same point as before the night sky
     function moveTraffic(dt) {
+      twinkleT += dt;                                       // stars twinkle
+      twinkle[0].opacity = 0.6 + 0.4 * Math.sin(twinkleT * 1.7);
+      twinkle[1].opacity = 0.6 + 0.4 * Math.sin(twinkleT * 1.3 + 2.2);
       traffic.forEach(function (v) {
         if (v.wait > 0) {
           v.wait -= dt; v.mesh.visible = false;
@@ -1790,12 +1853,12 @@
     // Natural wood top: light honey spruce, only a touch warmer towards the edge
     var burstTex = canvasTex(256, 256, function (g, w, h) {
       var rg = g.createRadialGradient(w / 2, h * 0.6, 8, w / 2, h * 0.6, w * 0.62);   // canvas is flipped onto the top, so 0.6 down = 0.4 up the body
-      rg.addColorStop(0, '#ecc995'); rg.addColorStop(0.6, '#e2b47a'); rg.addColorStop(0.9, '#cf9a5e'); rg.addColorStop(1, '#a8703c');
+      rg.addColorStop(0, '#e6b262'); rg.addColorStop(0.55, '#d69d4a'); rg.addColorStop(0.85, '#b87a33'); rg.addColorStop(1, '#7c4a1e');
       g.fillStyle = rg; g.fillRect(0, 0, w, h);
       g.strokeStyle = 'rgba(120,70,30,0.1)'; g.lineWidth = 1;          // fine spruce grain
       for (var gx = 0; gx < w; gx += 5) { g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + 2, h); g.stroke(); }
     });
-    var gSideM = mat(0xb07a45, { roughness: 0.4 }), gDarkM = mat(0x2a1a12, { roughness: 0.5 });
+    var gSideM = mat(0x8a5a2b, { roughness: 0.4 }), gDarkM = mat(0x2a1a12, { roughness: 0.5 });
     var gTopM = new T.MeshStandardMaterial({ map: burstTex, roughness: 0.42 });
     var bindM = mat(0x2a1a12, { roughness: 0.5 });
     var BW = 0.42, BH = 1.0, BD = 0.13;                              // half width, body length, depth
