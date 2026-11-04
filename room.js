@@ -738,22 +738,23 @@
       sk.addColorStop(1, '#5a2f7c');
       g.fillStyle = sk; g.fillRect(0, 0, w, h);
       // Stars: a dense field, thickest over the window's view; a few bigger ones, some warm
-      for (var st = 0; st < 1100; st++) {
-        var sx0 = rnd() < 0.55 ? between(w * 0.3, w * 0.74) : between(0, w);
-        var sy0 = Math.pow(rnd(), 1.25) * h * 0.66;
+      for (var st = 0; st < 1500; st++) {
+        var inView = st >= 1100;                               // the extra ones fill the strip the window shows
+        var sx0 = inView ? between(w * 0.38, w * 0.68) : rnd() < 0.55 ? between(w * 0.3, w * 0.74) : between(0, w);
+        var sy0 = inView ? between(h * 0.44, h * 0.62) : Math.pow(rnd(), 1.25) * h * 0.66;
         var sz = rnd() < 0.15 ? between(3, 4.5) : between(1.6, 3);
         g.fillStyle = rnd() < 0.2 ? 'rgba(255,225,190,' + between(0.55, 1) + ')' : 'rgba(225,235,255,' + between(0.5, 1) + ')';
         g.fillRect(sx0, sy0, sz, sz);
       }
       // A pale moon with a soft halo
-      var sx = w * 0.5, sy = h * 0.2;
-      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 240);
+      var sx = w * 0.47, sy = h * 0.505;
+      var glow = g.createRadialGradient(sx, sy, 10, sx, sy, 200);
       glow.addColorStop(0, 'rgba(200,210,255,0.42)');
       glow.addColorStop(1, 'rgba(150,160,255,0)');
       g.fillStyle = glow; g.fillRect(0, 0, w, h);
-      g.fillStyle = '#f4f1ff'; g.beginPath(); g.arc(sx, sy, 34, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#f4f1ff'; g.beginPath(); g.arc(sx, sy, 40, 0, Math.PI * 2); g.fill();
       g.fillStyle = 'rgba(150,150,205,0.28)';
-      [[-10, -8, 8], [9, 6, 6], [-4, 13, 4.5], [12, -11, 3.5]].forEach(function (cr) { g.beginPath(); g.arc(sx + cr[0], sy + cr[1], cr[2], 0, Math.PI * 2); g.fill(); });
+      [[-12, -9, 9.5], [11, 7, 7], [-5, 15, 5.5], [14, -13, 4]].forEach(function (cr) { g.beginPath(); g.arc(sx + cr[0], sy + cr[1], cr[2], 0, Math.PI * 2); g.fill(); });
       // Long thin clouds
       g.fillStyle = 'rgba(120,100,220,0.10)';
       for (var i = 0; i < 9; i++) {
@@ -798,8 +799,8 @@
     // Twinkling stars: two sparse layers just in front of the sky that pulse out of step with each other
     var twinkle = [0, 1].map(function () {
       var tex = canvasTex(SKY_W, SKY_H, function (g, w, h) {
-        for (var s = 0; s < 70; s++) {
-          var tx0 = between(w * 0.22, w * 0.82), ty0 = Math.pow(rnd(), 1.2) * h * 0.6, r = between(2, 3.6);
+        for (var s = 0; s < 40; s++) {
+          var tx0 = between(w * 0.38, w * 0.68), ty0 = between(h * 0.44, h * 0.6), r = between(2, 3.6);
           var tg = g.createRadialGradient(tx0, ty0, 0, tx0, ty0, r * 3);
           tg.addColorStop(0, 'rgba(255,255,255,0.95)'); tg.addColorStop(0.3, 'rgba(210,225,255,0.3)'); tg.addColorStop(1, 'rgba(210,225,255,0)');
           g.fillStyle = tg; g.fillRect(tx0 - r * 3, ty0 - r * 3, r * 6, r * 6);
@@ -843,27 +844,11 @@
       g.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag * 2, x1, y1);   // control point at twice the sag
       g.stroke();
     }
-    // Fairy lights strung along the wires: a soft halo on the road layer, a bright bead in the silhouette layer
-    function drawBulbs(halo, core, wires) {
-      var tones = ['255,214,140', '255,170,215', '255,244,214', '170,215,255'];
-      var bi = 0;
-      wires.forEach(function (s) {
-        var x0 = s[0], y0 = s[1], x1 = s[2], y1 = s[3], mx = (x0 + x1) / 2, cy = Math.max(y0, y1) + s[4] * 2;
-        halo.strokeStyle = 'rgba(170,150,255,0.35)'; halo.lineWidth = 6; halo.lineCap = 'round';   // a faint rim, so the wire reads against the dark
-        halo.beginPath(); halo.moveTo(x0, y0); halo.quadraticCurveTo(mx, cy, x1, y1); halo.stroke();
-        var n = Math.max(2, Math.round(Math.abs(x1 - x0) / 46));
-        for (var i = 1; i < n; i++) {
-          var t = i / n, u = 1 - t;
-          var bx = u * u * x0 + 2 * u * t * mx + t * t * x1;
-          var by = u * u * y0 + 2 * u * t * cy + t * t * y1;
-          var tone = tones[bi++ % tones.length];
-          var gl = halo.createRadialGradient(bx, by + 5, 1, bx, by + 5, 20);
-          gl.addColorStop(0, 'rgba(' + tone + ',0.85)'); gl.addColorStop(1, 'rgba(' + tone + ',0)');
-          halo.fillStyle = gl; halo.fillRect(bx - 20, by - 15, 40, 40);
-          core.fillStyle = 'rgb(' + tone + ')';
-          core.beginPath(); core.arc(bx, by + 5, 3.4, 0, Math.PI * 2); core.fill();
-          core.fillRect(bx - 1, by, 2, 3);                                  // a little stalk up to the wire
-        }
+    // A faint rim along each wire, so it reads against the dark sky
+    function drawWireRims(halo, wires) {
+      halo.strokeStyle = 'rgba(170,150,255,0.35)'; halo.lineWidth = 6; halo.lineCap = 'round';
+      wires.forEach(function (w) {
+        halo.beginPath(); halo.moveTo(w[0], w[1]); halo.quadraticCurveTo((w[0] + w[2]) / 2, Math.max(w[1], w[3]) + w[4] * 2, w[2], w[3]); halo.stroke();
       });
     }
     function drawPolesAndWires(g, w, h, halo) {
@@ -886,7 +871,7 @@
       drawWire(g, R[1][0], R[1][1], w * 0.72, R[1][1] - 20, 10);
       drawWire(g, R[3][0], R[3][1], w * 0.72, R[3][1] + 20, 12);
       var spans = wireLog; wireLog = null;
-      if (halo) drawBulbs(halo, g, spans);
+      if (halo) drawWireRims(halo, spans);
     }
 
     var frontC = document.createElement('canvas');   // blocks that stand in front of the road
