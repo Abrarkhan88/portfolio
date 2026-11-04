@@ -613,25 +613,40 @@
       SET:  { t: hexRGB('#3b3f8a'), m: hexRGB('#e5708a'), h: hexRGB('#ffa36a'), s: 0.05 },
       DUSK: { t: hexRGB('#171c52'), m: hexRGB('#6a3a86'), h: hexRGB('#d46a8a'), s: 0.6 }
     };
+    var LOOKS = { hemonto: 1, borsha: 1 };                       // the ritu that have their own look so far
     function moodAt(hours, ritu) {
       var R = RITU[ritu] || RITU.hemonto, sr = R.sr, ss = R.ss, noon = (sr + ss) / 2;
       var ks = [[0, 'N'], [sr - 1, 'N'], [sr - 0.4, 'PRE'], [sr + 0.25, 'RISE'], [sr + 1.5, 'MORN'], [noon, 'NOON'], [ss - 2, 'AFT'], [ss - 0.6, 'GOLD'], [ss + 0.1, 'SET'], [ss + 0.8, 'DUSK'], [ss + 1.5, 'N'], [24, 'N']];
       var i = 0; while (i < ks.length - 2 && hours > ks[i + 1][0]) i++;
       var a = ks[i], b = ks[i + 1], k = clamp((hours - a[0]) / (b[0] - a[0] || 1), 0, 1), A = KEY[a[1]], B = KEY[b[1]];
       var c = { t: mixc(A.t, B.t, k), m: mixc(A.m, B.m, k), h: mixc(A.h, B.h, k), s: A.s + (B.s - A.s) * k };
-      var dayK = 1 - c.s, gold = [255, 210, 150];                    // Hemonto: a little soft gold in the daylight
-      c.t = mixc(c.t, gold, 0.1 * dayK); c.m = mixc(c.m, gold, 0.1 * dayK); c.h = mixc(c.h, gold, 0.1 * dayK);
-      var m = { c: c, d: c.s, hours: hours, ritu: ritu, starA: c.s };
+      var look = LOOKS[ritu] ? ritu : 'hemonto', dayK = 1 - c.s;      // seasons without their own look borrow Hemonto's
+      if (look === 'hemonto') {                                      // a little soft gold in the daylight
+        var gold = [255, 210, 150];
+        c.t = mixc(c.t, gold, 0.1 * dayK); c.m = mixc(c.m, gold, 0.1 * dayK); c.h = mixc(c.h, gold, 0.1 * dayK);
+      }
+      if (look === 'borsha') {                                       // low grey cloud by day, dark slate cloud by night
+        var kd = 0.62 * dayK, kn = 0.5 * c.s;
+        ['t', 'm', 'h'].forEach(function (q) { c[q] = mixc(mixc(c[q], [112, 120, 134], kd), [34, 38, 58], kn); });
+      }
+      var m = { c: c, d: c.s, hours: hours, ritu: ritu, look: look, starA: look === 'borsha' ? 0 : c.s, rain: look === 'borsha' ? 1 : 0, wet: look === 'borsha' ? 1 : 0, overcast: look === 'borsha' ? 1 : 0 };
       m.lit = clamp((m.d - 0.15) / 0.6, 0, 1);                       // city windows and lamps coming on
-      m.moonA = clamp((m.d - 0.5) * 2, 0, 1);
+      if (m.overcast) m.lit = Math.max(m.lit, 0.3 * (1 - m.d));      // on a dark wet day some windows are lit already
+      m.moonA = clamp((m.d - 0.5) * 2, 0, 1) * (look === 'borsha' ? 0.08 : 1);
       var fr = clamp((hours - sr) / (ss - sr), 0, 1);
       m.sun = { on: hours > sr - 0.2 && hours < ss + 0.2, frac: fr, alt: Math.sin(Math.PI * fr) };
       var since = hours - sr;                                        // morning mist, thickest just after sunrise
       m.mist = (1 - m.d) * (since < 0 ? 0.3 : clamp(0.34 - since * 0.04, 0.08, 0.34));
+      m.mistCol = mixc([232, 232, 238], [92, 86, 132], m.d);
+      if (look === 'borsha') { m.mist = 0.36 * (1 - m.d) + 0.2 * m.d; m.mistCol = mixc([172, 178, 190], [60, 58, 92], m.d); }   // rain haze all day
       return m;
     }
     function dcol(night, day, d) { return rgbS(mixc(hexRGB(day), hexRGB(night), d)); }          // night colour at d = 1
-    function bcol(night, day, m, haze) { var col = mixc(hexRGB(day), hexRGB(night), m.d); if (haze) col = mixc(col, m.c.h, 0.2 * (1 - m.d)); return rgbS(col); }
+    function bcol(night, day, m, haze) {
+      var col = mixc(hexRGB(day), hexRGB(night), m.d); if (haze) col = mixc(col, m.c.h, 0.2 * (1 - m.d));
+      if (m.wet) col = mixc(col, mixc([88, 96, 114], [30, 34, 52], m.d), 0.35);          // wet walls
+      return rgbS(col);
+    }
 
     /* ---------- Dhaka outside the window ----------
        Three layers at different depths so the city shifts as the camera moves. The two painted layers
@@ -734,7 +749,7 @@
         [[-12, -9, 9.5], [11, 7, 7], [-5, 15, 5.5], [14, -13, 4]].forEach(function (cr) { g.beginPath(); g.arc(sx + cr[0], sy + cr[1], cr[2], 0, Math.PI * 2); g.fill(); });
       }
       // The sun, low over the rooftops in the morning and the afternoon, high and out of frame at midday
-      if (m.sun.on && day > 0.05) {
+      if (m.sun.on && day > 0.05 && !m.overcast) {
         var al = m.sun.alt, sxp = w * (0.36 + 0.28 * m.sun.frac), syp = h * (0.62 - 0.22 * al);
         var scol = mixc([255, 160, 90], [255, 246, 220], Math.pow(al, 0.5));
         var sg = g.createRadialGradient(sxp, syp, 6, sxp, syp, h * 0.36);
@@ -743,9 +758,21 @@
         g.fillStyle = rgbaS(scol, day); g.beginPath(); g.arc(sxp, syp, 44, 0, Math.PI * 2); g.fill();
       }
       // Long thin clouds
-      g.fillStyle = rgbaS(mixc([255, 255, 255], [120, 100, 220], d), 0.3 - 0.2 * d);
+      g.fillStyle = rgbaS(mixc([255, 255, 255], [120, 100, 220], d), m.overcast ? 0 : 0.3 - 0.2 * d);
       for (var i = 0; i < 9; i++) {
         g.beginPath(); g.ellipse(between(0, w), between(h * 0.18, h * 0.5), between(120, 380), between(6, 16), 0, 0, Math.PI * 2); g.fill();
+      }
+      // Borsha: a low, heavy cloud deck over the whole sky
+      if (m.look === 'borsha') {
+        var cr = 4242, crr = function () { cr = (cr * 16807) % 2147483647; return (cr - 1) / 2147483646; };
+        var cc = mixc([96, 104, 120], [26, 30, 48], d);
+        for (var q = 0; q < 26; q++) {
+          var cx2 = crr() * w, cy2 = h * (0.02 + crr() * 0.5), crw = 180 + crr() * 320, crh = 40 + crr() * 70;
+          g.fillStyle = rgbaS(mixc(cc, [200, 206, 220], (1 - d) * 0.25 * crr()), 0.55);
+          g.beginPath(); g.ellipse(cx2, cy2, crw, crh, 0, 0, Math.PI * 2); g.fill();
+        }
+        var ov = g.createLinearGradient(0, 0, 0, h * 0.62); ov.addColorStop(0, rgbaS(cc, 0.75)); ov.addColorStop(1, rgbaS(cc, 0.25));
+        g.fillStyle = ov; g.fillRect(0, 0, w, h * 0.62);
       }
       // City glow on the horizon (a warm haze by day), then a distant haze line of buildings
       var hzc = mixc([255, 226, 196], [255, 150, 170], d);
@@ -782,7 +809,7 @@
         low: [mx - 80 * k, mx + 80 * k, 0.735] });
       // Morning mist hanging over the rooftops
       if (m.mist > 0.01) {
-        var mc = mixc([232, 232, 238], [92, 86, 132], d), mg = g.createLinearGradient(0, h * 0.46, 0, h * 0.82);
+        var mc = m.mistCol, mg = g.createLinearGradient(0, h * 0.46, 0, h * 0.82);
         mg.addColorStop(0, rgbaS(mc, 0)); mg.addColorStop(0.7, rgbaS(mc, m.mist * 0.85)); mg.addColorStop(1, rgbaS(mc, m.mist));
         g.fillStyle = mg; g.fillRect(0, h * 0.46, w, h * 0.36);
       }
@@ -942,6 +969,26 @@
     front.renderOrder = 3;
     scene.add(front);
 
+    // Rain (Borsha): streaks drifting down a sheet just outside the glass, in front of the whole city
+    var rainTex = canvasTex(256, 512, function (g, w, h) {
+      var rs = 1234567, rr = function () { rs = (rs * 16807) % 2147483647; return (rs - 1) / 2147483646; };
+      g.lineCap = 'round';
+      for (var i = 0; i < 95; i++) {
+        var x = rr() * w, y = rr() * h, len = 30 + rr() * 60;
+        g.strokeStyle = 'rgba(205,220,245,' + (0.25 + 0.5 * rr()).toFixed(2) + ')'; g.lineWidth = 1 + rr() * 1.6;
+        for (var wy = -1; wy <= 1; wy += 1) { g.beginPath(); g.moveTo(x, y + wy * h); g.lineTo(x - len * 0.12, y + wy * h + len); g.stroke(); }   // drawn again a tile up and down, so it wraps
+      }
+    });
+    if (rainTex.wrapS !== undefined) { rainTex.wrapS = rainTex.wrapT = T.RepeatWrapping; if (rainTex.repeat) rainTex.repeat.set(2.5, 1.6); }
+    var rainMat = new T.MeshBasicMaterial({ map: rainTex, transparent: true, opacity: 0, depthWrite: false });
+    var rain = new T.Mesh(new T.PlaneGeometry(12, 7), rainMat);
+    rain.position.set(RX0 - 1.5, 3.5, -0.8);
+    rain.rotation.y = Math.PI / 2;
+    rain.renderOrder = 4;
+    rain.visible = false;
+    scene.add(rain);
+    var rainK = 0;
+
     // Repaint the sky and the city from the clock (the buildings are drawn from the same random start every time)
     function repaintSky(m) {
       var keep = seed;
@@ -1007,6 +1054,10 @@
     seed = -2028929348;   // the plants and ID-card barcodes below draw from the same point as before the night sky
     function moveTraffic(dt) {
       twinkleT += dt;                                       // stars twinkle
+      if (rainK > 0.01) {                                   // rain falls, and eases a little now and then
+        rainTex.offset.y += dt * 2.0;
+        rainMat.opacity = rainK * (0.62 + 0.14 * Math.sin(twinkleT * 0.35));
+      }
       twinkle[0].opacity = (0.6 + 0.4 * Math.sin(twinkleT * 1.7)) * curMood.starA;
       twinkle[1].opacity = (0.6 + 0.4 * Math.sin(twinkleT * 1.3 + 2.2)) * curMood.starA;
       traffic.forEach(function (v) {
@@ -2929,16 +2980,17 @@
     function setRGB(col, c) { col.setRGB(c[0] / 255, c[1] / 255, c[2] / 255); }
     function applyMood(m) {
       try {
-        var d = m.d, day = 1 - d, sun = m.sun, al = sun.alt;
+        var d = m.d, day = 1 - d, sun = m.sun, al = sun.alt, oc = m.overcast || 0;
         var warm = mixc([255, 168, 104], [255, 242, 214], Math.pow(al, 0.5));       // low sun is orange, high sun is white
-        hemi.intensity = 1.4 + 0.4 * day;
-        setRGB(hemi.color, mixc([219, 230, 244], mixc([255, 246, 232], m.c.h, 0.2), day));
+        hemi.intensity = 1.4 + 0.4 * day * (1 - 0.4 * oc);
+        setRGB(hemi.color, mixc([219, 230, 244], mixc(mixc([255, 246, 232], m.c.h, 0.2), [205, 216, 232], 0.7 * oc), day));
         setRGB(hemi.groundColor, mixc([42, 48, 56], [96, 92, 100], day));
         setRGB(sunset.color, mixc([180, 204, 255], warm, day));
-        sunset.intensity = 0.75 * d + (sun.on ? 0.4 + 1.0 * al : 0.15) * day;
+        sunset.intensity = 0.75 * d * (1 - 0.9 * oc) + (sun.on ? 0.4 + 1.0 * al : 0.15) * day * (1 - 0.85 * oc);
         sunset.position.set(-14, 8.5 * d + (3 + 9 * al) * day, 3 * d + (-8 + 16 * sun.frac) * day);
         neonLights.forEach(function (n) { n.l.intensity = n.base * (0.3 + 0.7 * d); });
-        var nk = 0.5 + 0.5 * d;                                                        // neon is softer in daylight
+        var nk = 0.5 + 0.5 * d + 0.25 * oc * day;                                      // neon is softer in daylight, a touch stronger on a dark wet day
+        rainK = m.rain; rain.visible = m.rain > 0.01; if (!rain.visible) rainMat.opacity = 0;
         neonM.color.setRGB(NEON_RGB[0] * nk, NEON_RGB[1] * nk, NEON_RGB[2] * nk);
         ring.material.color.setRGB(NEON_RGB[0] * nk, NEON_RGB[1] * nk, NEON_RGB[2] * nk);
         speakerGlow.intensity = 0.6 * (0.4 + 0.6 * d);
