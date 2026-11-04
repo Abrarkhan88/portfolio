@@ -3065,8 +3065,10 @@
       var tfmt = function (h) { var mm = Math.round(h * 60) % 1440, hh = Math.floor(mm / 60), ap = hh >= 12 ? 'pm' : 'am'; return (hh % 12 || 12) + ':' + ('0' + (mm % 60)).slice(-2) + ' ' + ap; };
       var tshow = function (h) {
         testClock = { hours: h, ritu: tsel.value };
-        curMood = moodAt(h, tsel.value); paintedAt = h; repaintSky(curMood); applyMood(curMood);
-        tout.textContent = tfmt(h);
+        try {
+          curMood = moodAt(h, tsel.value); paintedAt = h; repaintSky(curMood); applyMood(curMood);
+          tout.textContent = tfmt(h) + '  [' + curMood.look + ' storm ' + (curMood.storm || 0).toFixed(2) + ' stars ' + curMood.starA.toFixed(2) + ' build G1]';
+        } catch (err) { tout.textContent = tfmt(h) + '  ERROR: ' + err.message; }
       };
       var tstop = function () { if (tgo) { clearInterval(tgo); tgo = null; tplay.textContent = 'Play'; } };
       tr.addEventListener('input', function () { tstop(); if (tpend) return; tpend = true; requestAnimationFrame(function () { tpend = false; tshow(+tr.value / 60); }); });
