@@ -613,7 +613,7 @@
       SET:  { t: hexRGB('#3b3f8a'), m: hexRGB('#e5708a'), h: hexRGB('#ffa36a'), s: 0.05 },
       DUSK: { t: hexRGB('#171c52'), m: hexRGB('#6a3a86'), h: hexRGB('#d46a8a'), s: 0.6 }
     };
-    var LOOKS = { hemonto: 1, borsha: 1 };                       // the ritu that have their own look so far
+    var LOOKS = { hemonto: 1, borsha: 1, grishmo: 1 };                       // the ritu that have their own look so far
     function moodAt(hours, ritu) {
       var R = RITU[ritu] || RITU.hemonto, sr = R.sr, ss = R.ss, noon = (sr + ss) / 2;
       var ks = [[0, 'N'], [sr - 1, 'N'], [sr - 0.4, 'PRE'], [sr + 0.25, 'RISE'], [sr + 1.5, 'MORN'], [noon, 'NOON'], [ss - 2, 'AFT'], [ss - 0.6, 'GOLD'], [ss + 0.1, 'SET'], [ss + 0.8, 'DUSK'], [ss + 1.5, 'N'], [24, 'N']];
@@ -629,15 +629,28 @@
         var kd = 0.62 * dayK, kn = 0.5 * c.s;
         ['t', 'm', 'h'].forEach(function (q) { c[q] = mixc(mixc(c[q], [112, 120, 134], kd), [34, 38, 58], kn); });
       }
-      var m = { c: c, d: c.s, hours: hours, ritu: ritu, look: look, starA: look === 'borsha' ? 0 : c.s, rain: look === 'borsha' ? 1 : 0, wet: look === 'borsha' ? 1 : 0, overcast: look === 'borsha' ? 1 : 0 };
+      var storm = 0, dust = 0;
+      if (look === 'grishmo') {                                      // dust haze by day; a Kalbaishakhi storm cloud builds in the afternoon and stays into the night
+        var sr0 = sr, ss0 = ss;
+        storm = clamp((hours - (ss0 - 3)) / 2.5, 0, 1) * (1 - 0.2 * clamp((hours - ss0 + 0.5) / 1.5, 0, 1));
+        if (hours < sr0 - 0.5) storm = 0.8 * clamp((sr0 - 0.5 - hours) / 1.5 + (hours < sr0 - 2 ? 1 : 0), 0, 1);
+        if (hours >= sr0 - 0.5 && hours < ss0 - 3) storm = 0;
+        dust = dayK * (1 - 0.6 * storm);
+        ['t', 'm', 'h'].forEach(function (q, qi) { c[q] = mixc(c[q], [216, 186, 142], [0.72, 0.84, 0.8][qi] * dust); });
+        ['t', 'm'].forEach(function (q) { c[q] = mixc(mixc(c[q], [66, 54, 74], 0.7 * storm * dayK), [24, 20, 42], 0.5 * storm * c.s); });
+        c.h = mixc(mixc(c.h, [226, 138, 78], 0.35 * storm * dayK), [48, 34, 66], 0.35 * storm * c.s);
+      }
+      var m = { c: c, d: c.s, hours: hours, ritu: ritu, look: look, storm: storm, dust: dust, starA: look === 'borsha' ? 0 : c.s * (1 - 0.75 * storm), rain: look === 'borsha' ? 1 : 0, wet: look === 'borsha' ? 1 : 0, overcast: look === 'borsha' ? 1 : 0 };
       m.lit = clamp((m.d - 0.15) / 0.6, 0, 1);                       // city windows and lamps coming on
       if (m.overcast) m.lit = Math.max(m.lit, 0.3 * (1 - m.d));      // on a dark wet day some windows are lit already
-      m.moonA = clamp((m.d - 0.5) * 2, 0, 1) * (look === 'borsha' ? 0.08 : 1);
+      m.moonA = clamp((m.d - 0.5) * 2, 0, 1) * (look === 'borsha' ? 0.08 : 1 - 0.7 * storm);
+      if (storm > 0) m.lit = Math.max(m.lit, 0.35 * storm);          // lamps come on under the storm cloud
       var fr = clamp((hours - sr) / (ss - sr), 0, 1);
       m.sun = { on: hours > sr - 0.2 && hours < ss + 0.2, frac: fr, alt: Math.sin(Math.PI * fr) };
       var since = hours - sr;                                        // morning mist, thickest just after sunrise
       m.mist = (1 - m.d) * (since < 0 ? 0.3 : clamp(0.34 - since * 0.04, 0.08, 0.34));
       m.mistCol = mixc([232, 232, 238], [92, 86, 132], m.d);
+      if (look === 'grishmo') { m.mist = 0.3 * dust + 0.2 * storm * (1 - m.d) + (1 - m.d) * 0; m.mistCol = mixc(mixc([222, 196, 150], [96, 82, 100], storm), [70, 60, 92], m.d); }   // dust haze
       if (look === 'borsha') { m.mist = 0.36 * (1 - m.d) + 0.2 * m.d; m.mistCol = mixc([172, 178, 190], [60, 58, 92], m.d); }   // rain haze all day
       return m;
     }
@@ -645,6 +658,7 @@
     function bcol(night, day, m, haze) {
       var col = mixc(hexRGB(day), hexRGB(night), m.d); if (haze) col = mixc(col, m.c.h, 0.2 * (1 - m.d));
       if (m.wet) col = mixc(col, mixc([88, 96, 114], [30, 34, 52], m.d), 0.35);          // wet walls
+      if (m.dust) col = mixc(col, [204, 172, 128], 0.2 * m.dust);                        // dusty walls
       return rgbS(col);
     }
 
@@ -749,13 +763,13 @@
         [[-12, -9, 9.5], [11, 7, 7], [-5, 15, 5.5], [14, -13, 4]].forEach(function (cr) { g.beginPath(); g.arc(sx + cr[0], sy + cr[1], cr[2], 0, Math.PI * 2); g.fill(); });
       }
       // The sun, low over the rooftops in the morning and the afternoon, high and out of frame at midday
-      if (m.sun.on && day > 0.05 && !m.overcast) {
-        var al = m.sun.alt, sxp = w * (0.36 + 0.28 * m.sun.frac), syp = h * (0.62 - 0.22 * al);
+      if (m.sun.on && day > 0.05 && !m.overcast && !(m.storm > 0.9)) {
+        var sday = day * (1 - 0.9 * (m.storm || 0)), al = m.sun.alt, sxp = w * (0.36 + 0.28 * m.sun.frac), syp = h * (0.62 - 0.22 * al);
         var scol = mixc([255, 160, 90], [255, 246, 220], Math.pow(al, 0.5));
         var sg = g.createRadialGradient(sxp, syp, 6, sxp, syp, h * 0.36);
-        sg.addColorStop(0, rgbaS(scol, 0.7 * day)); sg.addColorStop(1, rgbaS(scol, 0));
+        sg.addColorStop(0, rgbaS(scol, 0.7 * sday)); sg.addColorStop(1, rgbaS(scol, 0));
         g.fillStyle = sg; g.fillRect(0, 0, w, h);
-        g.fillStyle = rgbaS(scol, day); g.beginPath(); g.arc(sxp, syp, 44, 0, Math.PI * 2); g.fill();
+        g.fillStyle = rgbaS(scol, sday); g.beginPath(); g.arc(sxp, syp, 44, 0, Math.PI * 2); g.fill();
       }
       // Long thin clouds
       g.fillStyle = rgbaS(mixc([255, 255, 255], [120, 100, 220], d), m.overcast ? 0 : 0.3 - 0.2 * d);
@@ -773,6 +787,24 @@
         }
         var ov = g.createLinearGradient(0, 0, 0, h * 0.62); ov.addColorStop(0, rgbaS(cc, 0.75)); ov.addColorStop(1, rgbaS(cc, 0.25));
         g.fillStyle = ov; g.fillRect(0, 0, w, h * 0.62);
+      }
+      // Grishmo: a dark storm cloud mass building over the city, lit orange along its underside at dusk
+      if (m.storm > 0.02) {
+        var sr1 = 9091, srr = function () { sr1 = (sr1 * 16807) % 2147483647; return (sr1 - 1) / 2147483646; };
+        var sc = mixc([92, 76, 98], [22, 20, 38], d);
+        for (var q2 = 0; q2 < 34; q2++) {
+          var qx = srr() * w, qy = h * (0.0 + srr() * 0.5), qw = 140 + srr() * 320, qh = 50 + srr() * 90;
+          g.fillStyle = rgbaS(mixc(mixc(sc, [24, 20, 36], 0.5 * srr()), [170, 128, 124], (1 - d) * 0.3 * srr()), 0.6 * m.storm);
+          g.beginPath(); g.ellipse(qx, qy, qw, qh, 0, 0, Math.PI * 2); g.fill();
+        }
+        var so = g.createLinearGradient(0, 0, 0, h * 0.58); so.addColorStop(0, rgbaS(sc, 0.8 * m.storm)); so.addColorStop(1, rgbaS(sc, 0.2 * m.storm));
+        g.fillStyle = so; g.fillRect(0, 0, w, h * 0.58);
+        var rim = g.createLinearGradient(0, h * 0.44, 0, h * 0.64); rim.addColorStop(0, 'rgba(236,140,84,0)'); rim.addColorStop(1, rgbaS([236, 140, 84], 0.38 * m.storm * day));
+        g.fillStyle = rim; g.fillRect(0, h * 0.44, w, h * 0.2);
+      }
+      if (m.dust > 0.02) {                                           // Grishmo: dust veil over the sky
+        var dv = g.createLinearGradient(0, 0, 0, h * 0.7); dv.addColorStop(0, rgbaS([214, 184, 140], 0.3 * m.dust)); dv.addColorStop(1, rgbaS([226, 196, 150], 0.55 * m.dust));
+        g.fillStyle = dv; g.fillRect(0, 0, w, h * 0.7);
       }
       // City glow on the horizon (a warm haze by day), then a distant haze line of buildings
       var hzc = mixc([255, 226, 196], [255, 150, 170], d);
@@ -2980,7 +3012,7 @@
     function setRGB(col, c) { col.setRGB(c[0] / 255, c[1] / 255, c[2] / 255); }
     function applyMood(m) {
       try {
-        var d = m.d, day = 1 - d, sun = m.sun, al = sun.alt, oc = m.overcast || 0;
+        var d = m.d, day = 1 - d, sun = m.sun, al = sun.alt, oc = Math.max(m.overcast || 0, 0.7 * (m.storm || 0));
         var warm = mixc([255, 168, 104], [255, 242, 214], Math.pow(al, 0.5));       // low sun is orange, high sun is white
         hemi.intensity = 1.4 + 0.4 * day * (1 - 0.4 * oc);
         setRGB(hemi.color, mixc([219, 230, 244], mixc(mixc([255, 246, 232], m.c.h, 0.2), [205, 216, 232], 0.7 * oc), day));
