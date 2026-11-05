@@ -1829,7 +1829,7 @@
         var inkM = new T.MeshBasicMaterial({ color: 0x1b1216, side: T.BackSide });
         function ink(mesh, k) { var o = new T.Mesh(mesh.geometry, inkM); o.scale.set(k, k, k); mesh.add(o); return o; }
 
-        var aSkin = toon(0xdc9c70), aTee = toon(0xf1f1f4), aHair = toon(0x17121b), aHair2 = toon(0x3d3760);
+        var aSkin = toon(0xcf9164), aTee = toon(0xf1f1f4), aHair = toon(0x17121b), aHair2 = toon(0x3d3760);
         aT = new T.Group(); torso.add(aT);
         aH = new T.Group(); head.add(aH);
 
@@ -1861,6 +1861,14 @@
         aJaw.scale.set(0.86, 0.9, 0.95); ink(aJaw, 1.045);
         var aChin = part(new T.SphereGeometry(0.1, 16, 12), aSkin, 0, -0.245, -0.12, aH);
         aChin.scale.set(0.78, 0.7, 0.8); ink(aChin, 1.06);
+        var aNose = part(new T.SphereGeometry(0.04, 14, 12), aSkin, 0, -0.045, -0.292, aH);
+        aNose.scale.set(0.95, 1.15, 1.1); ink(aNose, 1.12);
+        var stubM = new T.MeshBasicMaterial({ color: 0x2c1f1a, transparent: true, opacity: 0.4, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+        [aJaw, aChin].forEach(function (src) {                                                       // stubble: a faint dark shell over the jaw and chin
+          var sh = new T.Mesh(src.geometry, stubM); sh.scale.set(1.03, 1.03, 1.03); src.add(sh);
+        });
+        var aMous = part(new T.SphereGeometry(0.06, 14, 10), new T.MeshBasicMaterial({ color: 0x2c1f1a, transparent: true, opacity: 0.45 }), 0, -0.093, -0.283, aH);
+        aMous.scale.set(1.5, 0.3, 0.5);
         [-1, 1].forEach(function (sd) {
           var ear = part(new T.SphereGeometry(0.06, 12, 10), aSkin, sd * 0.275, -0.01, 0.02, aH);
           ear.scale.set(0.4, 1, 0.7); ink(ear, 1.1);
@@ -1869,59 +1877,69 @@
         var faceTex = canvasTex(512, 580, function (g, w, h) {
           function eye(cx, cy, sd) {
             g.save(); g.translate(cx, cy);
-            g.fillStyle = '#fbf7f4'; g.beginPath(); g.ellipse(0, 0, 70, 55, 0, 0, Math.PI * 2); g.fill();
-            g.save(); g.beginPath(); g.ellipse(0, 0, 70, 55, 0, 0, Math.PI * 2); g.clip();
-            var ig = g.createLinearGradient(0, -52, 0, 52); ig.addColorStop(0, '#2a1710'); ig.addColorStop(0.55, '#6b3b1c'); ig.addColorStop(1, '#c98a3c');
-            g.fillStyle = ig; g.beginPath(); g.ellipse(sd * -3, 2, 42, 52, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = '#0d0707'; g.beginPath(); g.ellipse(sd * -3, 4, 19, 26, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(sd * -17, -20, 12, 0, Math.PI * 2); g.fill();
-            g.beginPath(); g.arc(sd * 14, 24, 6, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.moveTo(-56, 8); g.quadraticCurveTo(0, -84, 58, -2); g.quadraticCurveTo(0, 62, -56, 8); g.closePath();   // an almond-shaped eye
+            g.fillStyle = '#f7f1ec'; g.fill();
+            g.save(); g.clip();
+            var ig = g.createLinearGradient(0, -34, 0, 34); ig.addColorStop(0, '#2b170d'); ig.addColorStop(0.5, '#5a3017'); ig.addColorStop(1, '#a8672c');
+            g.fillStyle = ig; g.beginPath(); g.arc(sd * 4, -2, 38, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#0c0606'; g.beginPath(); g.arc(sd * 4, -2, 17, 0, Math.PI * 2); g.fill();
+            g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(sd * -8, -15, 10, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.arc(sd * 16, 14, 5, 0, Math.PI * 2); g.fill();
             g.restore();
-            g.strokeStyle = '#120a0c'; g.lineCap = 'round'; g.lineWidth = 11;                      // the heavy upper lash line, flicked at the outer corner
-            g.beginPath(); g.moveTo(-sd * 70, 8); g.quadraticCurveTo(0, -78, sd * 72, -10); g.lineTo(sd * 88, -24); g.stroke();
-            g.lineWidth = 4; g.beginPath(); g.moveTo(-sd * 60, 28); g.quadraticCurveTo(0, 62, sd * 56, 26); g.stroke();   // lower lid
+            g.strokeStyle = '#150c0c'; g.lineCap = 'round'; g.lineWidth = 8;                         // the upper lash line
+            g.beginPath(); g.moveTo(-sd * 58, 8); g.quadraticCurveTo(0, -88, sd * 60, -3); g.lineTo(sd * 72, -11); g.stroke();
+            g.lineWidth = 3; g.strokeStyle = 'rgba(70,35,20,0.7)'; g.beginPath(); g.moveTo(-sd * 42, -30); g.quadraticCurveTo(0, -78, sd * 42, -34); g.stroke();   // lid crease
             g.restore();
           }
-          eye(w / 2 - 108, 262, -1); eye(w / 2 + 108, 262, 1);
-          g.strokeStyle = '#17121b'; g.lineCap = 'round';
-          [-1, 1].forEach(function (sd) {                                                           // brows, a touch angled
-            g.lineWidth = 13; g.beginPath(); g.moveTo(w / 2 + sd * 52, 170); g.quadraticCurveTo(w / 2 + sd * 120, 148, w / 2 + sd * 178, 178); g.stroke();
+          eye(w / 2 - 104, 268, -1); eye(w / 2 + 104, 268, 1);
+          g.strokeStyle = '#17110f'; g.lineCap = 'round';
+          [-1, 1].forEach(function (sd) {                                                           // strong, slightly raised brows
+            g.lineWidth = 17; g.beginPath(); g.moveTo(w / 2 + sd * 56, 196); g.quadraticCurveTo(w / 2 + sd * 118, 170, w / 2 + sd * 178, 190); g.stroke();
           });
-          g.strokeStyle = 'rgba(122,62,40,0.75)'; g.lineWidth = 5;                                  // nose: a small shaded hook
-          g.beginPath(); g.moveTo(w / 2 - 6, 346); g.quadraticCurveTo(w / 2 + 12, 362, w / 2 - 8, 372); g.stroke();
-          g.strokeStyle = '#7b362c'; g.lineWidth = 7;                                               // a small, easy smile
-          g.beginPath(); g.moveTo(w / 2 - 38, 438); g.quadraticCurveTo(w / 2, 462, w / 2 + 40, 436); g.stroke();
-          g.fillStyle = 'rgba(255,110,110,0.2)';                                                    // blush
-          g.beginPath(); g.ellipse(w / 2 - 158, 360, 38, 20, 0, 0, Math.PI * 2); g.fill();
-          g.beginPath(); g.ellipse(w / 2 + 158, 360, 38, 20, 0, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = 'rgba(110,55,35,0.7)'; g.lineWidth = 6;                                   // nose: shaded side and nostrils
+          g.beginPath(); g.moveTo(w / 2 + 10, 322); g.quadraticCurveTo(w / 2 + 26, 352, w / 2 + 4, 372); g.stroke();
+          g.fillStyle = 'rgba(80,38,25,0.55)';
+          g.beginPath(); g.ellipse(w / 2 - 20, 376, 9, 6, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(w / 2 + 22, 376, 9, 6, 0, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#6e2823'; g.beginPath();                                                   // an open, easy smile
+          g.moveTo(w / 2 - 50, 432); g.quadraticCurveTo(w / 2, 450, w / 2 + 52, 428); g.quadraticCurveTo(w / 2 + 34, 472, w / 2 - 6, 474); g.quadraticCurveTo(w / 2 - 38, 468, w / 2 - 50, 432); g.fill();
+          g.fillStyle = '#f6f0ea'; g.beginPath(); g.moveTo(w / 2 - 42, 436); g.quadraticCurveTo(w / 2, 450, w / 2 + 44, 432); g.lineTo(w / 2 + 38, 448); g.quadraticCurveTo(w / 2, 458, w / 2 - 36, 450); g.closePath(); g.fill();
+          g.strokeStyle = 'rgba(70,30,22,0.85)'; g.lineWidth = 5; g.beginPath(); g.moveTo(w / 2 - 52, 431); g.quadraticCurveTo(w / 2, 448, w / 2 + 54, 427); g.stroke();
+          g.fillStyle = 'rgba(255,110,90,0.14)';                                                    // faint warmth in the cheeks
+          g.beginPath(); g.ellipse(w / 2 - 160, 360, 40, 22, 0, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.ellipse(w / 2 + 160, 360, 40, 22, 0, 0, Math.PI * 2); g.fill();
         });
         var facePatch = new T.Mesh(new T.SphereGeometry(0.3 * 1.012, 40, 28, Math.PI * 1.5 - 0.58, 1.16, Math.PI * 0.3, Math.PI * 0.42),
           new T.MeshBasicMaterial({ map: faceTex, transparent: true, color: 0xf3f0f2, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
         facePatch.scale.set(0.93, 1.04, 0.97);
         aH.add(facePatch);
 
-        // ----- Hair: a swept-up top of chunky spikes, a long fringe over the forehead and two locks down the sides -----
-        var cap = part(new T.SphereGeometry(0.325, 32, 20, -Math.PI * 0.25, Math.PI * 1.5, 0, Math.PI * 0.62), aHair, 0, 0.02, 0.02, aH);
-        cap.scale.set(0.97, 1.06, 1.02); ink(cap, 1.04);
-        var dome = part(new T.SphereGeometry(0.335, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.3), aHair, 0, 0.06, 0, aH);
-        dome.scale.set(0.97, 1.1, 1.06); ink(dome, 1.04);
+        // ----- Hair: medium-length, wavy, swept back off the forehead, with curls at the sides and the nape -----
+        var cap = part(new T.SphereGeometry(0.326, 32, 20, -Math.PI * 0.3, Math.PI * 1.6, 0, Math.PI * 0.7), aHair, 0, 0.02, 0.025, aH);
+        cap.scale.set(0.98, 1.06, 1.04); ink(cap, 1.04);
+        var dome = part(new T.SphereGeometry(0.336, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.3), aHair, 0, 0.06, 0, aH);
+        dome.scale.set(0.98, 1.1, 1.08); ink(dome, 1.04);
         function lock(x, y, z, r, len, rx, rz, m) {
           var c = part(new T.ConeGeometry(r, len, 10), m || aHair, x, y, z, aH);
           c.rotation.set(rx, 0, rz); ink(c, 1.14); return c;
         }
-        // fringe: tips point down and a little forward, a side part so the left side falls longer
-        [[-0.21, 0.205, 0.26, 0.4], [-0.14, 0.215, 0.3, 0.2], [-0.07, 0.22, 0.24, 0.05], [0.0, 0.225, 0.2, -0.05], [0.07, 0.22, 0.22, -0.18], [0.14, 0.212, 0.2, -0.3], [0.2, 0.2, 0.17, -0.45]].forEach(function (f) {
-          lock(f[0], f[1] + 0.02, -0.24 + Math.abs(f[0]) * 0.1, 0.07, f[2], Math.PI + 0.35, f[3]);
+        function clump(x, y, z, sx, sy, sz, rx, ry, rz, m) {
+          var c = part(new T.SphereGeometry(0.1, 16, 12), m || aHair, x, y, z, aH);
+          c.scale.set(sx, sy, sz); c.rotation.set(rx, ry, rz); ink(c, 1.07); return c;
+        }
+        // waves on top, long clumps running front to back, with a soft sweep at the front over to one side
+        [[-0.19, 0.31, 0.0, 0.9, 0.8, 1.9, -0.25, 0, 0.25], [-0.1, 0.36, 0.0, 0.95, 0.8, 2.0, -0.3, 0, 0.12], [0.0, 0.385, 0.0, 1.0, 0.8, 2.0, -0.3, 0, 0],
+         [0.1, 0.36, 0.0, 0.95, 0.8, 2.0, -0.3, 0, -0.12], [0.19, 0.31, 0.0, 0.9, 0.8, 1.9, -0.25, 0, -0.25]].forEach(function (c) { clump(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8]); });
+        clump(0.05, 0.325, -0.19, 1.7, 0.75, 1.0, 0.1, 0, -0.35);                                 // the swept front
+        clump(-0.1, 0.3, -0.2, 1.3, 0.7, 0.9, 0.05, 0, 0.45);
+        // curls at the temples and sideburns, wavy locks over the ears, curls at the nape
+        [-1, 1].forEach(function (sd) {
+          lock(sd * 0.215, 0.2, -0.205, 0.05, 0.16, Math.PI + 0.3, sd * 0.4);
+          lock(sd * 0.29, 0.0, 0.0, 0.075, 0.34, Math.PI, sd * 0.3);
+          lock(sd * 0.27, -0.06, 0.12, 0.07, 0.3, Math.PI - 0.15, sd * 0.45);
         });
-        [-1, 1].forEach(function (sd) { lock(sd * 0.27, -0.02, -0.1, 0.06, 0.34, Math.PI + 0.08, sd * 0.1); });   // side locks that frame the face
-        // spikes swept up and back across the crown
-        [[-0.17, 0.33, -0.03, 0.46, 0.5], [-0.08, 0.37, -0.05, 0.5, 0.25], [0.0, 0.39, -0.04, 0.54, 0.0], [0.09, 0.37, -0.04, 0.5, -0.28], [0.17, 0.33, -0.02, 0.44, -0.55],
-         [-0.12, 0.3, 0.1, 0.4, 0.4], [0.12, 0.3, 0.1, 0.4, -0.4]].forEach(function (sp) {
-          lock(sp[0], sp[1], sp[2], 0.095, 0.3, 0.55, sp[4], aHair);
-          void sp[3];
-        });
-        [[-0.05, 0.43, -0.06, 0.25], [0.05, 0.43, -0.05, -0.2]].forEach(function (hl) {            // a couple of lighter streaks so the hair reads as shiny
-          var st = part(new T.ConeGeometry(0.03, 0.22, 8), aHair2, hl[0], hl[1], hl[2], aH); st.rotation.set(0.5, 0, hl[3]);
+        [-0.2, -0.1, 0.0, 0.1, 0.2].forEach(function (x, i) { lock(x, -0.08 - (i % 2) * 0.03, 0.24, 0.07, 0.3, Math.PI - 0.25, (i - 2) * 0.22); });
+        [[-0.05, 0.43, -0.03, 0.25], [0.06, 0.42, -0.02, -0.2], [-0.2, 0.34, 0.02, 0.5]].forEach(function (hl) {   // lighter streaks so the hair reads as glossy
+          var st = part(new T.SphereGeometry(0.05, 10, 8), aHair2, hl[0], hl[1], hl[2], aH); st.scale.set(0.5, 0.3, 2.4); st.rotation.set(-0.3, 0, hl[3]);
         });
 
         // ----- Switch over: hide the original torso, head and hair; keep the legs but cel-shade them -----
