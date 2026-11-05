@@ -1816,9 +1816,11 @@
     /* ---------- Anime restyle of the figure ----------
        Cel-shaded (a few flat light steps) with a thin dark outline, a hand-drawn face, chunky spiky hair and a broader,
        more muscular build. It is built on top of the figure above: if anything here fails, the original figure comes back. */
+    var USE_ANIME = false;                                  // off for now: the primitive-built anime figure did not look right; the original figure shows instead
     var animeOK = false;
     (function () {
       var oldTorso = [], legMeshes = [], aT = null, aH = null;
+      if (!USE_ANIME) return;
       try {
         torso.traverse(function (o) { if (o.isMesh) oldTorso.push(o); });
         me.children.forEach(function (o) { if (o.isMesh) legMeshes.push(o); });
