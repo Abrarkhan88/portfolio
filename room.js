@@ -1813,6 +1813,130 @@
     // short sideburns
     [-1, 1].forEach(function (side) { part(new T.BoxGeometry(0.03, 0.1, 0.06), fadeM, side * 0.268, 0.06, -0.04, head); });
 
+    /* ---------- Anime restyle of the figure ----------
+       Cel-shaded (a few flat light steps) with a thin dark outline, a hand-drawn face, chunky spiky hair and a broader,
+       more muscular build. It is built on top of the figure above: if anything here fails, the original figure comes back. */
+    var animeOK = false;
+    (function () {
+      var oldTorso = [], legMeshes = [], aT = null, aH = null;
+      try {
+        torso.traverse(function (o) { if (o.isMesh) oldTorso.push(o); });
+        me.children.forEach(function (o) { if (o.isMesh) legMeshes.push(o); });
+        var grad = null;
+        try { grad = new T.DataTexture(new Uint8Array([105, 185, 255]), 3, 1, T.RedFormat); grad.minFilter = grad.magFilter = T.NearestFilter; grad.needsUpdate = true; } catch (e0) { grad = null; }
+        var tcache = {};
+        function toon(c) { var k = typeof c === 'number' ? c : c.getHex(); return tcache[k] || (tcache[k] = new T.MeshToonMaterial({ color: k, gradientMap: grad })); }
+        var inkM = new T.MeshBasicMaterial({ color: 0x1b1216, side: T.BackSide });
+        function ink(mesh, k) { var o = new T.Mesh(mesh.geometry, inkM); o.scale.set(k, k, k); mesh.add(o); return o; }
+
+        var aSkin = toon(0xdc9c70), aTee = toon(0xf1f1f4), aHair = toon(0x17121b), aHair2 = toon(0x3d3760);
+        aT = new T.Group(); torso.add(aT);
+        aH = new T.Group(); head.add(aH);
+
+        // ----- Body: a broad chest tapering to a narrower waist, big shoulders and arms -----
+        var aChest = part(new T.CapsuleGeometry(0.34, 0.4, 8, 20), aTee, 0, 0.52, 0, aT);
+        aChest.scale.set(1.36, 1, 0.8); ink(aChest, 1.035);
+        var aWaist = part(new T.CylinderGeometry(0.4, 0.3, 0.46, 20), aTee, 0, 0.2, 0, aT);
+        aWaist.scale.set(1.2, 1, 0.76); ink(aWaist, 1.04);
+        [-1, 1].forEach(function (sd) { part(new T.SphereGeometry(0.17, 16, 12), aTee, sd * 0.2, 0.66, -0.19, aT).scale.set(1.05, 0.8, 0.6); });   // chest muscle under the shirt
+        var aHands = [];
+        [-1, 1].forEach(function (sd) {
+          var sh = [sd * 0.54, 0.8, 0];
+          ink(part(new T.SphereGeometry(0.175, 18, 14), aTee, sh[0], sh[1], sh[2], aT), 1.05);
+          var bi = [sd * 0.57, 0.5, -0.09];
+          ink(limb(sh, bi, 0.17, aTee, aT), 1.05);                                    // the sleeve, stretched over the arm
+          var elbow = [sd * 0.5, 0.4, -0.56], wrist = [sd * 0.26, 0.45, -1.19];
+          ink(limb(bi, elbow, 0.125, aSkin, aT), 1.06);                               // upper arm
+          ink(part(new T.SphereGeometry(0.1, 14, 12), aSkin, elbow[0], elbow[1], elbow[2], aT), 1.08);
+          ink(limb(elbow, wrist, 0.092, aSkin, aT), 1.08);                            // forearm
+          var hnd = part(new T.SphereGeometry(0.105, 16, 12), aSkin, sd * 0.24, 0.45, -1.31, aT);
+          hnd.scale.set(0.95, 0.5, 1.3); ink(hnd, 1.1); aHands.push(hnd);
+        });
+        ink(part(new T.CylinderGeometry(0.12, 0.14, 0.22, 16), aSkin, 0, 1.07, -0.02, aT), 1.07);   // thick neck
+
+        // ----- Head: a softly tapered face -----
+        var aSkull = part(new T.SphereGeometry(0.3, 32, 22), aSkin, 0, 0, 0, aH);
+        aSkull.scale.set(0.93, 1.04, 0.97); ink(aSkull, 1.035);
+        var aJaw = part(new T.SphereGeometry(0.2, 24, 16), aSkin, 0, -0.14, -0.07, aH);
+        aJaw.scale.set(0.86, 0.9, 0.95); ink(aJaw, 1.045);
+        var aChin = part(new T.SphereGeometry(0.1, 16, 12), aSkin, 0, -0.245, -0.12, aH);
+        aChin.scale.set(0.78, 0.7, 0.8); ink(aChin, 1.06);
+        [-1, 1].forEach(function (sd) {
+          var ear = part(new T.SphereGeometry(0.06, 12, 10), aSkin, sd * 0.275, -0.01, 0.02, aH);
+          ear.scale.set(0.4, 1, 0.7); ink(ear, 1.1);
+        });
+        // The face is painted on a curved patch that hugs the front of the head (big anime eyes, brows, nose, mouth, blush)
+        var faceTex = canvasTex(512, 580, function (g, w, h) {
+          function eye(cx, cy, sd) {
+            g.save(); g.translate(cx, cy);
+            g.fillStyle = '#fbf7f4'; g.beginPath(); g.ellipse(0, 0, 70, 55, 0, 0, Math.PI * 2); g.fill();
+            g.save(); g.beginPath(); g.ellipse(0, 0, 70, 55, 0, 0, Math.PI * 2); g.clip();
+            var ig = g.createLinearGradient(0, -52, 0, 52); ig.addColorStop(0, '#2a1710'); ig.addColorStop(0.55, '#6b3b1c'); ig.addColorStop(1, '#c98a3c');
+            g.fillStyle = ig; g.beginPath(); g.ellipse(sd * -3, 2, 42, 52, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#0d0707'; g.beginPath(); g.ellipse(sd * -3, 4, 19, 26, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(sd * -17, -20, 12, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.arc(sd * 14, 24, 6, 0, Math.PI * 2); g.fill();
+            g.restore();
+            g.strokeStyle = '#120a0c'; g.lineCap = 'round'; g.lineWidth = 11;                      // the heavy upper lash line, flicked at the outer corner
+            g.beginPath(); g.moveTo(-sd * 70, 8); g.quadraticCurveTo(0, -78, sd * 72, -10); g.lineTo(sd * 88, -24); g.stroke();
+            g.lineWidth = 4; g.beginPath(); g.moveTo(-sd * 60, 28); g.quadraticCurveTo(0, 62, sd * 56, 26); g.stroke();   // lower lid
+            g.restore();
+          }
+          eye(w / 2 - 108, 262, -1); eye(w / 2 + 108, 262, 1);
+          g.strokeStyle = '#17121b'; g.lineCap = 'round';
+          [-1, 1].forEach(function (sd) {                                                           // brows, a touch angled
+            g.lineWidth = 13; g.beginPath(); g.moveTo(w / 2 + sd * 52, 170); g.quadraticCurveTo(w / 2 + sd * 120, 148, w / 2 + sd * 178, 178); g.stroke();
+          });
+          g.strokeStyle = 'rgba(122,62,40,0.75)'; g.lineWidth = 5;                                  // nose: a small shaded hook
+          g.beginPath(); g.moveTo(w / 2 - 6, 346); g.quadraticCurveTo(w / 2 + 12, 362, w / 2 - 8, 372); g.stroke();
+          g.strokeStyle = '#7b362c'; g.lineWidth = 7;                                               // a small, easy smile
+          g.beginPath(); g.moveTo(w / 2 - 38, 438); g.quadraticCurveTo(w / 2, 462, w / 2 + 40, 436); g.stroke();
+          g.fillStyle = 'rgba(255,110,110,0.2)';                                                    // blush
+          g.beginPath(); g.ellipse(w / 2 - 158, 360, 38, 20, 0, 0, Math.PI * 2); g.fill();
+          g.beginPath(); g.ellipse(w / 2 + 158, 360, 38, 20, 0, 0, Math.PI * 2); g.fill();
+        });
+        var facePatch = new T.Mesh(new T.SphereGeometry(0.3 * 1.012, 40, 28, Math.PI * 1.5 - 0.58, 1.16, Math.PI * 0.3, Math.PI * 0.42),
+          new T.MeshBasicMaterial({ map: faceTex, transparent: true, color: 0xf3f0f2, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+        facePatch.scale.set(0.93, 1.04, 0.97);
+        aH.add(facePatch);
+
+        // ----- Hair: a swept-up top of chunky spikes, a long fringe over the forehead and two locks down the sides -----
+        var cap = part(new T.SphereGeometry(0.325, 32, 20, -Math.PI * 0.25, Math.PI * 1.5, 0, Math.PI * 0.62), aHair, 0, 0.02, 0.02, aH);
+        cap.scale.set(0.97, 1.06, 1.02); ink(cap, 1.04);
+        var dome = part(new T.SphereGeometry(0.335, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.3), aHair, 0, 0.06, 0, aH);
+        dome.scale.set(0.97, 1.1, 1.06); ink(dome, 1.04);
+        function lock(x, y, z, r, len, rx, rz, m) {
+          var c = part(new T.ConeGeometry(r, len, 10), m || aHair, x, y, z, aH);
+          c.rotation.set(rx, 0, rz); ink(c, 1.14); return c;
+        }
+        // fringe: tips point down and a little forward, a side part so the left side falls longer
+        [[-0.21, 0.205, 0.26, 0.4], [-0.14, 0.215, 0.3, 0.2], [-0.07, 0.22, 0.24, 0.05], [0.0, 0.225, 0.2, -0.05], [0.07, 0.22, 0.22, -0.18], [0.14, 0.212, 0.2, -0.3], [0.2, 0.2, 0.17, -0.45]].forEach(function (f) {
+          lock(f[0], f[1] + 0.02, -0.24 + Math.abs(f[0]) * 0.1, 0.07, f[2], Math.PI + 0.35, f[3]);
+        });
+        [-1, 1].forEach(function (sd) { lock(sd * 0.27, -0.02, -0.1, 0.06, 0.34, Math.PI + 0.08, sd * 0.1); });   // side locks that frame the face
+        // spikes swept up and back across the crown
+        [[-0.17, 0.33, -0.03, 0.46, 0.5], [-0.08, 0.37, -0.05, 0.5, 0.25], [0.0, 0.39, -0.04, 0.54, 0.0], [0.09, 0.37, -0.04, 0.5, -0.28], [0.17, 0.33, -0.02, 0.44, -0.55],
+         [-0.12, 0.3, 0.1, 0.4, 0.4], [0.12, 0.3, 0.1, 0.4, -0.4]].forEach(function (sp) {
+          lock(sp[0], sp[1], sp[2], 0.095, 0.3, 0.55, sp[4], aHair);
+          void sp[3];
+        });
+        [[-0.05, 0.43, -0.06, 0.25], [0.05, 0.43, -0.05, -0.2]].forEach(function (hl) {            // a couple of lighter streaks so the hair reads as shiny
+          var st = part(new T.ConeGeometry(0.03, 0.22, 8), aHair2, hl[0], hl[1], hl[2], aH); st.rotation.set(0.5, 0, hl[3]);
+        });
+
+        // ----- Switch over: hide the original torso, head and hair; keep the legs but cel-shade them -----
+        oldTorso.forEach(function (o) { o.visible = false; });
+        legMeshes.forEach(function (o) { o.material = toon(o.material.color); ink(o, 1.045); });
+        chest = aChest; hands.length = 0; aHands.forEach(function (hd) { hands.push(hd); });
+        animeOK = true;
+      } catch (err) {
+        if (window.console) console.warn('Anime figure failed, using the original', err);
+        oldTorso.forEach(function (o) { o.visible = true; });
+        if (aT && aT.parent) aT.parent.remove(aT);
+        if (aH && aH.parent) aH.parent.remove(aH);
+      }
+    })();
+
     /* Where he looks: the monitor by default, the object you open, and now and then you */
     var headTarget = new T.Vector3(-0.3, 3.03, -2.6);
     var headYaw = 0, headPitch = 0;
