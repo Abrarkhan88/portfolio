@@ -2807,13 +2807,17 @@
     var PHONE_CORNERS = [[1.392, 2.883, -1.43], [1.708, 2.883, -1.43], [1.392, 2.217, -1.43], [1.708, 2.217, -1.43]];
     function placePhone(w, h) {
       if (phoneUi.hidden) return;
-      var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-      PHONE_CORNERS.forEach(function (c) {
+      // The phone is seen in perspective, so its outline is a trapezoid. Use the largest upright rectangle that fits inside it,
+      // so the screen's corners never poke out past the phone body.
+      var pts = PHONE_CORNERS.map(function (c) {                       // top-left, top-right, bottom-left, bottom-right
         tmp.set(c[0], c[1], c[2]).project(camera);
-        var px = (tmp.x * 0.5 + 0.5) * w, py = (-tmp.y * 0.5 + 0.5) * h;
-        x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+        return [(tmp.x * 0.5 + 0.5) * w, (-tmp.y * 0.5 + 0.5) * h];
       });
-      if (!isFinite(x0)) return;
+      var x0 = Math.max(pts[0][0], pts[2][0]), x1 = Math.min(pts[1][0], pts[3][0]),
+          y0 = Math.max(pts[0][1], pts[1][1]), y1 = Math.min(pts[2][1], pts[3][1]);
+      if (!isFinite(x0 + x1 + y0 + y1) || x1 <= x0 || y1 <= y0) return;
+      var ix = (x1 - x0) * 0.012, iy = (y1 - y0) * 0.006;                // a hair of black bezel all round
+      x0 += ix; x1 -= ix; y0 += iy; y1 -= iy;
       phoneUi.style.left = x0 + 'px';
       phoneUi.style.top = y0 + 'px';
       phoneUi.style.width = (x1 - x0) + 'px';
